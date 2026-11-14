@@ -2,7 +2,8 @@
 //   0x00  "NUP\x01"; u32 @0x08 = offset of the table of contents (TOC)
 //   TOC   "TOC\x01", u32 title count, u64 dir count, u64 file count, u64 name-pool offset (from the TOC),
 //         u64 name-pool size; the whole table runs from the TOC to the end of the name pool
-//   TOC+0x30: titles, 0x40 bytes each: u64 title id, u32 root dir, u32 exefs dir, u32 romfs dir, u32 version
+//   TOC+0x30: titles, 0x40 bytes each: u64 title id, u32 root dir, u32 exefs dir, u32 romfs dir, u32 version,
+//         u8 kind @0x18 (0 base, 1 update, 2 add-on); a dir 0xFFFFFFFF is none
 //   then dirs  (24 bytes): u32 name offset, u32 name length, u32 first child, u32 child count, 8 unused
 //   then files (80 bytes): u32 name offset, u32 name length, u64 size, u64 absolute offset, u64 stored size,
 //                          32-byte hash, u8 codec @0x40 (0 raw, 1 one zstd frame), 15 unused
@@ -137,12 +138,19 @@ static Nup *parse(const char *path) {
     }
     t = malloc(size);
     if (!t || !read_all(f, t, size, toc)) { err = "table of contents unreadable"; goto bad; }
+    // the game: the last base (kind 0) or update (1) record with an exefs. A Deluxe Edition's add-ons (kind 2) come
+    // after it with no exefs (0xFFFFFFFF), so the last record is not always the game (a55uka/nup SPEC.md 3.1).
     const uint8_t *title = t + 0x30 + (nt - 1) * 0x40;
+    for (uint64_t i = nt; i-- > 0;) {
+        const uint8_t *r = t + 0x30 + i * 0x40;
+        if (r[0x18] <= 1 && u32(r + 12) != 0xFFFFFFFFu) { title = r; break; }
+    }
     n = calloc(1, sizeof *n);
     if (!n || !(n->path = strdup(path))) { err = "memory"; goto bad; }
     for (int p = 0; p < 2; p++) {
         Walk w = {t, size, nd, nf, dirs, files, children, pool, pool_size, id.size, NULL, 0, 0, 0, NULL};
-        walk(&w, u32(title + (p ? 16 : 12)), "");
+        uint32_t root = u32(title + (p ? 16 : 12));
+        if (root != 0xFFFFFFFFu) walk(&w, root, "");   // a package without that part: no files
         if (w.err) {
             for (size_t i = 0; i < w.n; i++) free(w.out[i].name);
             free(w.out);

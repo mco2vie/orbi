@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 MAGIC = b"NUP\x01"
+NONE = 0xFFFFFFFF  # a package record's exefs or romfs dir when it has none
 CHUNK = 8 << 20
 ZSTD_OPTIONS = {zstd.DecompressionParameter.window_log_max: 31}  # frames written with zstd --long
 
@@ -40,7 +41,9 @@ def is_nup(path: Path) -> bool:
 
 
 class Nup:
-    """The package's newest title (the last in its table: an update's comes after the base game's)."""
+    """The package's newest program: the last base or update record with an exefs (an update's comes after the base
+    game's). Add-on packages (DLC, kind 2: a Deluxe Edition's) come after both and have no exefs (0xFFFFFFFF), so the
+    last record alone is not the game (a55uka/nup SPEC.md 3.1)."""
 
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -61,7 +64,12 @@ class Nup:
         self._dirs = 0x30 + nt * 0x40
         self._files = self._dirs + self._nd * 24
         self._children = self._files + nf * 80
-        tid, _, self._exefs, self._romfs, self.version = struct.unpack_from("<QIIII", self._t, 0x30 + (nt - 1) * 0x40)
+        self.packages = []  # (title id, kind, exefs dir, romfs dir, version) of every record
+        for i in range(nt):
+            tid, _, ex, ro, ver = struct.unpack_from("<QIIII", self._t, 0x30 + i * 0x40)
+            self.packages.append((tid, self._t[0x30 + i * 0x40 + 0x18], ex, ro, ver))
+        game = [r for r in self.packages if r[1] <= 1 and r[2] != NONE] or self.packages
+        tid, _, self._exefs, self._romfs, self.version = game[-1]
         self.title_id = f"{tid:016X}"
         self._parts: dict[str, dict[str, Entry]] = {}
 
@@ -73,7 +81,8 @@ class Nup:
         """{path under the part: Entry} of "exefs" or "romfs", sorted by path."""
         if part not in self._parts:
             out: dict[str, Entry] = {}
-            stack = [(self._exefs if part == "exefs" else self._romfs, "")]
+            root = self._exefs if part == "exefs" else self._romfs
+            stack = [(root, "")] if root != NONE else []  # a package without that part
             while stack:
                 d, prefix = stack.pop()
                 _, _, first, count = struct.unpack_from("<4I", self._t, self._dirs + d * 24)

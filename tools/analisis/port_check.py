@@ -69,7 +69,9 @@ def load_exefs(src: Path) -> tuple[dict[str, bytes], str]:
     if src.is_file() and nup.is_nup(src):
         pkg = nup.Nup(src)
         files = {name: pkg.read(e) for name, e in pkg.files("exefs").items() if "/" not in name}
-        return files, f"{src.name}: .nup, title {pkg.title_id}, version {pkg.version}"
+        kinds = {0: "base", 1: "update", 2: "add-on"}
+        recs = ", ".join(f"{t:016X} {kinds.get(k, f'kind {k}')} v{v}" for t, k, _, _, v in pkg.packages)
+        return files, f"{src.name}: .nup, game {pkg.title_id} version {pkg.version}; packages: {recs}"
     d = src / "exefs" if (src / "exefs").is_dir() else src
     if not d.is_dir():
         sys.exit(f"{src}: neither a .nup package nor a folder with exefs/")
