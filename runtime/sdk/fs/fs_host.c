@@ -1201,6 +1201,14 @@ static void ov_free_space(Cpu *c) {
 // void EnableGlobalFileDataCache(void *buffer, size_t size): a cache inside the console's fs process; host reads
 // go to the OS file cache, so the buffer is not used
 static void ov_enable_data_cache(Cpu *c) { (void)c; }
+// Result QueryMountAddOnContentCacheSize(size_t *out, int index) / MountAddOnContent(name, index, cache, size):
+// no add-on is installed on the host (ov_system.c's aoc count is 0)
+static void ov_aoc_cache_size(Cpu *c) {
+    uint64_t *out = arg_p(c, 0);
+    if (out) *out = 0;
+    ret_x(c, FS_R_TARGET_NOT_FOUND);
+}
+static void ov_mount_aoc(Cpu *c) { ret_x(c, FS_R_TARGET_NOT_FOUND); }
 #undef I32
 #undef I64
 
@@ -1276,6 +1284,8 @@ HOST_OVERRIDE("_ZN2nn2fs14EnsureSaveDataERKNS_7account3UidE", ov_ensure_save);
 HOST_OVERRIDE("_ZN2nn2fs17MountCacheStorageEPKc", ov_mount_cache0);
 HOST_OVERRIDE("_ZN2nn2fs16GetFreeSpaceSizeEPlPKc", ov_free_space);
 HOST_OVERRIDE("_ZN2nn2fs25EnableGlobalFileDataCacheEPvm", ov_enable_data_cache);
+HOST_OVERRIDE("_ZN2nn2fs31QueryMountAddOnContentCacheSizeEPmi", ov_aoc_cache_size);
+HOST_OVERRIDE("_ZN2nn2fs17MountAddOnContentEPKciPvm", ov_mount_aoc);
 
 // ---- --probe-fs
 // Every check calls the overrides the way guest code does: by synthetic address through rt_call, with AAPCS64

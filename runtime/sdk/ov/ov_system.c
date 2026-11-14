@@ -21,6 +21,7 @@
 
 #include "cfg.h"
 #include "fs.h"
+#include "gamelib.h"
 #include "hacks.h"
 #include "host.h"
 #include "ov.h"
@@ -330,6 +331,15 @@ static void ov_random_bytes(Cpu *c) {
 // ==== SDK-internal initialisation (services.c)
 static void ov_diag_startup(Cpu *c) { (void)c; rt_log("diag: host diagnostics"); }
 static void ov_aoc_initialize(Cpu *c) { (void)c; rt_log("aoc: no add-on content"); }
+// The rest of nn::aoc: with Initialize replaced the SDK never makes its service object, so every call reaching
+// aoc::detail::GetObjectHolder reads a null pointer (Orbitals' CountAddOnContent from main+0x989c). No add-on is
+// installed on the host yet, so the list is empty.
+static void ov_aoc_count(Cpu *c) { ret_x(c, 0); }          // int CountAddOnContent([ApplicationId])
+static void ov_aoc_list(Cpu *c) { ret_x(c, 0); }           // int ListAddOnContent(int *out, int offset, int count[, ApplicationId])
+static void ov_aoc_base_id(Cpu *c) {                       // Bit64 GetAddOnContentBaseId([ApplicationId]): program id + 0x1000
+    ret_x(c, (rt_game()->port ? rt_game()->port->program_id : 0) + 0x1000);
+}
+static void ov_aoc_prepare(Cpu *c) { ret_x(c, FS_R_TARGET_NOT_FOUND); }   // Result PrepareAddOnContent(int index)
 
 static void ov_err_context(Cpu *c) { (void)c; rt_log("err: error contexts stay local"); }
 static void ov_pctl_initialize(Cpu *c) { (void)c; rt_log("pctl: no parental controls"); }
@@ -844,6 +854,13 @@ HOST_OVERRIDE("_ZN2nn6crypto36GenerateCryptographicallyRandomBytesEPvm", ov_rand
 
 HOST_OVERRIDE("nndiagStartup", ov_diag_startup);
 HOST_OVERRIDE("_ZN2nn3aoc10InitializeEv", ov_aoc_initialize);
+HOST_OVERRIDE("_ZN2nn3aoc17CountAddOnContentEv", ov_aoc_count);
+HOST_OVERRIDE("_ZN2nn3aoc17CountAddOnContentENS_13ApplicationIdE", ov_aoc_count);
+HOST_OVERRIDE("_ZN2nn3aoc16ListAddOnContentEPiii", ov_aoc_list);
+HOST_OVERRIDE("_ZN2nn3aoc16ListAddOnContentEPiiiNS_13ApplicationIdE", ov_aoc_list);
+HOST_OVERRIDE("_ZN2nn3aoc21GetAddOnContentBaseIdEv", ov_aoc_base_id);
+HOST_OVERRIDE("_ZN2nn3aoc21GetAddOnContentBaseIdENS_13ApplicationIdE", ov_aoc_base_id);
+HOST_OVERRIDE("_ZN2nn3aoc19PrepareAddOnContentEi", ov_aoc_prepare);
 
 HOST_OVERRIDE("_ZN2nn3err26InitializeContextWriterApiEv", ov_err_context);
 HOST_OVERRIDE("_ZN2nn4pctl10InitializeEv", ov_pctl_initialize);
