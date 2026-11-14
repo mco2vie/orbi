@@ -1,0 +1,312 @@
+"""Feasibility report for porting another Switch 2 game onto this runtime: what in its exefs the runtime already covers.
+
+Why: the recompiler (recomp/), the SDK replaced by name and NVN2 over Vulkan were written for MKW. Another game runs on
+them only as far as it uses the same things; what it uses beyond them is the work of a port. This reads the game's own
+exefs (from a dump folder or a .nup package, never anything in the repository) and says, without running the game:
+  - the modules, their build ids and sizes, and the SDK version string;
+  - which engine and middleware it is built with (Unity, Unreal, Nintendo's sead/agl, Havok, Wwise, FMOD, CRIWARE...);
+  - its graphics API: the NVN2 driver's proc table in its sdk (tools/gpu/nvn2_procs.py) against the runtime's
+    (runtime/gfx/nvn/procs/*.inc), and whether it uses Vulkan or NVN1 names instead;
+  - its imports from the SDK by namespace: which the runtime replaces (HOST_OVERRIDE / HOST_OBSERVER in runtime/) and
+    which end in a console service the runtime does not serve (tools/analisis/sdk_gaps.py's map);
+  - the console services its main.npdm may open;
+  - whether recomp/versions.py and the runtime know its build (they do not, for a new game: a row to add).
+The report names functions of the game: keep it in build/ (the default) and out of git.
+
+Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_check.md]
+       DUMP_DIR holds exefs/ (or is the exefs folder itself). Takes ~10-60 s, mostly decompressing the modules.
+"""
+
+import argparse
+import re
+import struct
+import sys
+import time
+from collections import Counter, defaultdict
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "recomp"))
+sys.path.insert(0, str(ROOT / "tools/prepare"))
+sys.path.insert(0, str(ROOT / "tools/gpu"))
+sys.path.insert(0, str(ROOT / "tools/analisis"))
+
+import nup  # noqa: E402
+import nvn2_procs  # noqa: E402
+import versions  # noqa: E402
+from nso import Nso  # noqa: E402
+from sdk_gaps import SERVICE_NS, overrides  # noqa: E402
+
+# Engine and middleware markers, found as strings in the modules' images. A hit is a hint, not proof: the count says how
+# strong it is.
+MARKERS = {
+    "Unity (IL2CPP)": [b"il2cpp", b"UnityPlayer", b"Unity Technologies", b"UnityEngine."],
+    "Unreal Engine": [b"FEngineLoop", b"UnrealEngine", b"Unreal Engine", b"/Script/Engine", b"UE4Game", b"UE5"],
+    "Godot": [b"Godot Engine", b"godot::"],
+    "GameMaker": [b"YoYo Games", b"YYGameMaker"],
+    "Nintendo sead/agl (MKW's family)": [b"sead::", b"agl::", b"N4sead", b"N3agl"],
+    "Havok": [b"hkBase", b"Havok", b"hkpWorld", b"hknp"],
+    "Wwise": [b"AK::SoundEngine", b"AkSoundEngine", b"Wwise"],
+    "FMOD": [b"FMOD Studio", b"FMOD::", b"fmod_"],
+    "CRIWARE": [b"CRI Middleware", b"criAtom", b"CRIWARE"],
+    "Lua": [b"lua_pushvalue", b"LuaJIT", b"Lua 5."],
+    "Mono": [b"mono_runtime_invoke", b"Mono.Runtime"],
+    "Vulkan": [b"vkCreateInstance", b"vkQueueSubmit", b"VK_KHR_"],
+}
+SDK_VERSION = re.compile(rb"(?:NintendoSdk_|SDK MW\+Nintendo\+|NintendoSDK[ _]?)[\w.+\-]{2,80}")
+NVN_NAME = re.compile(rb"\bnvn[A-Z][A-Za-z0-9]{3,80}\b")
+
+
+def load_exefs(src: Path) -> tuple[dict[str, bytes], str]:
+    """{file name: bytes} of the exefs, and where it came from."""
+    if src.is_file() and nup.is_nup(src):
+        pkg = nup.Nup(src)
+        files = {name: pkg.read(e) for name, e in pkg.files("exefs").items() if "/" not in name}
+        return files, f"{src.name}: .nup, title {pkg.title_id}, version {pkg.version}"
+    d = src / "exefs" if (src / "exefs").is_dir() else src
+    if not d.is_dir():
+        sys.exit(f"{src}: neither a .nup package nor a folder with exefs/")
+    return {p.name: p.read_bytes() for p in sorted(d.iterdir()) if p.is_file()}, f"{d}: folder"
+
+
+def nso_of(name: str, data: bytes, tmp: Path) -> Nso | None:
+    if data[:4] != b"NSO0":
+        return None
+    p = tmp / name
+    p.write_bytes(data)
+    return Nso(str(p))
+
+
+def namespace(mangled: str) -> str:
+    """nn::hid for _ZN2nn3hid..., sead for _ZN4sead...; (C) for an unmangled name."""
+    if not mangled.startswith("_Z"):
+        return "(C)"
+    s = mangled[2:]
+    if s.startswith("N"):
+        s = s[1:].lstrip("rVKRO")
+    parts = []
+    while s and s[0].isdigit() and len(parts) < 2:
+        m = re.match(r"\d+", s)
+        n = int(m.group())
+        s = s[m.end() :]
+        parts.append(s[:n])
+        s = s[n:]
+    if not parts:
+        return "(other)"
+    return "::".join(parts) if parts[0] == "nn" else parts[0]
+
+
+def runtime_nvn() -> tuple[set[str], set[str]]:
+    """(names in the runtime's proc tables, names with an implementation)."""
+    listed = set()
+    for inc in (ROOT / "runtime/gfx/nvn/procs").glob("*_procs.inc"):
+        listed.update(re.findall(r"NVN_PROC\((\w+)\)", inc.read_text()))
+    done = set()
+    for src in (ROOT / "runtime").rglob("*.c"):
+        if src.name == "nvn_procs.c":
+            continue
+        t = src.read_text(errors="replace")
+        done.update(re.findall(r"NVN_API\((\w+)\)", t))
+        done.update(re.findall(r"NVN2_IGNORED\((\w+)\)", t))
+        done.update(re.findall(r"\bvoid nvnp_(\w+)\(Cpu", t))
+    return listed, done
+
+
+def npdm_services(data: bytes) -> list[str]:
+    """Service names in main.npdm's ACI0 service access control (what the program may open)."""
+    if data[:4] != b"META":
+        return []
+    aci, aci_size = struct.unpack_from("<II", data, 0x70)
+    if data[aci : aci + 4] != b"ACI0":
+        return []
+    sac, sac_size = struct.unpack_from("<II", data, aci + 0x28)
+    at, end, out = aci + sac, aci + sac + sac_size, []
+    while at < end and at < len(data):
+        ctrl = data[at]
+        n = (ctrl & 7) + 1
+        name = data[at + 1 : at + 1 + n].decode("ascii", "replace")
+        out.append(name + (" (server)" if ctrl & 0x80 else ""))
+        at += 1 + n
+    return out
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("game", type=Path, help="the dump: a .nup package or a folder with exefs/")
+    ap.add_argument("--out", type=Path, default=ROOT / "build/port_check.md")
+    args = ap.parse_args()
+    t0 = time.time()
+    files, origin = load_exefs(args.game)
+    tmp = ROOT / "build/port_check_exefs"
+    tmp.mkdir(parents=True, exist_ok=True)
+    mods = {}
+    for name, data in files.items():
+        n = nso_of(name, data, tmp)
+        if n:
+            mods[name] = n
+    if not mods:
+        sys.exit(f"{origin}: no NSO module in the exefs")
+    L: list[str] = []
+    w = L.append
+
+    w("# Port feasibility report\n")
+    w(
+        f"Source: {origin}. Generated by `tools/analisis/port_check.py`; names functions of the game: keep it out of git.\n"
+    )
+
+    # modules
+    w("## Modules\n")
+    w("| Module | Build id | Image | Imports | Exports | Known to this port |")
+    w("|---|---|---|---|---|---|")
+    known_builds = {v.main_build_id: f"MKW {v.name}" for v in versions.VERSIONS}  # first 8 bytes of main's build id
+    sdk_known = set(nvn2_procs.TABLES)
+    for name, n in mods.items():
+        known = (known_builds.get(n.build_id[:16]) if name == "main" else None) or (
+            "MKW's sdk" if n.build_id in sdk_known else "no"
+        )
+        w(
+            f"| `{name}` | `{n.build_id[:16]}` | {n.size / 2**20:.1f} MiB | {len(n.imports())} | {len(n.exports())} | {known} |"
+        )
+    other = sorted(set(files) - set(mods))
+    if other:
+        w(f"\nOther exefs files: {', '.join(f'`{o}`' for o in other)}")
+
+    # SDK version and engine
+    images = {name: bytes(n.image) for name, n in mods.items()}
+    vers = Counter()
+    for img in images.values():
+        vers.update(m.decode("ascii", "replace") for m in SDK_VERSION.findall(img))
+    w("\n## SDK version strings\n")
+    w("\n".join(f"- `{v}` ({c}x)" for v, c in vers.most_common(5)) or "- none found")
+    w("\n## Engine and middleware (string markers)\n")
+    w("| Marker set | Hits | In modules |")
+    w("|---|---|---|")
+    engine_hits = {}
+    for label, pats in MARKERS.items():
+        where, hits = [], 0
+        for name, img in images.items():
+            h = sum(img.count(p) for p in pats)
+            if h:
+                where.append(name)
+                hits += h
+        engine_hits[label] = hits
+        if hits:
+            w(f"| {label} | {hits} | {', '.join(where)} |")
+    if not any(engine_hits.values()):
+        w("| none | 0 | |")
+
+    # graphics
+    w("\n## Graphics API\n")
+    listed, done = runtime_nvn()
+    names_in_code = set()
+    for img in images.values():
+        names_in_code.update(m.decode() for m in NVN_NAME.findall(img))
+    driver = {}
+    if "sdk" in mods:
+        try:
+            driver = nvn2_procs.procs(mods["sdk"], search=mods["sdk"].build_id not in sdk_known)
+        except Exception as e:  # noqa: BLE001 - another sdk build may not match the search; the report says so
+            w(f"- NVN2 driver proc table: not found in `sdk` ({type(e).__name__}: {e}).")
+    if driver:
+        new = sorted(set(driver) - listed)
+        todo = sorted((set(driver) & listed) - done)
+        w(
+            f"- NVN2 driver in `sdk`: {len(driver)} procs. In the runtime's tables: {len(set(driver) & listed)}; "
+            f"implemented: {len(set(driver) & done)}."
+        )
+        w(
+            f"- Procs the runtime has no row for (new in this driver): {len(new)}"
+            + (": " + ", ".join(f"`{x}`" for x in new[:60]) + (" ..." if len(new) > 60 else "") if new else "")
+        )
+        w(f"- Procs listed but not implemented (stop the run if the game calls them): {len(todo)}")
+    used = sorted(names_in_code & (listed | set(driver)))
+    w(
+        f"- NVN names found as strings in the modules (what the game may ask nvnDeviceGetProcAddress for): {len(used)}; "
+        f"of them without an implementation here: {len(set(used) - done)}"
+        + (": " + ", ".join(f"`{x}`" for x in sorted(set(used) - done)[:60]) if set(used) - done else "")
+    )
+    unknown = sorted(names_in_code - listed - set(driver) - {"nvnBootstrapLoader"})
+    if unknown:
+        w(
+            f"- NVN-looking names in no table (new procs, or strings that only look like one): {len(unknown)}: "
+            + ", ".join(f"`{x}`" for x in unknown[:60])
+            + (" ..." if len(unknown) > 60 else "")
+        )
+    if engine_hits.get("Vulkan"):
+        w(
+            "- **Vulkan names found**: the game may draw through Vulkan instead of NVN2; the runtime has no Vulkan front end "
+            "for the game (its NVN2 layer would not be used)."
+        )
+    if not driver and not used:
+        w("- No NVN at all: the graphics path is not NVN2, and the runtime's graphics layer does not apply as is.")
+
+    # SDK imports
+    w("\n## Imports from the SDK\n")
+    replaced = overrides()
+    sdk_exports = {s[0] for s in mods["sdk"].exports()} if "sdk" in mods else set()
+    by_ns: dict[str, list[str]] = defaultdict(list)
+    total = covered = 0
+    for name, n in mods.items():
+        if name == "sdk":
+            continue
+        for s in n.imports():
+            if sdk_exports and s[0] not in sdk_exports:
+                continue  # from a subsdk, not the SDK
+            total += 1
+            if s[0] in replaced:
+                covered += 1
+            else:
+                by_ns[namespace(s[0])].append(s[0])
+    w(
+        f"Imports resolved by `sdk`: {total}; replaced by the runtime (same mangled name): {covered}. The rest run the "
+        "SDK's own recompiled code: fine for pure libraries, a stop for code that opens a console service the runtime "
+        "does not serve.\n"
+    )
+    w("| Namespace | Console service | Not replaced |")
+    w("|---|---|---|")
+    service_gap = 0
+    for ns, items in sorted(by_ns.items(), key=lambda kv: (kv[0] not in SERVICE_NS, -len(kv[1]))):
+        svc = SERVICE_NS.get(ns, "-")
+        if svc != "-":
+            service_gap += len(items)
+        if svc != "-" or len(items) >= 5:
+            w(f"| `{ns}` | {svc} | {len(items)} |")
+
+    # services
+    if "main.npdm" in files:
+        svcs = npdm_services(files["main.npdm"])
+        w(f"\n## Services in main.npdm ({len(svcs)})\n")
+        w(", ".join(f"`{s}`" for s in svcs) or "none")
+
+    # verdict
+    w("\n## Summary\n")
+    eng = [k for k, v in engine_hits.items() if v and k != "Vulkan"]
+    w(f"- Engine hints: {', '.join(eng) or 'none'}.")
+    if driver:
+        w(
+            f"- Graphics: NVN2, {len(set(driver) - listed)} driver procs new to the runtime, "
+            f"{len(set(used) - done)} named in the game's code without an implementation."
+        )
+    w(
+        f"- SDK: {total - covered} of {total} imports not replaced, {service_gap} of them in namespaces backed by a "
+        "console service (each needs a host replacement before the game gets past it)."
+    )
+    w(
+        "- Not known to recomp/versions.py: a patch table (spin loops: tools/cpu/spin_waits.py) and a version row are "
+        "the first work of a port."
+        if "main" not in mods or mods["main"].build_id[:16] not in known_builds
+        else "- recomp/versions.py knows this build (a Mario Kart World dump)."
+    )
+    w(f"\n_{time.time() - t0:.0f} s._")
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text("\n".join(L) + "\n")
+    for p in tmp.iterdir():
+        p.unlink()
+    tmp.rmdir()
+    print("\n".join(L))
+    print(f"\nwritten to {args.out}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
