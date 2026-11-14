@@ -17,7 +17,11 @@ Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_c
        DUMP_DIR holds exefs/ (or is the exefs folder itself). Takes ~10-60 s, mostly decompressing the modules.
        --dump-data FILE writes what it reads from runtime/ (replaced SDK names, NVN tables) as JSON, for the Windows
        executable (.github/workflows/port_check.yml): port_check.exe carries that file instead of the sources.
+       --disasm main+0x181bf8[:0x180] ...: instead of the report, those ranges disassembled (capstone), with calls
+       through the PLT named by their import and the module + offset of every branch target, to port_disasm.txt (a
+       crash in mkw.log names the addresses). It is the game's own code: send it, never commit it.
 Windows executable: drop the .nup on port_check.exe (or run it and paste the path); the report goes next to the exe.
+Run it with no argument and it also asks for the --disasm ranges (Enter for the report).
 """
 
 import argparse
@@ -148,12 +152,61 @@ def npdm_services(data: bytes) -> list[str]:
     return out
 
 
+def plt_names(n: Nso) -> dict[int, str]:
+    """GOT slot -> import name, from the JUMP_SLOT and GLOB_DAT relocations."""
+    out = {}
+    for off, typ, sym, _ in n.relocs:
+        if typ in (1025, 1026) and 0 < sym < len(n.syms):  # R_AARCH64_GLOB_DAT, R_AARCH64_JUMP_SLOT
+            out[off] = n.syms[sym][0]
+    return out
+
+
+def plt_target(n: Nso, got: dict[int, str], t: int) -> str | None:
+    """The import a PLT stub at t jumps to: adrp x16, page; ldr x17, [x16, #lo]; ... br x17."""
+    if t + 8 > len(n.image):
+        return None
+    a, b = struct.unpack_from("<II", n.image, t)
+    if a & 0x9F00001F != 0x90000010 or b & 0xFFC003FF != 0xF9400211:
+        return None
+    imm = ((a >> 29) & 3) | (((a >> 5) & 0x7FFFF) << 2)
+    imm -= (1 << 21) if imm & (1 << 20) else 0
+    slot = (t & ~0xFFF) + (imm << 12) + ((b >> 10) & 0xFFF) * 8
+    return got.get(slot)
+
+
+def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
+    from capstone import CS_ARCH_ARM64, CS_MODE_ARM, Cs
+
+    md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+    out = []
+    for spec in specs:
+        m = re.fullmatch(r"(\w+)\+(0x[0-9a-fA-F]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec.strip())
+        if not m or m.group(1) not in mods:
+            out.append(f"## {spec}: not MODULE+0xOFFSET[:LENGTH] of {', '.join(mods)}")
+            continue
+        n, start = mods[m.group(1)], int(m.group(2), 16) & ~3
+        length = int(m.group(3), 0) if m.group(3) else 0x100
+        got = plt_names(n)
+        out.append(f"## {m.group(1)}+{start:#x}, {length:#x} bytes")
+        for ins in md.disasm(bytes(n.image[start : start + length]), start):
+            line = f"{m.group(1)}+{ins.address:#08x}  {ins.bytes.hex()}  {ins.mnemonic:<8} {ins.op_str}"
+            if ins.mnemonic in ("bl", "b") or ins.mnemonic.startswith(("b.", "cb", "tb")):
+                t = int(ins.op_str.split("#")[-1], 16) if "#" in ins.op_str else None
+                name = plt_target(n, got, t) if t is not None else None
+                if name:
+                    line += f"   ; -> {name}"
+            out.append(line)
+        out.append("")
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("game", type=Path, nargs="?", help="the dump: a .nup package or a folder with exefs/")
     default_out = Path(sys.executable).parent / "port_check.md" if FROZEN else ROOT / "build/port_check.md"
     ap.add_argument("--out", type=Path, default=default_out)
     ap.add_argument("--dump-data", type=Path, help="write the runtime's tables as JSON (for the executable) and exit")
+    ap.add_argument("--disasm", nargs="+", metavar="MOD+0xOFF[:LEN]", help="disassemble these ranges instead")
     args = ap.parse_args()
     if args.dump_data:
         replaced, listed, done = runtime_data()
@@ -165,6 +218,8 @@ def main() -> None:
     if args.game is None:  # started with a double click: ask
         typed = input("Drag the .nup file (or the dump folder) here and press Enter: ").strip().strip('"')
         args.game = Path(typed)
+        ranges = input("Ranges to disassemble, e.g. main+0x181bf8:0x180 (Enter for the report): ").split()
+        args.disasm = ranges or None
     t0 = time.time()
     files, origin = load_exefs(args.game)
     tmp_dir = tempfile.TemporaryDirectory(prefix="port_check_")
@@ -176,6 +231,16 @@ def main() -> None:
             mods[name] = n
     if not mods:
         sys.exit(f"{origin}: no NSO module in the exefs")
+    if args.disasm:
+        text = "\n".join(
+            [f"# {origin}: the game's own code, for the port's work; do not commit", ""] + disasm(mods, args.disasm)
+        )
+        out = args.out.with_name("port_disasm.txt")
+        out.write_text(text + "\n", encoding="utf-8")
+        tmp_dir.cleanup()
+        print(text)
+        print(f"\nwritten to {out}", file=sys.stderr)
+        return
     L: list[str] = []
     w = L.append
 

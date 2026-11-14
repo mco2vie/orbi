@@ -109,13 +109,16 @@ static void walk(Walk *w, uint64_t dir, const char *prefix) {
             if (!g) { free(path); w->err = "memory"; return; }
             w->out = g;
         }
+        e.id = (uint32_t)w->n;   // insertion order: a later record's file replaces an earlier one's (overlay)
         w->out[w->n++] = e;
     }
     w->depth--;
 }
 
 static int entry_order(const void *a, const void *b) {
-    return strcmp(((const PackEntry *)a)->name, ((const PackEntry *)b)->name);
+    const PackEntry *x = a, *y = b;
+    int c = strcmp(x->name, y->name);
+    return c ? c : (x->id > y->id) - (x->id < y->id);
 }
 
 static Nup *parse(const char *path) {
@@ -149,8 +152,19 @@ static Nup *parse(const char *path) {
     if (!n || !(n->path = strdup(path))) { err = "memory"; goto bad; }
     for (int p = 0; p < 2; p++) {
         Walk w = {t, size, nd, nf, dirs, files, children, pool, pool_size, id.size, NULL, 0, 0, 0, NULL};
-        uint32_t root = u32(title + (p ? 16 : 12));
-        if (root != 0xFFFFFFFFu) walk(&w, root, "");   // a package without that part: no files
+        if (!p) {   // exefs: the game's record alone
+            uint32_t root = u32(title + 12);
+            if (root != 0xFFFFFFFFu) walk(&w, root, "");
+        } else {    // romfs: every base and update record in table order, an update's files over the base's (an update
+                    // package holds only what it changes: 53 files in a user's Orbitals 5.0.0 update)
+            for (uint64_t i = 0; i < nt && !w.err; i++) {
+                const uint8_t *r = t + 0x30 + i * 0x40;
+                if (r[0x18] <= 1 && u32(r + 16) != 0xFFFFFFFFu) {
+                    w.depth = 0;
+                    walk(&w, u32(r + 16), "");
+                }
+            }
+        }
         if (w.err) {
             for (size_t i = 0; i < w.n; i++) free(w.out[i].name);
             free(w.out);
@@ -158,6 +172,16 @@ static Nup *parse(const char *path) {
             goto bad;
         }
         qsort(w.out, w.n, sizeof *w.out, entry_order);
+        size_t kept = 0;   // of each name, the last record's
+        for (size_t i = 0; i < w.n; i++) {
+            if (i + 1 < w.n && !strcmp(w.out[i].name, w.out[i + 1].name)) {
+                free(w.out[i].name);
+                continue;
+            }
+            w.out[kept] = w.out[i];
+            w.out[kept++].id = 0;
+        }
+        w.n = kept;
         n->part[p] = w.out;
         n->count[p] = w.n;
     }

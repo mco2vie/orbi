@@ -318,7 +318,9 @@ def main() -> None:
         with_mods = f" mods {mods_key}" if mods_key else ""
         keys = {
             "exefs": str(exefs_src),
-            "romfs": f"copy {version.name}" if args.romfs == "copy" else f"link {romfs_src}",
+            # another game: " overlay" since its .nup RomFS is the base's with the update's files over it (port-step1c)
+            "romfs": (f"copy {version.name}" + ("" if version.number else " overlay")) if args.romfs == "copy"
+            else f"link {romfs_src}",
             "generate": f"{build.game_id()} {version.name} {code_key(GENERATOR)}{with_mods}",
             "compile": f"{build.game_id()} {version.name} {args.target} {code_key(COMPILER)}{with_mods}",
             "shaders": f"{version.name} {translator_key()}",

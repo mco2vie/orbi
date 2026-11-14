@@ -81,24 +81,36 @@ class Nup:
         """{path under the part: Entry} of "exefs" or "romfs", sorted by path."""
         if part not in self._parts:
             out: dict[str, Entry] = {}
-            root = self._exefs if part == "exefs" else self._romfs
-            stack = [(root, "")] if root != NONE else []  # a package without that part
-            while stack:
-                d, prefix = stack.pop()
-                _, _, first, count = struct.unpack_from("<4I", self._t, self._dirs + d * 24)
-                for k in range(first, first + count):
-                    c = struct.unpack_from("<I", self._t, self._children + k * 4)[0]
-                    if c < self._nd:
-                        stack.append((c, prefix + self._name(self._dirs + c * 24) + "/"))
-                        continue
-                    rec = self._files + (c - self._nd) * 80
-                    size, off, stored = struct.unpack_from("<QQQ", self._t, rec + 8)
-                    codec = self._t[rec + 0x40]
-                    if codec > 1:
-                        raise ValueError(f"{self.path}: unknown codec {codec} for {prefix + self._name(rec)}")
-                    out[prefix + self._name(rec)] = Entry(off, size, stored, codec == 1)
+            if part == "exefs":
+                roots = [self._exefs]
+            else:  # every base and update record in table order: an update's files over the base's (an update
+                # package holds only what it changes: 53 files in a user's Orbitals 5.0.0 update)
+                roots = [r[3] for r in self.packages if r[1] <= 1]
+            for root in roots:
+                if root != NONE:  # a package without that part
+                    out.update(self._walk(root))
             self._parts[part] = dict(sorted(out.items()))
         return self._parts[part]
+
+    def _walk(self, top: int) -> dict[str, Entry]:
+        """{path: Entry} of the files under directory top."""
+        out: dict[str, Entry] = {}
+        stack = [(top, "")]
+        while stack:
+            d, prefix = stack.pop()
+            _, _, first, count = struct.unpack_from("<4I", self._t, self._dirs + d * 24)
+            for k in range(first, first + count):
+                c = struct.unpack_from("<I", self._t, self._children + k * 4)[0]
+                if c < self._nd:
+                    stack.append((c, prefix + self._name(self._dirs + c * 24) + "/"))
+                    continue
+                rec = self._files + (c - self._nd) * 80
+                size, off, stored = struct.unpack_from("<QQQ", self._t, rec + 8)
+                codec = self._t[rec + 0x40]
+                if codec > 1:
+                    raise ValueError(f"{self.path}: unknown codec {codec} for {prefix + self._name(rec)}")
+                out[prefix + self._name(rec)] = Entry(off, size, stored, codec == 1)
+        return out
 
     def read(self, e: Entry) -> bytes:
         with open(self.path, "rb") as f:

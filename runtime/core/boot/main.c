@@ -265,8 +265,12 @@ static void crash_handler(const PlatCrash *x) {
     if (c) {
         for (int i = 0; i < 31; i++)
             rt_logf("  x%-2d %016llx%s", i, (unsigned long long)c->x[i], i % 4 == 3 ? "\n" : "");
-        rt_logf("  sp  %016llx\n  pc  %016llx  lr %s\n", (unsigned long long)c->sp, (unsigned long long)c->pc,
-                ldr_describe(c->x[30], d, sizeof d));
+        char p[160];
+        rt_logf("  sp  %016llx\n  pc  %016llx (%s)  lr %s\n", (unsigned long long)c->sp, (unsigned long long)c->pc,
+                ldr_describe(c->pc, p, sizeof p), ldr_describe(c->x[30], d, sizeof d));
+        // x16 / x17: the PLT's scratch registers, the last import called through it (a host function's name)
+        for (int r = 16; r <= 17; r++)
+            if (hostfn_name(c->x[r])) rt_logf("  x%d = host %s\n", r, hostfn_name(c->x[r]));
         uint64_t fp = c->x[29];
         for (int n = 0; n < 32 && fp && !(fp & 7) && readable(fp, 16); n++) {
             uint64_t next = LD64(fp), lr = LD64(fp + 8);
