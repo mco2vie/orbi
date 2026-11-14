@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.14"
       - name: Dependencies
-        run: python -m pip install lz4 pyinstaller
+        run: python -m pip install lz4 numpy pyinstaller   # numpy: tools/gpu/nvn2_procs.py locate()
       - name: The runtime's tables
         run: python tools/analisis/port_check.py --dump-data build/port_check_data.json
       - name: Build
