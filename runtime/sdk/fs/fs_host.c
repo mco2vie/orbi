@@ -1184,6 +1184,23 @@ static void ov_read_cache_list(Cpu *c) { ret_x(c, read_cache_list(arg_p(c, 0), a
 static void ov_close_cache_list(Cpu *c) { close_cache_list(arg_x(c, 0)); }
 // The fs priority only orders I/O inside the system fs process; host I/O is unordered.
 static void ov_set_priority(Cpu *c) { (void)c; }
+// Result EnsureSaveData(const account::Uid &): the save directory is made when it is first mounted (mount_save)
+static void ov_ensure_save(Cpu *c) {
+    ready();
+    ret_x(c, my_uid(arg_p(c, 0)) ? 0 : FS_R_TARGET_NOT_FOUND);
+}
+// Result MountCacheStorage(const char *name): the form without an index is index 0
+static void ov_mount_cache0(Cpu *c) { ret_x(c, mount_cache(arg_p(c, 0), 0)); }
+// Result GetFreeSpaceSize(int64_t *out, const char *mount): a console save has its own fixed quota; the host disk
+// is not that quota, so a fixed 1 GiB (more than any Switch save asks for) says "there is room"
+static void ov_free_space(Cpu *c) {
+    int64_t *out = arg_p(c, 0);
+    if (out) *out = (int64_t)1 << 30;
+    ret_x(c, out ? 0 : FS_R_INVALID);
+}
+// void EnableGlobalFileDataCache(void *buffer, size_t size): a cache inside the console's fs process; host reads
+// go to the OS file cache, so the buffer is not used
+static void ov_enable_data_cache(Cpu *c) { (void)c; }
 #undef I32
 #undef I64
 
@@ -1254,6 +1271,11 @@ HOST_OVERRIDE(S_OPEN_CACHE_LIST, ov_open_cache_list);
 HOST_OVERRIDE(S_READ_CACHE_LIST, ov_read_cache_list);
 HOST_OVERRIDE(S_CLOSE_CACHE_LIST, ov_close_cache_list);
 HOST_OVERRIDE(S_SET_PRIORITY, ov_set_priority);
+// Used by Orbitals Deluxe Edition (port mode), not by MKW
+HOST_OVERRIDE("_ZN2nn2fs14EnsureSaveDataERKNS_7account3UidE", ov_ensure_save);
+HOST_OVERRIDE("_ZN2nn2fs17MountCacheStorageEPKc", ov_mount_cache0);
+HOST_OVERRIDE("_ZN2nn2fs16GetFreeSpaceSizeEPlPKc", ov_free_space);
+HOST_OVERRIDE("_ZN2nn2fs25EnableGlobalFileDataCacheEPvm", ov_enable_data_cache);
 
 // ---- --probe-fs
 // Every check calls the overrides the way guest code does: by synthetic address through rt_call, with AAPCS64

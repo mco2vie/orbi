@@ -268,6 +268,16 @@ static void ov_pop(Cpu *c) {
     ret_x(c, m);
 }
 
+// bool TryPopNotificationMessage(Message *out): ov_pop without the wait (Orbitals polls it each frame)
+static void ov_try_pop(Cpu *c) {
+    uint32_t *out = arg_p(c, 0);
+    plat_mutex_lock(&lock);
+    int got = head != tail && out;
+    if (got) *out = messages[head++ % 32];
+    plat_mutex_unlock(&lock);
+    ret_x(c, (uint64_t)got);
+}
+
 // int applet::GetPreviousProgramIndex(): started directly, not from an ExecuteProgram chain
 static void ov_previous_program(Cpu *c) { ret_x(c, (uint64_t)(int64_t)-1); }
 // AppletResourceUserId applet:: / am::GetAppletResourceUserId(): one application, one stable non-zero id
@@ -822,6 +832,7 @@ HOST_OVERRIDE("_ZN2nn2oe25GetProgramTotalActiveTimeEv", ov_active_time);
 HOST_OVERRIDE("_ZN2nn2oe38SetUserInactivityDetectionTimeExtendedEb", ov_inactivity_extended);
 HOST_OVERRIDE("_ZN2nn2oe17FinishStartupLogoEv", ov_finish_logo);
 HOST_OVERRIDE("_ZN2nn2oe22PopNotificationMessageEv", ov_pop);
+HOST_OVERRIDE("_ZN2nn2oe25TryPopNotificationMessageEPj", ov_try_pop);
 HOST_OVERRIDE("_ZN2nn5prepo10PlayReport4SaveEv", ov_report_save);
 HOST_OVERRIDE("_ZN2nn5prepo10PlayReport4SaveERKNS_7account3UidE", ov_report_save);
 HOST_OVERRIDE("_ZN2nn5prepo28RequestImmediateTransmissionEv", ov_result_ok);
