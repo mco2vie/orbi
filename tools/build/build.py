@@ -50,7 +50,7 @@ GEN_FLAGS = ["-O1", "-fno-strict-aliasing", "-Wno-return-type", "-Wno-unused-lab
              *ARCH_FLAGS[ARCH], *GEN_ARCH_FLAGS[ARCH]]  # fmt: skip
 RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", *ARCH_FLAGS[ARCH]]
 sys.path.insert(0, str(ROOT / "recomp"))
-from versions import detect as detect_version  # noqa: E402  (the game version of a dump: patches, RtGame.version)
+from versions import detect_any as detect_version  # noqa: E402  (the game version of a dump; 0: another game)
 
 
 def gen_modules(gen: Path) -> list[str]:
@@ -130,11 +130,38 @@ def game_id() -> str:
     return h.hexdigest()[:16]
 
 
+def port_glue(exefs: Path) -> list[str]:
+    """RtGame.port for a game without a version row (gamelib.h RtPort): its program id from main.npdm's ACI0, and the
+    NVN2 driver's proc table found in its sdk (tools/gpu/nvn2_procs.py locate(); zeros, logged, when not found)."""
+    program_id, title = 0, f"build {detect_version(exefs).main_build_id}"
+    npdm = (exefs / "main.npdm").read_bytes() if (exefs / "main.npdm").is_file() else b""
+    if npdm[:4] == b"META":
+        aci = int.from_bytes(npdm[0x70:0x74], "little")
+        if npdm[aci : aci + 4] == b"ACI0":
+            program_id = int.from_bytes(npdm[aci + 0x10 : aci + 0x18], "little")
+            title = f"program {program_id:016X}, {title}"
+    table = (0, 0, 0, 0)
+    try:
+        sys.path.insert(0, str(ROOT / "tools/gpu"))
+        import nvn2_procs
+        from nso import Nso
+
+        pool, offsets, last, pointers = nvn2_procs.tables(Nso(str(exefs / "sdk")), search=True)
+        table = (pool, offsets, pointers, last)
+        print(f"build: NVN2 proc table in sdk: pool {pool:#x}, offsets {offsets:#x}, pointers {pointers:#x}, "
+              f"last index {last:#x}", file=sys.stderr)  # fmt: skip
+    except Exception as e:  # noqa: BLE001 - the runtime then has no driver procs, and says so
+        print(f"build: no NVN2 proc table found in sdk ({type(e).__name__}: {e})", file=sys.stderr)
+    return ["static const RtPort port = {" + f"{program_id:#x}ull, {c_string(title)}, " +
+            ", ".join(f"{v:#x}" for v in table[:3]) + f", {table[3]:#x}" + "};", ""]  # fmt: skip
+
+
 def module_glue(gen: Path, exefs: Path, library: bool) -> str:
     """modules.c: the game code's tables (runtime/core/boot/gamelib.h): layout, function tables, the SHA-256 of each ExeFS
     file read now from the game copy, the patch sets of the generated patches.h, and the data the generated code reads
     on every call. library: the entry point of mkwgame.so / mkwgame.dll instead of rt_game_builtin."""
     layout = [m["name"] for m in json.loads((gen / "layout.json").read_text())]
+    number = detect_version(exefs).number
     out = ["// Game code tables written by tools/build/build.py; do not edit.", '#include "gamelib.h"',
            '#include "layout.h"', '#if __has_include("patches.h")', '#include "patches.h"', "#endif", ""]  # fmt: skip
     for name in layout:
@@ -159,10 +186,11 @@ def module_glue(gen: Path, exefs: Path, library: bool) -> str:
             "static const RtImagePatch *const image_patches = 0;", "#endif", "",
             # RtGame.version: recomp/versions.py's number for the dump (100: 1.0.0, 180: 1.8.0)
             "volatile int g_fnprof;", "uint8_t rt_patch_on[RT_MAX_PATCH_SETS];", "",
+            *(port_glue(exefs) if not number else []),
             "static const RtGame game = {RT_GAME_ABI, RT_GAME_ID, modules, sizeof modules / sizeof *modules,",
             "                            exefs_sha256, sizeof exefs_sha256 / sizeof *exefs_sha256, patch_sets,",
-            f"                            RT_PATCH_COUNT, RT_PATCH_PAGE, {detect_version(exefs).number}, &g_fnprof, rt_patch_on,",
-            "                            image_patches, RT_IMAGE_PATCH_COUNT};", "",
+            f"                            RT_PATCH_COUNT, RT_PATCH_PAGE, {number}, &g_fnprof, rt_patch_on,",
+            f"                            image_patches, RT_IMAGE_PATCH_COUNT, {'0' if number else '&port'}}};", "",
             "RT_GAME_EXPORT const RtGame *mkwgame_tables(void) { return &game; }" if library
             else "const RtGame *rt_game_builtin(void) { return &game; }", ""]  # fmt: skip
     return "\n".join(out)

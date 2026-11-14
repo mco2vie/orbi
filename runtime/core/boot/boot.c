@@ -52,6 +52,11 @@ static void check_npdm(void) {
     memcpy(&stack, npdm + 0x1C, 4);
     int prio = npdm[0xE], core = npdm[0xF];
     free(npdm);
+    if ((prio != 44 || core != 0 || stack != 0x100000) && rt_version()->number == 0) {   // another game: say so, go on
+        rt_log("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000 (MKW's)",
+               prio, core, stack);
+        return;
+    }
     if (prio != 44 || core != 0 || stack != 0x100000)
         rt_fatal("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000", prio,
                  core, stack);
@@ -68,6 +73,23 @@ static void cb_loader_ready(Cpu *c) {
 static void cb_module_inits(Cpu *c) {
     if (plat_cas32(&inits_done, 0, 0)) rt_fatal("boot: module constructors requested twice");
     const RtInitCount *expected_inits = rt_version()->inits;
+    if (!expected_inits[0].name) {   // version 0, another game: every module's DT_INIT in load order, counts logged
+        for (int k = 0; k < ldr_count(); k++) {
+            const RtLoaded *m = ldr_module(k);
+            uint64_t entries = m->init_array_size / 8;
+            if (!m->init) {
+                rt_log("boot: %s has no DT_INIT", m->name);
+                continue;
+            }
+            rt_log("boot: ENTER %s DT_INIT (%llu init_array entries)", m->name, (unsigned long long)entries);
+            rt_call(c, m->init, 0);
+            uint32_t state = ctor_state(m);
+            rt_logf("boot: DT_INIT %s state=%u (%llu)\n", m->name, state, (unsigned long long)entries);
+            if (state != CTOR_DONE) rt_fatal("boot: %s DT_INIT left its constructor flag at %u, not 2", m->name, state);
+        }
+        plat_xchg32(&inits_done, 1);
+        return;
+    }
     int nmods = 0;
     for (unsigned k = 0; k < RT_MAX_MODULES && expected_inits[k].name; k++, nmods++) {
         const RtLoaded *m = module_named(expected_inits[k].name);
@@ -112,6 +134,11 @@ void rt_boot_event(const char *what, Cpu *c, const char *detail) {
     }
     if (!strcmp(what, "nvn")) {
         uint64_t nvn_ret = rt_version()->nvn_ret;
+        if (!nvn_ret) {   // version 0, another game: where its first NVN call comes from, and the run goes on
+            rt_logf("boot: first NVN call nvnBootstrapLoader(\"%s\") from %s\n", detail, at);
+            stats_line();
+            return;
+        }
         if (ret != main_mod->base + nvn_ret)
             rt_fatal("boot: first NVN call %s(\"%s\") from %s, expected main+%#llx", "nvnBootstrapLoader", detail, at,
                      (unsigned long long)nvn_ret);

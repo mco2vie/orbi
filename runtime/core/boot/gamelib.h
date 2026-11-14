@@ -7,7 +7,7 @@
 
 #include "cpu.h"
 
-#define RT_GAME_ABI 2   // 2: image_patches
+#define RT_GAME_ABI 3   // 2: image_patches; 3: port
 #ifndef RT_GAME_ID
 #define RT_GAME_ID "dev"   // -D from build.py: a hash of the headers the game code is compiled against
 #endif
@@ -38,6 +38,16 @@ typedef struct {
     uint32_t n;
 } RtImagePatch;
 
+// A game this port has no version row for (RtGame.version 0, recomp/versions.py unknown()): what setup read from its
+// own exefs (tools/build/build.py port_glue), in place of runtime/core/boot/version.c's fixed values.
+typedef struct {
+    uint64_t program_id;     // main.npdm ACI0 (svcGetInfo 18)
+    const char *title;       // as the dump names it, for the log ("040032B023CA4800 v327680")
+    // the NVN2 driver's proc table in sdk (tools/gpu/nvn2_procs.py locate()); all 0 when the search found none
+    uint64_t sdk_name_pool, sdk_name_offsets, sdk_pointers;
+    int sdk_last_index;
+} RtPort;
+
 typedef struct {
     uint32_t abi;            // RT_GAME_ABI
     const char *id;          // RT_GAME_ID: a library built against other headers is built again, not loaded
@@ -54,6 +64,7 @@ typedef struct {
     uint8_t *patch_on;       // rt_patch_on[RT_MAX_PATCH_SETS]
     const RtImagePatch *image_patches;   // the enabled code mods' (recomp/gen.py --image), applied at load
     int nimage_patches;
+    const RtPort *port;      // NULL for a version of MKW; set for a game ported from its own exefs (version 0)
 } RtGame;
 
 const RtGame *rt_game(void);           // the tables in use; fatal when there are none

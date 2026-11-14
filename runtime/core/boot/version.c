@@ -74,12 +74,27 @@ static const RtVersion versions[] = {
     },
 };
 
+// Version 0: a game this port was not written for, set up from its own exefs (recomp/versions.py unknown()). No fixed
+// address is known, so every feature that needs one stays off (version.h: a field at 0); only the NVN2 driver's proc
+// table comes from the dump, found by setup (RtGame.port). boot.c logs what it would otherwise check.
+static RtVersion unknown = {.number = 0, .display = "unknown"};
+
 const RtVersion *rt_version(void) {
     static const RtVersion *cur;
     if (cur) return cur;
     int v = rt_game()->version;
     for (size_t i = 0; i < sizeof versions / sizeof *versions; i++)
         if (versions[i].number == v) return cur = &versions[i];
+    const RtPort *p = rt_game()->port;
+    if (v == 0 && p) {
+        unknown.sdk_name_pool = p->sdk_name_pool;
+        unknown.sdk_name_offsets = p->sdk_name_offsets;
+        unknown.sdk_pointers = p->sdk_pointers;
+        unknown.sdk_last_index = p->sdk_last_index;
+        rt_log("version: %s, not a version of Mario Kart World: no fixed addresses; NVN2 proc table %s",
+               p->title ? p->title : "a game", p->sdk_pointers ? "from the dump" : "not found (driver procs off)");
+        return cur = &unknown;
+    }
     rt_fatal("version: the game code is for game version %d, which this runtime has no addresses for", v);
 }
 

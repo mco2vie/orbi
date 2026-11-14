@@ -137,10 +137,27 @@ def code_mods(game: Path) -> tuple[list[dict], str]:
 
 
 
+def spin_table(exefs: Path, work: Path) -> Path:
+    """A game without a checked-in patch table (recomp/versions.py unknown()): its spin loops found now
+    (tools/cpu/spin_waits.py, a few minutes on a large executable), as the table gen.py reads. Without it, a loop that
+    polls memory becomes a jump to itself in the compiled code (recomp/README.md)."""
+    out = work / "patches-port.txt"
+    work.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        p = subprocess.run([sys.executable, str(ROOT / "tools/cpu/spin_waits.py"), "--exefs", str(exefs)], stdout=f,
+                           stderr=subprocess.PIPE, text=True, check=False)  # fmt: skip
+    if p.returncode:
+        raise Failed(f"spin_waits.py failed: {' / '.join(p.stderr.strip().splitlines()[-5:])}")
+    n = sum(1 for line in out.read_text(encoding="utf-8").splitlines() if line.startswith("spin "))
+    print(f"setup: {n} spin loops found in {exefs} ({out})", file=sys.stderr)
+    return out
+
+
 def generate(exefs: Path, work: Path, jobs: int, v: Version, image: list[dict]) -> None:
     gen = work / "generated"
+    table = v.patches or spin_table(exefs, work)
     cmd = [sys.executable, str(ROOT / "recomp/gen.py"), "--exefs", str(exefs), "--out", str(gen), "--jobs", str(jobs),
-           "--patches", str(v.patches), "--mods", str(exefs.parent / "mods")]  # fmt: skip
+           "--patches", str(table), "--mods", str(exefs.parent / "mods")]  # fmt: skip
     if image:  # the enabled code mods' bytes, lifted in place
         (work / "image.json").write_text(json.dumps(image), encoding="utf-8")
         cmd += ["--image", str(work / "image.json")]
@@ -174,6 +191,7 @@ def regenerate_if_cleaned(state: dict, keys: dict[str, str], work: Path) -> None
 GENERATOR = [
     *sorted((ROOT / "recomp").glob("*.py")),
     *sorted((ROOT / "recomp").glob("patches-mkw*.txt")),
+    ROOT / "tools/cpu/spin_waits.py",  # a game without a table: the search that makes it
 ]  # each version's table
 COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name("gamecode.py")]
 
@@ -323,6 +341,11 @@ def main() -> None:
                 state["port"] = args.port
                 save_state(game, state)
             key = keys.get(step, "")
+            if not version.number and step in ("shaders", "warm"):
+                # another game: its shaders are not in agl / BNSH archives, and its first runs are the port's work
+                print(f"setup: {step} skipped for {version.name} (not Mario Kart World)", file=sys.stderr)
+                emit("skip", step)
+                continue
             if step != "cleanup" and state["done"].get(step) == key:
                 emit("skip", step)
                 continue
@@ -370,7 +393,8 @@ def main() -> None:
                         shutil.rmtree(p, ignore_errors=True)
                 # the languages the game does not ship (ca, gl, eu), from this version's translations (the step runs
                 # at every setup, so an update brings its new texts); about a second
-                game_texts.build_all(game, loose_romfs(runtime, romfs, work, "Mals"))
+                if version.number:   # MKW's message archives only
+                    game_texts.build_all(game, loose_romfs(runtime, romfs, work, "Mals"))
                 shutil.rmtree(work / "pack", ignore_errors=True)
             state["done"][step] = key
             save_state(game, state)

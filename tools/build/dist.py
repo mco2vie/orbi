@@ -1,8 +1,8 @@
 """Assemble the player's folder: the runtime and its libraries, and setup/ with the tools that build the game on the
 player's machine. Nothing of the game goes in; the start screen's setup adds it.
 
-Why: the player has no Python, compiler or glslc. setup/ carries a portable CPython (python-build-standalone) with numpy
-and lz4, zig as the C compiler, glslc from conda-forge (Google's own shaderc builds are not downloadable), and the
+Why: the player has no Python, compiler or glslc. setup/ carries a portable CPython (python-build-standalone) with numpy,
+lz4 and capstone (spin_waits.py, for a game without a checked-in patch table), zig as the C compiler, glslc from conda-forge (Google's own shaderc builds are not downloadable), and the
 sources the setup runs (recomp/, sm86/, tools/, the runtime headers the game code includes). NVIDIA's SM86 spec does
 not go in: the setup builds it (sm86/spec/spec.py). Every download is pinned by sha256, as tools/build/windeps.py; a
 mismatch stops.
@@ -52,6 +52,9 @@ PINS = {
         "lz4": (PYPI + "f1/01/d52c7b11eaa286d49dae619c0eec4aabc0bf3cda7a7467eb77c62c4471f3/"
                 "lz4-4.4.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
                 "0bba042ec5a61fa77c7e380351a61cb768277801240249841defd2ff0a10742f"),
+        "capstone": (PYPI + "d1/39/17747862222bb062e86b501f1f148d5ff589b77908b080d30f7f085cbfb7/"
+                     "capstone-5.0.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+                     "273fd8d747d2e35c88f91450be51a603ecfaafb00d96d9f315dcb8689c86193e"),  # tools/cpu/spin_waits.py (a game without a table)
         "shaderc": (CONDA + "linux-64/shaderc-2026.4-hcebf71c_1.conda",
                     "5cbe27520e948983863fd2f2ce59b2585d261430875c42c51a2dec823806694b"),
         "glslang": (CONDA + "linux-64/glslang-16.6.0-h980caa0_0.conda",
@@ -74,6 +77,9 @@ PINS = {
         "lz4": (PYPI + "67/79/a4e91872ab60f5e89bfad3e996ea7dc74a30f27253faf95865771225ccba/"
                 "lz4-4.4.5-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
                 "3b84a42da86e8ad8537aabef062e7f661f4a877d1c74d65606c49d835d36d668"),
+        "capstone": (PYPI + "45/d9/dbeadb9fcd461e608ce79b1cb647fed6baa812fa6e1c68b0ba5ef81291af/"
+                     "capstone-5.0.9-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+                     "41772ad0c71aa5d3e97d541e802593c2e71fb94ac7e20d4202f97ce2a3eb8ed5"),  # tools/cpu/spin_waits.py (a game without a table)
         "shaderc": (CONDA + "linux-aarch64/shaderc-2026.4-h2d14b02_1.conda",
                     "ec6a66f8c593745e8f4aca9ba0400e7a43fdd1a36257fdb4464c083075770259"),
         "glslang": (CONDA + "linux-aarch64/glslang-16.6.0-ha162a40_0.conda",
@@ -96,6 +102,9 @@ PINS = {
         "lz4": (PYPI + "18/2c/8332080fd293f8337779a440b3a143f85e374311705d243439a3349b81ad/"
                 "lz4-4.4.5-cp314-cp314-win_amd64.whl",
                 "92159782a4502858a21e0079d77cdcaade23e8a5d252ddf46b0652604300d7be"),
+        "capstone": (PYPI + "50/e6/6f06fdb6a9ed32b2f7cd9c036b92d5324112c3ef7080f2c71efc367d40dd/"
+                     "capstone-5.0.9-py3-none-win_amd64.whl",
+                     "732cedbbb56d42e723f14d7af6387f1454194a820b4b96b56d1e53f865ef85d0"),  # tools/cpu/spin_waits.py (a game without a table)
         "shaderc": (CONDA + "win-64/shaderc-2026.4-hef10606_1.conda",
                     "d73088bb4b4fc388252d53c1aba4522891c131b7020815198776668e47616caa"),
         "glslang": (CONDA + "win-64/glslang-16.6.0-h8fa7867_0.conda",
@@ -112,6 +121,8 @@ PINS = {
 SOURCES = ["recomp", "sm86", "tools/build/build.py", "tools/prepare", "tools/mod", "tools/romfs/resolution.py",
            "tools/i18n/catalog.py", "tools/i18n/game_texts.py", "i18n/game",
            "tools/shaders/extract.py", "tools/shaders/translate.py", "tools/shaders/shaderc_lib.py",
+           # a game this port has no version row for: its spin loops and NVN2 proc table, found at setup
+           "tools/cpu/spin_waits.py", "tools/gpu/nvn2_procs.py",
            "runtime/cpu",
            "runtime/core/boot/gamelib.h",
            "tools/github/signatures.toml"]  # fmt: skip  (the known errors tools/prepare/lastrun.py names)
@@ -251,7 +262,7 @@ def main() -> None:
     setup.mkdir(exist_ok=True)
     unpack_top(got["python"], setup / "python")
     site = setup / "python" / ("Lib/site-packages" if args.target == "windows" else "lib/python3.14/site-packages")
-    for wheel in ("numpy", "lz4"):
+    for wheel in ("numpy", "lz4", "capstone"):
         unpack_wheel(got[wheel], site)
     unpack_top(got["zig"], setup / "zig")
     glslc = setup / "glslc"
@@ -275,7 +286,7 @@ def main() -> None:
     print(f"{out}: {size / 2**20:.0f} MiB")
     if args.target == "linux" or (args.target == "linux-aarch64" and platform.machine() in ("aarch64", "arm64")):
         # the package's tools run here: a quick proof before a setup relies on them
-        subprocess.run([str(setup / "python/bin/python3"), "-I", "-c", "import numpy, lz4.block"], check=True)
+        subprocess.run([str(setup / "python/bin/python3"), "-I", "-c", "import numpy, lz4.block, capstone"], check=True)
         subprocess.run([str(setup / "zig/zig"), "version"], check=True)
 
 

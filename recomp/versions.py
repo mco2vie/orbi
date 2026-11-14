@@ -22,7 +22,7 @@ class Version:
     number: int  # RtGame.version (runtime/core/boot/gamelib.h): 100, 180
     main_build_id: str  # first 8 bytes of the NSO build id of exefs/main, hex
     romfs_files: int  # files of its RomFS, counted on a dump
-    patches: Path  # recomp/patches-*.txt for this executable
+    patches: Path | None  # recomp/patches-*.txt for this executable; None: setup finds the spin loops (unknown())
 
 
 VERSIONS = (
@@ -52,6 +52,22 @@ def detect_id(got: str) -> Version:
             return v
     names = ", ".join(v.name for v in VERSIONS)
     raise ValueError(f"exefs/main is not a known version of Mario Kart World ({names}; build id {got})")
+
+
+def unknown(got: str) -> Version:
+    """Another game (or a build of MKW not listed), set up from its own exefs: number 0, no RomFS count to check, and
+    no checked-in patch table (setup finds its spin loops, tools/prepare/prepare.py spin_table). The runtime runs it
+    with no fixed addresses (runtime/core/boot/version.c)."""
+    return Version(f"port-{got}", 0, got, 0, None)
+
+
+def detect_any(exefs: Path) -> Version:
+    """detect, or unknown() for a build not listed."""
+    got = main_build_id(exefs)
+    try:
+        return detect_id(got)
+    except ValueError:
+        return unknown(got)
 
 
 # The RomFS names its game data version in one file: System/Resource/ResourceSizeTable.Product.<number>.*.rsizetable.zs

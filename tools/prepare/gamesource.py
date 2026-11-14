@@ -15,7 +15,7 @@ from machine import Failed, emit
 from nup import Nup, is_nup
 
 # (prepare.py put recomp/ on the path, through build.py)
-from versions import ROMFS_PRODUCT, Version, build_id_of, detect_id, romfs_mismatch
+from versions import ROMFS_PRODUCT, Version, build_id_of, detect_id, romfs_mismatch, unknown
 
 ROMFS_MARGIN = 0.95  # a few short still passes: some dumping tools skip empty files
 
@@ -100,7 +100,9 @@ def check(src: Path, game: Path, runtime: Path | None = None) -> tuple[Path, Pat
     try:
         v = detect_id(got)
     except ValueError as e:
-        raise Failed(str(e), "version", got) from None
+        # another game (the orbitals-port branch): set up from its own exefs, with no RomFS count or version to check
+        v = unknown(got)
+        print(f"setup: {e}: setting it up as another game ({v.name})", file=sys.stderr)
     need = int(v.romfs_files * ROMFS_MARGIN)
     if is_nx(romfs):
         n = int(unpack(runtime, romfs, "-", "romfs").split()[1])
@@ -108,7 +110,7 @@ def check(src: Path, game: Path, runtime: Path | None = None) -> tuple[Path, Pat
         n = len(Nup(romfs).files("romfs")) if romfs.is_file() else count_files(romfs, need)
     if n < need:
         raise Failed(f"the RomFS has {n} files, {v.name} has {v.romfs_files}: an incomplete copy", "romfs", str(n))
-    if not is_nx(romfs):
+    if not is_nx(romfs) and v.number:
         res = Path(ROMFS_PRODUCT).parent
         names = (
             Nup(romfs).files("romfs")

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "fs.h"
+#include "gamelib.h"
 #include "hacks.h"
 #include "host.h"
 #include "kernel.h"
@@ -121,7 +122,7 @@ static void get_info(Cpu *c, uint64_t pc) {
         if (seed_random(c->x[3], &v)) break;   // core/hacks/seed.c: MKW_SEED
         if (!plat_random(&v, sizeof v)) rt_fatal("GetInfo 11: no random bytes from the system");
         break;
-    case 18: v = PROGRAM_ID; break;
+    case 18: v = rt_game()->port ? rt_game()->port->program_id : PROGRAM_ID; break;   // another game: its own
     case 20: v = user_exception_context(); break;   // the SDK keeps e.g. the dying message at +0x1C0
     case 23: v = 1; break;
     default: {

@@ -36,7 +36,7 @@ static uint64_t sdk_base(void) {
 
 // The driver's function for an NVN2 proc name, or 0.
 uint64_t nvn2_sdk_proc(const char *name) {
-    if (strncmp(name, "nvn", 3)) return 0;
+    if (strncmp(name, "nvn", 3) || !SDK_POINTERS) return 0;   // no table found for this sdk build (version 0)
     uint64_t base = sdk_base();
     int lo = 0, hi = SDK_LAST_INDEX;
     while (lo <= hi) {
