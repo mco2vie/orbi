@@ -22,6 +22,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 OVERRIDE = re.compile(r'HOST_(?:OVERRIDE|OBSERVER)\("([^"]+)"')
+OVERRIDE_MACRO = re.compile(r"HOST_(?:OVERRIDE|OBSERVER)\(\s*([A-Za-z_]\w*)\s*,")
+MACRO = re.compile(r'^\s*#\s*define\s+([A-Za-z_]\w*)\s+"(_Z[^"]+)"', re.M)
 # Namespaces whose SDK code ends in a console service session (service names from main.npdm).
 SERVICE_NS = {
     "nn::account": "acc:u0", "nn::hid": "hid", "nn::oe": "appletOE", "nn::am": "appletOE", "nn::friends": "friend:u",
@@ -36,9 +38,17 @@ SERVICE_NS = {
 
 
 def overrides() -> set[str]:
+    """Every symbol the runtime registers, also when the registration names a macro (fs_host.c's S_OPEN_FILE...)."""
+    texts = {src: src.read_text(errors="replace") for ext in ("*.c", "*.h") for src in (ROOT / "runtime").rglob(ext)}
+    macros = {}
+    for text in texts.values():
+        macros.update(MACRO.findall(text))
     names = set()
-    for src in (ROOT / "runtime").rglob("*.c"):
-        names.update(OVERRIDE.findall(src.read_text(errors="replace")))
+    for src, text in texts.items():
+        if src.suffix != ".c":
+            continue
+        names.update(OVERRIDE.findall(text))
+        names.update(macros[m] for m in OVERRIDE_MACRO.findall(text) if m in macros)
     return names
 
 
