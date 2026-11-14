@@ -179,6 +179,18 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
 
     md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
     out = []
+
+    def cstring(n: Nso, a: int) -> str | None:
+        if not 0 <= a < len(n.image):
+            return None
+        end = n.image.find(b"\0", a, a + 200)
+        raw = bytes(n.image[a : end if end >= 0 else a + 200])
+        try:
+            t = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+        return t if len(t) >= 3 and t.isprintable() else None
+
     for spec in specs:
         m = re.fullmatch(r"(\w+)\+(0x[0-9a-fA-F]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec.strip())
         if not m or m.group(1) not in mods:
@@ -187,9 +199,22 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
         n, start = mods[m.group(1)], int(m.group(2), 16) & ~3
         length = int(m.group(3), 0) if m.group(3) else 0x100
         got = plt_names(n)
+        pages: dict[str, int] = {}  # register -> adrp page, for the string an adrp + add pair names
         out.append(f"## {m.group(1)}+{start:#x}, {length:#x} bytes")
         for ins in md.disasm(bytes(n.image[start : start + length]), start):
             line = f"{m.group(1)}+{ins.address:#08x}  {ins.bytes.hex()}  {ins.mnemonic:<8} {ins.op_str}"
+            ops = [o.strip() for o in ins.op_str.split(",")]
+            if ins.mnemonic == "adrp" and len(ops) == 2:
+                pages[ops[0]] = int(ops[1].lstrip("#"), 16)
+            elif ins.mnemonic == "add" and len(ops) == 3 and ops[1] in pages and ops[2].startswith("#0x"):
+                a = pages[ops[1]] + int(ops[2][1:], 16)
+                txt = cstring(n, a)
+                if txt:
+                    line += f'   ; "{txt[:120]}"'
+            elif ins.mnemonic == "ldr" and len(ops) == 3 and ops[1].lstrip("[") in pages and ops[2].startswith("#0x"):
+                a = pages[ops[1].lstrip("[")] + int(ops[2].rstrip("]!")[1:], 16)
+                if a in got:
+                    line += f"   ; GOT of {got[a]}"
             if ins.mnemonic in ("bl", "b") or ins.mnemonic.startswith(("b.", "cb", "tb")):
                 t = int(ins.op_str.split("#")[-1], 16) if "#" in ins.op_str else None
                 name = plt_target(n, got, t) if t is not None else None
@@ -339,6 +364,7 @@ def main() -> None:
     w("\n## Imports from the SDK\n")
     sdk_exports = {s[0] for s in mods["sdk"].exports()} if "sdk" in mods else set()
     by_ns: dict[str, list[str]] = defaultdict(list)
+    by_ns_all: dict[str, list[str]] = defaultdict(list)
     total = covered = 0
     for name, n in mods.items():
         if name == "sdk":
@@ -347,10 +373,21 @@ def main() -> None:
             if sdk_exports and s[0] not in sdk_exports:
                 continue  # from a subsdk, not the SDK
             total += 1
+            by_ns_all[namespace(s[0])].append(s[0])
             if s[0] in replaced:
                 covered += 1
             else:
                 by_ns[namespace(s[0])].append(s[0])
+    lines = [
+        f"# {origin}: imports from the sdk, replaced (+) or not (-) by the runtime; the game's names, do not commit"
+    ]
+    for ns in sorted(by_ns_all):
+        lines.append(f"\n## {ns}")
+        lines += [f"{'+' if x in replaced else '-'} {x}" for x in sorted(by_ns_all[ns])]
+    imp = args.out.with_name("port_imports.txt")
+    imp.parent.mkdir(parents=True, exist_ok=True)
+    imp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    w(f"Every import, by namespace, with its state: `{imp.name}`.\n")
     w(
         f"Imports resolved by `sdk`: {total}; replaced by the runtime (same mangled name): {covered}. The rest run the "
         "SDK's own recompiled code: fine for pure libraries, a stop for code that opens a console service the runtime "
