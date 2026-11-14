@@ -848,3 +848,9 @@ static void ov_initialize(Cpu *c) {
 HOST_OVERRIDE("_ZN2nn2fs8MountRomEPKcPvm", ov_mount_rom);
 HOST_OVERRIDE("_ZN2nn2fs22QueryMountRomCacheSizeEPm", ov_query_cache);
 HOST_OVERRIDE("_ZN2nn2fs24InitializeForApplicationEv", ov_initialize);
+
+// void nn::fs::SetAllocator(void *(*alloc)(size_t), void (*free)(void *, size_t)): the SDK's fs code would ask the
+// file system proxy whether its access log is on (an IPC to fsp-srv, Orbitals' boot from main+0x5540); the host does
+// the file system with its own memory, so there is nothing to keep
+static void ov_fs_set_allocator(Cpu *c) { (void)c; }
+HOST_OVERRIDE("_ZN2nn2fs12SetAllocatorEPFPvmEPFvS1_mE", ov_fs_set_allocator);
