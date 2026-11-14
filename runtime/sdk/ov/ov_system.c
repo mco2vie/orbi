@@ -657,6 +657,19 @@ static void ov_to_calendar(Cpu *c) {
     ret_x(c, 0);
 }
 
+// Result ToCalendarTime(CalendarTime *out, CalendarAdditionalInfo *info, const PosixTime &t, const TimeZoneRule &rule):
+// Unreal's FPlatformTime::SystemTime (Orbitals main+0x1a5b0) passes the rule LoadTimeZoneRule made for the device
+// location, which is the host's time zone (ov_time2.c), so this is local time as the three-argument form; without it
+// the SDK's code asked the time service, got nothing, and the zero date failed DateTime.cpp's check at boot.
+static void ov_to_calendar_rule(Cpu *c) { ov_to_calendar(c); }
+
+// int GetDayOfWeek(int year, int month, int day): 0 Sunday .. 6 Saturday (Unreal's FPlatformTime::UtcTime, Orbitals
+// main+0x1a754); 1970-01-01 was a Thursday
+static void ov_day_of_week(Cpu *c) {
+    int64_t d = days_from_civil((int32_t)arg_x(c, 0), (unsigned)(int32_t)arg_x(c, 1), (unsigned)(int32_t)arg_x(c, 2));
+    ret_x(c, (uint64_t)(((d % 7) + 11) % 7));
+}
+
 // CalendarTime ToCalendarTimeInUtc(const PosixTime &t): 8 bytes in x0
 static void ov_to_calendar_utc(Cpu *c) {
     const int64_t *t = arg_p(c, 0);
@@ -854,6 +867,9 @@ HOST_OVERRIDE("_ZN2nn4time26StandardNetworkSystemClock14GetCurrentTimeEPNS0_9Pos
 HOST_OVERRIDE("_ZN2nn4time14ToCalendarTimeEPNS0_12CalendarTimeEPNS0_22CalendarAdditionalInfoERKNS0_9PosixTimeE",
               ov_to_calendar);
 HOST_OVERRIDE("_ZN2nn4time19ToCalendarTimeInUtcERKNS0_9PosixTimeE", ov_to_calendar_utc);
+HOST_OVERRIDE("_ZN2nn4time14ToCalendarTimeEPNS0_12CalendarTimeEPNS0_22CalendarAdditionalInfoERKNS0_9PosixTimeERKNS0_12TimeZoneRuleE",
+              ov_to_calendar_rule);
+HOST_OVERRIDE("_ZN2nn4time12GetDayOfWeekEiii", ov_day_of_week);
 HOST_OVERRIDE("_ZN2nn4time18ToPosixTimeFromUtcERKNS0_12CalendarTimeE", ov_to_posix_utc);
 HOST_OVERRIDE("_ZN2nn4time13ClockSnapshotC1Ev", ov_snapshot_init);
 HOST_OVERRIDE("_ZN2nn4time20CalculateSpanBetweenEPNS_8TimeSpanERKNS0_13ClockSnapshotES5_", ov_span_between);
