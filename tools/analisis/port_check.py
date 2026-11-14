@@ -15,17 +15,24 @@ The report names functions of the game: keep it in build/ (the default) and out 
 
 Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_check.md]
        DUMP_DIR holds exefs/ (or is the exefs folder itself). Takes ~10-60 s, mostly decompressing the modules.
+       --dump-data FILE writes what it reads from runtime/ (replaced SDK names, NVN tables) as JSON, for the Windows
+       executable (.github/workflows/port_check.yml): port_check.exe carries that file instead of the sources.
+Windows executable: drop the .nup on port_check.exe (or run it and paste the path); the report goes next to the exe.
 """
 
 import argparse
+import json
 import re
 import struct
 import sys
+import tempfile
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
+FROZEN = getattr(sys, "frozen", False)  # port_check.exe (PyInstaller): no runtime/ sources, their data baked in
 ROOT = Path(__file__).resolve().parents[2]
+DATA = Path(getattr(sys, "_MEIPASS", ROOT)) / "port_check_data.json"
 sys.path.insert(0, str(ROOT / "recomp"))
 sys.path.insert(0, str(ROOT / "tools/prepare"))
 sys.path.insert(0, str(ROOT / "tools/gpu"))
@@ -96,6 +103,15 @@ def namespace(mangled: str) -> str:
     return "::".join(parts) if parts[0] == "nn" else parts[0]
 
 
+def runtime_data() -> tuple[set[str], set[str], set[str]]:
+    """(SDK names the runtime replaces, NVN names in its proc tables, NVN names implemented): from the sources, or
+    from the file baked into the executable."""
+    if FROZEN:
+        d = json.loads(DATA.read_text())
+        return set(d["replaced"]), set(d["nvn_listed"]), set(d["nvn_done"])
+    return overrides(), *runtime_nvn()
+
+
 def runtime_nvn() -> tuple[set[str], set[str]]:
     """(names in the runtime's proc tables, names with an implementation)."""
     listed = set()
@@ -132,13 +148,25 @@ def npdm_services(data: bytes) -> list[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("game", type=Path, help="the dump: a .nup package or a folder with exefs/")
-    ap.add_argument("--out", type=Path, default=ROOT / "build/port_check.md")
+    ap.add_argument("game", type=Path, nargs="?", help="the dump: a .nup package or a folder with exefs/")
+    default_out = Path(sys.executable).parent / "port_check.md" if FROZEN else ROOT / "build/port_check.md"
+    ap.add_argument("--out", type=Path, default=default_out)
+    ap.add_argument("--dump-data", type=Path, help="write the runtime's tables as JSON (for the executable) and exit")
     args = ap.parse_args()
+    if args.dump_data:
+        replaced, listed, done = runtime_data()
+        d = {"replaced": sorted(replaced), "nvn_listed": sorted(listed), "nvn_done": sorted(done)}
+        args.dump_data.parent.mkdir(parents=True, exist_ok=True)
+        args.dump_data.write_text(json.dumps(d))
+        print(f"{args.dump_data}: {len(replaced)} replaced SDK names, {len(listed)} NVN procs, {len(done)} implemented")
+        return
+    if args.game is None:  # started with a double click: ask
+        typed = input("Drag the .nup file (or the dump folder) here and press Enter: ").strip().strip('"')
+        args.game = Path(typed)
     t0 = time.time()
     files, origin = load_exefs(args.game)
-    tmp = ROOT / "build/port_check_exefs"
-    tmp.mkdir(parents=True, exist_ok=True)
+    tmp_dir = tempfile.TemporaryDirectory(prefix="port_check_")
+    tmp = Path(tmp_dir.name)
     mods = {}
     for name, data in files.items():
         n = nso_of(name, data, tmp)
@@ -197,7 +225,7 @@ def main() -> None:
 
     # graphics
     w("\n## Graphics API\n")
-    listed, done = runtime_nvn()
+    replaced, listed, done = runtime_data()
     names_in_code = set()
     for img in images.values():
         names_in_code.update(m.decode() for m in NVN_NAME.findall(img))
@@ -242,7 +270,6 @@ def main() -> None:
 
     # SDK imports
     w("\n## Imports from the SDK\n")
-    replaced = overrides()
     sdk_exports = {s[0] for s in mods["sdk"].exports()} if "sdk" in mods else set()
     by_ns: dict[str, list[str]] = defaultdict(list)
     total = covered = 0
@@ -300,13 +327,26 @@ def main() -> None:
     w(f"\n_{time.time() - t0:.0f} s._")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text("\n".join(L) + "\n")
-    for p in tmp.iterdir():
-        p.unlink()
-    tmp.rmdir()
+    args.out.write_text("\n".join(L) + "\n", encoding="utf-8")
+    tmp_dir.cleanup()
     print("\n".join(L))
     print(f"\nwritten to {args.out}", file=sys.stderr)
 
 
 if __name__ == "__main__":
-    main()
+    if not FROZEN:
+        main()
+    else:  # a console window that closes at the end: keep it open so the result (or the error) can be read
+        try:
+            main()
+        except SystemExit as e:
+            if e.code not in (None, 0):
+                print(e.code if isinstance(e.code, str) else f"stopped ({e.code})")
+        except Exception:  # noqa: BLE001 - shown to the player, who sends it
+            import traceback
+
+            traceback.print_exc()
+        try:
+            input("\nPress Enter to close.")
+        except EOFError:  # no console to read from
+            pass
