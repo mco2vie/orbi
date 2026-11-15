@@ -18,7 +18,7 @@ Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_c
        --dump-data FILE writes what it reads from runtime/ (replaced SDK names, NVN tables) as JSON, for the Windows
        executable (.github/workflows/port_check.yml): port_check.exe carries that file instead of the sources.
        --disasm main+0x181bf8[:0x180] sdk:clock_gettime[:0x200] ...: instead of the report, those ranges (an offset or
-       an exported symbol) disassembled (capstone), with calls through the PLT named by their import, direct calls by
+       an exported symbol; a trailing * also follows its direct calls two levels) disassembled (capstone), with calls through the PLT named by their import, direct calls by
        the module's exported symbol, and the module + offset of every branch target, to port_disasm.txt (a
        crash in orbital.log names the addresses). It is the game's own code: send it, never commit it.
 Windows executable: drop the .nup on port_check.exe (or run it and paste the path); the report goes next to the exe.
@@ -215,8 +215,14 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
     # module -> address -> exported name, for MODULE:symbol specs and for direct calls inside a module (the SDK's
     # musl calls its own clock_gettime with a bl, not through the PLT)
     defined = {mn: {s[3]: s[0] for s in n.exports() if s[3]} for mn, n in mods.items()}
-    for spec in specs:
-        spec = spec.strip()
+    # A spec ending in * also disassembles the functions its direct calls and tail branches reach in the same module
+    # (not PLT imports), two levels deep and at most 24 of them, 0x180 bytes each: one run answers "what does this
+    # call" without a second round trip.
+    queue = [(s.strip().rstrip("*"), 2 if s.strip().endswith("*") else 0) for s in specs]
+    seen: set[tuple[str, int]] = set()
+    extra = 0
+    while queue:
+        spec, depth = queue.pop(0)
         m = re.fullmatch(r"(\w+)\+(0x[0-9a-fA-F]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec)
         ms = None if m else re.fullmatch(r"(\w+):([\w.$@]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec)
         if ms and ms.group(1) in mods:
@@ -230,9 +236,13 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
         else:
             out.append(f"## {spec}: not MODULE+0xOFFSET[:LENGTH] or MODULE:symbol[:LENGTH] of {', '.join(mods)}")
             continue
+        if (mname, start) in seen:
+            continue
+        seen.add((mname, start))
         n = mods[mname]
         length = int(ln, 0) if ln else 0x100
         got = plt_names(n)
+        callees: list[int] = []
         pages: dict[str, int] = {}  # register -> adrp page, for the string an adrp + add pair names
         here = defined[mname].get(start)
         out.append(f"## {mname}+{start:#x}{f' ({here})' if here else ''}, {length:#x} bytes")
@@ -253,11 +263,19 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
             if ins.mnemonic in ("bl", "b") or ins.mnemonic.startswith(("b.", "cb", "tb")):
                 t = int(ins.op_str.split("#")[-1], 16) if "#" in ins.op_str else None
                 name = plt_target(n, got, t) if t is not None else None
+                imported = name is not None
                 name = name or (defined[mname].get(t) if t is not None else None)
                 if name:
                     line += f"   ; -> {name}"
+                far = t is not None and not start <= t < start + length
+                if depth and not imported and far and ins.mnemonic in ("bl", "b") and t not in callees:
+                    callees.append(t)
             out.append(line)
         out.append("")
+        for t in callees:
+            if extra < 24 and (mname, t) not in seen:
+                extra += 1
+                queue.append((f"{mname}+{t:#x}:0x180", depth - 1))
     return out
 
 
