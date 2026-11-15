@@ -340,6 +340,15 @@ static void ov_aoc_base_id(Cpu *c) {                       // Bit64 GetAddOnCont
     ret_x(c, (rt_game()->port ? rt_game()->port->program_id : 0) + 0x1000);
 }
 static void ov_aoc_prepare(Cpu *c) { ret_x(c, FS_R_TARGET_NOT_FOUND); }   // Result PrepareAddOnContent(int index)
+// void GetAddOnContentListChangedEvent(nn::os::SystemEvent *): a real event the game can wait on (Orbitals does, on
+// its own thread from main+0xd91c), never signalled: the host's list does not change. As ov_chat.c's attach:
+// nn::os::SystemEvent holds its SystemEventType first.
+static void ov_aoc_changed_event(Cpu *c) {
+    static uint64_t create;
+    if (!create && !(create = ldr_symbol("_ZN2nn2os17CreateSystemEventEPNS0_15SystemEventTypeENS0_14EventClearModeEb")))
+        rt_fatal("aoc: nn::os::CreateSystemEvent not found");
+    rt_call(c, create, 3, arg_x(c, 0), 0, 0);   // manual clear, not interprocess
+}
 
 static void ov_err_context(Cpu *c) { (void)c; rt_log("err: error contexts stay local"); }
 static void ov_pctl_initialize(Cpu *c) { (void)c; rt_log("pctl: no parental controls"); }
@@ -861,6 +870,7 @@ HOST_OVERRIDE("_ZN2nn3aoc16ListAddOnContentEPiiiNS_13ApplicationIdE", ov_aoc_lis
 HOST_OVERRIDE("_ZN2nn3aoc21GetAddOnContentBaseIdEv", ov_aoc_base_id);
 HOST_OVERRIDE("_ZN2nn3aoc21GetAddOnContentBaseIdENS_13ApplicationIdE", ov_aoc_base_id);
 HOST_OVERRIDE("_ZN2nn3aoc19PrepareAddOnContentEi", ov_aoc_prepare);
+HOST_OVERRIDE("_ZN2nn3aoc31GetAddOnContentListChangedEventEPNS_2os11SystemEventE", ov_aoc_changed_event);
 
 HOST_OVERRIDE("_ZN2nn3err26InitializeContextWriterApiEv", ov_err_context);
 HOST_OVERRIDE("_ZN2nn4pctl10InitializeEv", ov_pctl_initialize);
