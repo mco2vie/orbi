@@ -482,7 +482,7 @@ void kern_threads_dump(void) {
         int k = t->wkind >= 0 && t->wkind < 5 ? t->wkind : 0;
         rt_logf("  thread %#x \"%s\" prio %d core %d%s: %s %#llx%s\n", t->handle, name, t->prio, t->cur_core,
                 t == tcur ? " (this one)" : "", wk[k], (unsigned long long)(k ? t->waddr : 0),
-                dg_in_host(t) ? ", in a host call" : "");
+                dg_in_host(t) ? ", inside an SVC or host function" : "");
         rt_logf("    lr %s\n", ldr_describe(c->x[30], d, sizeof d));
         uint64_t fp = c->x[29];
         for (int f = 0; f < 12 && fp && !(fp & 7) && plat_mem_readable(fp, 16); f++) {

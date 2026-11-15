@@ -22,6 +22,9 @@
 #define PROGRAM_ID 0x0400c3f00006e000ull   // Mario Kart World (main.npdm ACI0)
 
 static uint64_t g_svcs;
+// The first SVC (the guest's boot), for the run time an abort reports. Not a constructor: rt_ticks' scale is set by
+// one in main.c, and constructors of different files run in no fixed order.
+static uint64_t g_start_ns, g_start_ticks;
 void (*volatile svc_test_exit_hook)(unsigned code);
 
 RtStats rt_stats(void) {
@@ -119,6 +122,11 @@ static __attribute__((noreturn)) void svc_fatal(Cpu *c, uint32_t imm, uint64_t p
     if (imm == 0x26) {
         abort_texts(c);
         kern_threads_dump();   // a timeout abort ("GameThread timed out waiting for RenderThread") needs the others
+        // A timeout abort is only plausible after its timeout: Unreal's waits about 25 s. Both clocks since the start:
+        // the host's, and the guest's GetSystemTick (rt_ticks, turbo included), which the game measures with.
+        rt_logf("  run time at the abort: %.2f s by the host clock, %.2f s by the guest's GetSystemTick\n",
+                (plat_now_ns() - g_start_ns) / 1e9, (double)(rt_ticks() - g_start_ticks) / RT_TICK_HZ);
+        rt_logf("  (the run time counts from the guest's first SVC, at its boot)\n");
     }
     rt_fatal("svc #%#x %s is not implemented", imm, name);
 }
@@ -212,7 +220,10 @@ void rt_svc(Cpu *c, uint32_t imm, uint64_t pc) {
 }
 
 static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
-    __atomic_fetch_add(&g_svcs, 1, __ATOMIC_RELAXED);
+    if (__builtin_expect(!__atomic_fetch_add(&g_svcs, 1, __ATOMIC_RELAXED), 0)) {
+        g_start_ns = plat_now_ns();
+        g_start_ticks = rt_ticks();
+    }
     if (rt_trace & RT_TRACE_SVC) {
         char at[160];
         rt_log("svc %#x at %s x0=%#llx x1=%#llx x2=%#llx x3=%#llx", imm, ldr_describe(pc, at, sizeof at),
