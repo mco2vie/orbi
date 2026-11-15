@@ -187,9 +187,20 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
         raw = bytes(n.image[a : end if end >= 0 else a + 200])
         try:
             t = raw.decode("utf-8")
+            if len(t) >= 3 and t.isprintable():
+                return f'"{t}"'
+        except UnicodeDecodeError:
+            pass
+        # UTF-16LE, Unreal's TEXT("...") (TCHAR is char16_t on the Switch): up to the first 16-bit 0
+        w = bytes(n.image[a : a + 400])
+        stop = next((i for i in range(0, len(w) - 1, 2) if w[i] == 0 and w[i + 1] == 0), -1)
+        if stop < 6:
+            return None
+        try:
+            t = w[:stop].decode("utf-16-le")
         except UnicodeDecodeError:
             return None
-        return t if len(t) >= 3 and t.isprintable() else None
+        return f'u"{t}"' if t.isprintable() else None
 
     for spec in specs:
         m = re.fullmatch(r"(\w+)\+(0x[0-9a-fA-F]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec.strip())
@@ -210,7 +221,7 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
                 a = pages[ops[1]] + int(ops[2][1:], 16)
                 txt = cstring(n, a)
                 if txt:
-                    line += f'   ; "{txt[:120]}"'
+                    line += f"   ; {txt[:160]}"
             elif ins.mnemonic == "ldr" and len(ops) == 3 and ops[1].lstrip("[") in pages and ops[2].startswith("#0x"):
                 a = pages[ops[1].lstrip("[")] + int(ops[2].rstrip("]!")[1:], 16)
                 if a in got:

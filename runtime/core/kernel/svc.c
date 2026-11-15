@@ -52,6 +52,60 @@ static const struct { uint32_t imm; const char *name; } unimplemented[] = {
     {0x51, "MapTransferMemory"}, {0x52, "UnmapTransferMemory"}, {0x70, "CreatePort"}, {0x72, "ConnectToPort"},
 };
 
+// The text at a, ASCII or UTF-16LE (Unreal's TCHAR), when it is one: at least 6 printable characters then a 0.
+// Written to out (cap bytes, ASCII, longer text cut); 0 when a is not text.
+static int guest_text(uint64_t a, char *out, size_t cap) {
+    if (!a || (a >> 48)) return 0;
+    uint64_t n = 4096 - (a & 4095);
+    if (n > 512) n = 512;
+    if (!readable(a, n)) return 0;
+    const uint8_t *p = (const uint8_t *)(uintptr_t)a;
+    for (int wide = 0; wide < 2; wide++) {
+        size_t step = wide ? 2 : 1, k = 0, i = 0;
+        for (; i + step <= n; i += step) {
+            unsigned ch = wide ? (unsigned)(p[i] | p[i + 1] << 8) : p[i];
+            if (!ch) break;
+            if (ch < 0x20 || ch > 0x7e) {
+                if (ch != '\n' && ch != '\t') { k = 0; break; }
+                ch = ' ';
+            }
+            if (k + 1 < cap) out[k] = (char)ch;
+            k++;
+        }
+        if (k >= 6 && i + step <= n) {   // ended by its 0, not by the window
+            out[k + 1 < cap ? k : cap - 1] = 0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// An SDK or engine abort usually has its message in memory the aborting frames point at (Unreal's fatal error text
+// is built in a heap buffer, then GError->Serialize aborts, Orbitals main+0x1f9780): the registers and the 8-byte
+// words of the guest stack above sp that point at text are printed, so the log says why without a disassembly.
+static void abort_texts(const Cpu *c) {
+    char t[240];
+    uint64_t seen[24];
+    int ns = 0;
+    rt_logf("  texts the abort's registers and stack point at:\n");
+    for (int r = 0; r < 31; r++)
+        if (guest_text(c->x[r], t, sizeof t)) {
+            rt_logf("    x%-2d \"%s\"\n", r, t);
+            if (ns < 24) seen[ns++] = c->x[r];
+        }
+    uint64_t sp = c->sp;
+    for (uint64_t off = 0; off < (64u << 10) && ns < 24; off += 8) {
+        if (!((sp + off) & 4095) && !readable(sp + off, 8)) break;
+        if (off == 0 && !readable(sp, 8)) break;
+        uint64_t v = LD64(sp + off);
+        int dup = 0;
+        for (int i = 0; i < ns; i++) dup |= seen[i] == v;
+        if (dup || !guest_text(v, t, sizeof t)) continue;
+        seen[ns++] = v;
+        rt_logf("    sp+%#llx \"%s\"\n", (unsigned long long)off, t);
+    }
+}
+
 static __attribute__((noreturn)) void svc_fatal(Cpu *c, uint32_t imm, uint64_t pc, const char *why) {
     const char *name = "unknown";
     for (unsigned i = 0; i < sizeof unimplemented / sizeof *unimplemented; i++)
@@ -62,6 +116,7 @@ static __attribute__((noreturn)) void svc_fatal(Cpu *c, uint32_t imm, uint64_t p
             ldr_describe(pc, at, sizeof at), why, (unsigned long long)c->x[0], (unsigned long long)c->x[1],
             (unsigned long long)c->x[2], (unsigned long long)c->x[3]);
     kern_backtrace(c);
+    if (imm == 0x26) abort_texts(c);
     rt_fatal("svc #%#x %s is not implemented", imm, name);
 }
 
