@@ -800,9 +800,12 @@ uint32_t mem_query(uint64_t a, RtMemoryInfo *out) {
     } else if (a - L.hostfn.base < L.hostfn.size) {
         r = (RtMemoryInfo){.base = L.hostfn.base, .size = L.hostfn.size, .state = ST_INACCESSIBLE};
     } else {
+        // Inaccessible, not Code: still never free for the SDK, but nothing to read. As Code RX, nn::ro's module
+        // scan in the C++ unwinder (ro::detail::FindModuleHeader, from _Unwind_RaiseException) took the gap after
+        // Orbitals' subsdk0 for a module and read it: a host fault at 0x7009ed0000 (port-step1q).
         taken_gap(a, &r.base, &r.size);
-        r.state = ST_CODE;
-        r.perm = PERM_RX;
+        r.state = ST_INACCESSIBLE;
+        r.perm = PERM_NONE;
     }
     // Moved stacks: the destination is Stack, the source Normal without access; free and normal regions around them
     // are clipped (MNG services.c).
