@@ -70,6 +70,8 @@ static void cb_loader_ready(Cpu *c) {
 
 // DT_INIT registers the module with musl (__nnmusl_init_dso) and runs its init_array; the constructor flag reads 2
 // afterwards (MacNativeGames loader.c:458-462).
+void ov_musl_clock_hooks(const char *when);   // sdk/ov/ov_time2.c
+
 static void cb_module_inits(Cpu *c) {
     if (plat_cas32(&inits_done, 0, 0)) rt_fatal("boot: module constructors requested twice");
     const RtInitCount *expected_inits = rt_version()->inits;
@@ -86,6 +88,7 @@ static void cb_module_inits(Cpu *c) {
             uint32_t state = ctor_state(m);
             rt_logf("boot: DT_INIT %s state=%u (%llu)\n", m->name, state, (unsigned long long)entries);
             if (state != CTOR_DONE) rt_fatal("boot: %s DT_INIT left its constructor flag at %u, not 2", m->name, state);
+            ov_musl_clock_hooks(m->name);   // sdk/ov/ov_time2.c: a constructor may have put musl's clock stubs back
         }
         plat_xchg32(&inits_done, 1);
         return;
