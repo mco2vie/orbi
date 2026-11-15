@@ -154,10 +154,22 @@ def discover(mod):
     mat = mat[(mat >= mod.lo) & (mat < mod.hi) & (mat % 4 == 0)]
     mat = (mat - pc0) >> 2
 
+    # A prologue right after padding: PACIBSP, PACIASP or BTI c with a zero word (`udf #0`, the linker's fill between
+    # functions) before it. Code never falls through a `udf`, so the prologue is only entered by a jump to it: a
+    # function whose address the steps above do not see. Orbitals (Unreal) calls main+0x4137a50 through a C++
+    # member-function pointer `{ptr, adj}` it reads from an object (`blr` at main+0x122b98c): "no function at guest
+    # pc main+0x4137a50: not a function start".
+    prologue = (w == 0xD503237F) | (w == 0xD503233F) | (w == 0xD503245F)
+    prologue[1:] &= w[:-1] == 0
+    prologue[0] = False
+    pro = idx(prologue)
+
     bl_tgt = bl_tgt[(bl_tgt >= 0) & (bl_tgt < n)]
-    starts = np.unique(np.concatenate([seeds, bl_tgt, mat]))
+    starts = np.unique(np.concatenate([seeds, bl_tgt, mat, pro]))
     stats = {'seeds': int(len(seeds)), 'bl_targets': int(len(np.unique(bl_tgt))),
-             'materialised_targets': int(len(np.unique(mat))), 'initial_starts': int(len(starts))}
+             'materialised_targets': int(len(np.unique(mat))), 'padded_prologues': int(len(pro)),
+             'padded_prologues_new': int(len(np.setdiff1d(pro, np.concatenate([seeds, bl_tgt, mat])))),
+             'initial_starts': int(len(starts))}
 
     rounds = 0
     while True:

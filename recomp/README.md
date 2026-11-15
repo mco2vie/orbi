@@ -17,7 +17,9 @@ Changes against the original:
 - `gen.py`: the `GENERATED_MARKER` (`MKW_RECOMP_…`) lives in the file itself instead of `tools/check_content.py`;
   `tools/git/pre-commit` watches for it. Every back edge of a loop without calls carries a compiler barrier
   (`__asm__ volatile("" ::: "memory")`): without it clang hoists out of the loop the loads another thread changes and
-  leaves a `jmp` to itself (`main+0x27ebb20`, which `spin_waits.py` does not recognise).
+  leaves a `jmp` to itself (`main+0x27ebb20`, which `spin_waits.py` does not recognise). Function discovery also takes
+  a `PACIBSP`/`PACIASP`/`BTI c` right after a zero word (the linker's padding) as a start: Orbitals calls
+  `main+0x4137a50` only through a C++ member-function pointer, and no seed or materialised address names it.
 
 Usage: `uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt`
 (~2.5 min, 887 MB of C); for 1.8.0, `--patches recomp/patches-mkw-180.txt` (`uv run recomp/versions.py game/exefs`
