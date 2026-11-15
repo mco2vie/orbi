@@ -17,8 +17,9 @@ Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_c
        DUMP_DIR holds exefs/ (or is the exefs folder itself). Takes ~10-60 s, mostly decompressing the modules.
        --dump-data FILE writes what it reads from runtime/ (replaced SDK names, NVN tables) as JSON, for the Windows
        executable (.github/workflows/port_check.yml): port_check.exe carries that file instead of the sources.
-       --disasm main+0x181bf8[:0x180] ...: instead of the report, those ranges disassembled (capstone), with calls
-       through the PLT named by their import and the module + offset of every branch target, to port_disasm.txt (a
+       --disasm main+0x181bf8[:0x180] sdk:clock_gettime[:0x200] ...: instead of the report, those ranges (an offset or
+       an exported symbol) disassembled (capstone), with calls through the PLT named by their import, direct calls by
+       the module's exported symbol, and the module + offset of every branch target, to port_disasm.txt (a
        crash in orbital.log names the addresses). It is the game's own code: send it, never commit it.
 Windows executable: drop the .nup on port_check.exe (or run it and paste the path); the report goes next to the exe.
 Run it with no argument and it also asks for the --disasm ranges (Enter for the report).
@@ -211,18 +212,32 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
             return None
         return f'u"{t}"' if t.isprintable() else None
 
+    # module -> address -> exported name, for MODULE:symbol specs and for direct calls inside a module (the SDK's
+    # musl calls its own clock_gettime with a bl, not through the PLT)
+    defined = {mn: {s[3]: s[0] for s in n.exports() if s[3]} for mn, n in mods.items()}
     for spec in specs:
-        m = re.fullmatch(r"(\w+)\+(0x[0-9a-fA-F]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec.strip())
-        if not m or m.group(1) not in mods:
-            out.append(f"## {spec}: not MODULE+0xOFFSET[:LENGTH] of {', '.join(mods)}")
+        spec = spec.strip()
+        m = re.fullmatch(r"(\w+)\+(0x[0-9a-fA-F]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec)
+        ms = None if m else re.fullmatch(r"(\w+):([\w.$@]+)(?::(0x[0-9a-fA-F]+|\d+))?", spec)
+        if ms and ms.group(1) in mods:
+            at = next((a for a, nm in defined[ms.group(1)].items() if nm == ms.group(2)), None)
+            if at is None:
+                out.append(f"## {spec}: {ms.group(2)} is not an exported symbol of {ms.group(1)}")
+                continue
+            mname, start, ln = ms.group(1), at & ~3, ms.group(3)
+        elif m and m.group(1) in mods:
+            mname, start, ln = m.group(1), int(m.group(2), 16) & ~3, m.group(3)
+        else:
+            out.append(f"## {spec}: not MODULE+0xOFFSET[:LENGTH] or MODULE:symbol[:LENGTH] of {', '.join(mods)}")
             continue
-        n, start = mods[m.group(1)], int(m.group(2), 16) & ~3
-        length = int(m.group(3), 0) if m.group(3) else 0x100
+        n = mods[mname]
+        length = int(ln, 0) if ln else 0x100
         got = plt_names(n)
         pages: dict[str, int] = {}  # register -> adrp page, for the string an adrp + add pair names
-        out.append(f"## {m.group(1)}+{start:#x}, {length:#x} bytes")
+        here = defined[mname].get(start)
+        out.append(f"## {mname}+{start:#x}{f' ({here})' if here else ''}, {length:#x} bytes")
         for ins in md.disasm(bytes(n.image[start : start + length]), start):
-            line = f"{m.group(1)}+{ins.address:#08x}  {ins.bytes.hex()}  {ins.mnemonic:<8} {ins.op_str}"
+            line = f"{mname}+{ins.address:#08x}  {ins.bytes.hex()}  {ins.mnemonic:<8} {ins.op_str}"
             ops = [o.strip() for o in ins.op_str.split(",")]
             if ins.mnemonic == "adrp" and len(ops) == 2:
                 pages[ops[0]] = int(ops[1].lstrip("#"), 16)
@@ -238,6 +253,7 @@ def disasm(mods: dict[str, Nso], specs: list[str]) -> list[str]:
             if ins.mnemonic in ("bl", "b") or ins.mnemonic.startswith(("b.", "cb", "tb")):
                 t = int(ins.op_str.split("#")[-1], 16) if "#" in ins.op_str else None
                 name = plt_target(n, got, t) if t is not None else None
+                name = name or (defined[mname].get(t) if t is not None else None)
                 if name:
                     line += f"   ; -> {name}"
             out.append(line)
@@ -251,7 +267,7 @@ def main() -> None:
     default_out = Path(sys.executable).parent / "port_check.md" if FROZEN else ROOT / "build/port_check.md"
     ap.add_argument("--out", type=Path, default=default_out)
     ap.add_argument("--dump-data", type=Path, help="write the runtime's tables as JSON (for the executable) and exit")
-    ap.add_argument("--disasm", nargs="+", metavar="MOD+0xOFF[:LEN]", help="disassemble these ranges instead")
+    ap.add_argument("--disasm", nargs="+", metavar="MOD+0xOFF[:LEN] | MOD:symbol[:LEN]", help="disassemble these ranges instead")
     args = ap.parse_args()
     if args.dump_data:
         replaced, listed, done = runtime_data()
