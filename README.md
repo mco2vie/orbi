@@ -1,6 +1,6 @@
 # pmocer-latibro
 
-A static recompilation project for Mario Kart World, built around a custom runtime and shader translation pipeline.
+A static recompilation project for orbital built around a custom runtime and shader translation pipeline.
 
 This repository aims to recreate the game's behavior on x86-64 by recompiling the Switch 2 AArch64 code into C, replacing the console runtime with a native implementation, and translating SM86 shaders into SPIR-V for Vulkan-backed execution.
 
