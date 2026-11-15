@@ -5,27 +5,35 @@
 
 #include "host.h"
 
-// TouchScreenState<16>: sampling number (8), touch count (4), reserved (4), 16 TouchState of 0x28 bytes.
-#define TOUCH_STATE_16_SIZE (0x10 + 16 * 0x28)
+// TouchScreenState<N>: sampling number (8), touch count (4), reserved (4), N TouchState of 0x28 bytes.
+#define TOUCH_STATE_SIZE(n) (0x10 + (n) * 0x28)
 
 static uint64_t samples;
 
 // void nn::hid::InitializeTouchScreen()
 static void ov_initialize_touch(Cpu *c) { (void)c; }
 
-// int nn::hid::GetTouchScreenStates<16>(TouchScreenState<16> *out, int count): the newest sample first.
-static void ov_touch_states(Cpu *c) {
+// int nn::hid::GetTouchScreenStates<N>(TouchScreenState<N> *out, int count): the newest sample first, one sample.
+static void touch_states(Cpu *c, int touches) {
     uint8_t *out = arg_p(c, 0);
     int count = (int)arg_x(c, 1);
     if (!out || count < 1) {
         ret_x(c, 0);
         return;
     }
-    memset(out, 0, TOUCH_STATE_16_SIZE);
+    memset(out, 0, TOUCH_STATE_SIZE(touches));
     uint64_t n = __atomic_add_fetch(&samples, 1, __ATOMIC_RELAXED);
     memcpy(out, &n, sizeof n);
     ret_x(c, 1);
 }
 
+// Each N is its own template instance with its own name: MKW reads <16>, Orbitals (Unreal) <1>, whose SDK body
+// aborted in nn::diag::detail::Abort (svc Break at sdk+0x1a4540) without the HID shared memory. All 16 are answered.
+#define TOUCH_N(n)                                                                                                   \
+    static void ov_touch_states_##n(Cpu *c) { touch_states(c, n); }                                                  \
+    HOST_OVERRIDE("_ZN2nn3hid20GetTouchScreenStatesILm" #n "EEEiPNS0_16TouchScreenStateIXT_EEEi", ov_touch_states_##n);
+
+TOUCH_N(1) TOUCH_N(2) TOUCH_N(3) TOUCH_N(4) TOUCH_N(5) TOUCH_N(6) TOUCH_N(7) TOUCH_N(8)
+TOUCH_N(9) TOUCH_N(10) TOUCH_N(11) TOUCH_N(12) TOUCH_N(13) TOUCH_N(14) TOUCH_N(15) TOUCH_N(16)
+
 HOST_OVERRIDE("_ZN2nn3hid21InitializeTouchScreenEv", ov_initialize_touch);
-HOST_OVERRIDE("_ZN2nn3hid20GetTouchScreenStatesILm16EEEiPNS0_16TouchScreenStateIXT_EEEi", ov_touch_states);
