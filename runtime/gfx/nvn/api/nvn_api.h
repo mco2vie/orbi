@@ -80,6 +80,7 @@ uint64_t nvn_tex_view_offset(const tex_t *t, const view_t *v);
 // holds no OP_CALL or OP_JUMP. Texture pointers in payloads (p_set_rt, p_copy_b2t, p_copy_t2t, p_clear_tex) are
 // immutable host copies that live for the run, one per tex_t.serial. Deferred binds (p_bind_handles.src != 0) hold the
 // handles read at submit (nvn_submit_prepare). Payloads of the ops nvn_obj.h does not define:
+typedef struct { sync_t *sync; } p_fence_sync;   // OP_FENCE_SYNC
 typedef struct { volatile uint32_t *val; uint32_t mode, value; } p_signal_event;   // OP_SIGNAL_EVENT; mode: NVNeventSignalMode
 typedef p_signal_event p_wait_event;                                                // OP_WAIT_EVENT; mode: NVNeventWaitMode
 // OP_QUEUE: the game's queue whose ops follow (only in the streams nvn_qorder.c builds, where two queues' work takes
@@ -120,6 +121,10 @@ typedef struct { uint64_t addr, size; int kind; } NvnEarlyDst;   // MKW_EARLY_RE
 extern NvnEarlyDst nvn_sub_dst[NVN_EARLY_MAX];
 extern int nvn_sub_ndst;
 extern volatile uint32_t *nvn_sub_event_val[64];
+// OP_FENCE_SYNC (nvnCommandBufferFenceSync): the syncs this submission fences, the first 64 (QueueSubmitCommands sets
+// them to its fence, as nvnQueueFenceSync does to the newest)
+extern sync_t *nvn_sub_sync[64];
+extern uint32_t nvn_sub_syncs;
 int nvn_report_at_submit(void);   // MKW_REPORT_AT_SUBMIT (nvn_api_cmd.c)   // the submission being prepared (nvn_api_cmd.c)
 uint64_t nvn_submit_count(void);                           // QueueSubmitCommands calls so far
 const char *nvn_op_name(uint32_t op);                      // "DRAW_IDX", ...; "?" past OP_COUNT_

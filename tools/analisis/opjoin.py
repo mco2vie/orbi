@@ -8,9 +8,9 @@ reutilizada, 08/11/2026: the reused draws cost 1.4-3.7 us replayed as usual, so 
 
 The files come from `build/mkw --replay` with MKW_TRACE=draw MKW_OP_DUMP=FILE (runtime/gfx/vk/exec/vk_exec.c): one
 line per draw or dispatch, "submission op-position kind ticks". Kinds above the NVN ops are vk_exec.c's OPX_* (the
-reused and captured ones by default 54 and 55: OP_COUNT_ + 3 and + 4).
+reused and captured ones by default 55 and 56: OP_COUNT_ + 3 and + 4).
 
-Usage: uv run tools/analisis/opjoin.py A.txt B.txt [--hit 54] [--cap 55] [--tsc 3293.8]
+Usage: uv run tools/analisis/opjoin.py A.txt B.txt [--hit 55] [--cap 56] [--tsc 3293.8]
 """
 
 import argparse
@@ -33,8 +33,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("a")
     ap.add_argument("b")
-    ap.add_argument("--hit", type=int, default=54, help="kind of a reused draw in B")
-    ap.add_argument("--cap", type=int, default=55, help="kind of a captured draw in B")
+    ap.add_argument("--hit", type=int, default=55, help="kind of a reused draw in B")
+    ap.add_argument("--cap", type=int, default=56, help="kind of a captured draw in B")
     ap.add_argument("--tsc", type=float, default=3293.8, help="TSC ticks per us (dmesg: tsc: Refined ... MHz)")
     args = ap.parse_args()
     a, b = load(args.a), load(args.b)

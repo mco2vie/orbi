@@ -814,6 +814,10 @@ NVN_API(nvnQueueSubmitCommands) {
         f = gfx_backend()->submit(h, n);
         early_watch_submit(f);
     }
+    for (uint32_t i = 0; i < nvn_sub_syncs; i++) {   // the command buffers' FenceSync: done with this submit
+        nvn_sub_sync[i]->fence = f;
+        __atomic_store_n(&nvn_sub_sync[i]->fenced, 1, __ATOMIC_RELEASE);
+    }
     // MKW_SUBMIT_CATCHUP (default 1, 0 when MKW_EARLY_READ waits: Linux; "ab"): the submit returns once its replay and GPU work are done, as on the console,
     // where the GPU runs a submit right after it and what it writes (timestamps the game decides what to draw with,
     // among others) is there when the CPU reads it. With the replay ~3 submits behind, trees and cacti flickered dark for

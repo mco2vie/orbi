@@ -448,6 +448,9 @@ NVN_API(nvnCommandBufferCopyCommands) {
 // ---------- CommandBuffer: commands with CPU-visible results (performed by the back end in GPU order)
 // void nvnCommandBufferSignalEvent(NVNcommandBuffer *cmd, const NVNevent *event, NVNeventSignalMode mode,
 // NVNeventSignalLocation location, int flags, uint32_t value)
+// void nvnCommandBufferFenceSync(NVNcommandBuffer *cmd, NVNsync *s, NVNsyncCondition, int flags): s is signalled when
+// the work recorded before it completes; the submission that carries it sets s to its own fence (Orbitals' Unreal)
+NVN_API(nvnCommandBufferFenceSync) { REC(cmd_of(c), OP_FENCE_SYNC, p_fence_sync)->sync = arg_p(c, 1); }
 NVN_API(nvnCommandBufferSignalEvent) {
     const ev_t *e = arg_p(c, 1);
     *REC(cmd_of(c), OP_SIGNAL_EVENT, p_signal_event) = (p_signal_event){e->val, (uint32_t)arg_x(c, 2), (uint32_t)arg_x(c, 5)};
@@ -503,6 +506,8 @@ int nvn_report_at_submit(void) {
     return on;
 }
 volatile uint32_t *nvn_sub_event_val[64];   // the first 64 events the submission signals
+sync_t *nvn_sub_sync[64];
+uint32_t nvn_sub_syncs;
 
 // MKW_EARLY_READ (core/memory/memory_early.c): what this submit's GPU work writes in CPU-visible memory, listed by the walk
 // below and watched from the submit (nvnQueueSubmitCommands) with its fence. Under the submit lock.
@@ -578,6 +583,8 @@ static int resolve_deferred(const uint8_t *p, int depth) {   // returns the defe
         } else if (h.op == OP_SIGNAL_EVENT) {
             if (nvn_sub_events < 64) nvn_sub_event_val[nvn_sub_events] = ((const p_signal_event *)(uintptr_t)(p + 8))->val;
             nvn_sub_events++;
+        } else if (h.op == OP_FENCE_SYNC) {
+            if (nvn_sub_syncs < 64) nvn_sub_sync[nvn_sub_syncs++] = ((const p_fence_sync *)(uintptr_t)(p + 8))->sync;
         } else if (h.op == OP_WAIT_EVENT) {
             nvn_sub_waits++;
         } else if (h.op == OP_DRAW_IDX_IND) {   // the arguments, read when the console's GPU would
@@ -607,7 +614,7 @@ static int resolve_deferred(const uint8_t *p, int depth) {   // returns the defe
 }
 
 void nvn_submit_prepare(const uint64_t *handles, int n) {
-    nvn_sub_sp_reports = nvn_sub_reports = nvn_sub_events = nvn_sub_waits = 0;
+    nvn_sub_sp_reports = nvn_sub_reports = nvn_sub_events = nvn_sub_waits = nvn_sub_syncs = 0;
     nvn_sub_ndst = 0, early_watch = mem_early_on();
     uint64_t now = __atomic_add_fetch(&nsubmits, 1, __ATOMIC_RELAXED);
     for (int i = 0; i < n; i++) copy_touch(handles[i], now, "QueueSubmitCommands");
@@ -617,7 +624,7 @@ void nvn_submit_prepare(const uint64_t *handles, int n) {
 // Asynchronous replay. A copy a queued submission still reads keeps that submission's deferred binds: when it holds
 // deferred binds (or is not known to hold none), this submission gets a clone, resolved here and freed after its replay.
 void nvn_submit_prepare_async(const uint64_t *handles, uint64_t *out, int n) {
-    nvn_sub_sp_reports = nvn_sub_reports = nvn_sub_events = nvn_sub_waits = 0;
+    nvn_sub_sp_reports = nvn_sub_reports = nvn_sub_events = nvn_sub_waits = nvn_sub_syncs = 0;
     nvn_sub_ndst = 0, early_watch = mem_early_on();
     uint64_t now = __atomic_add_fetch(&nsubmits, 1, __ATOMIC_RELAXED);
     uint64_t replayed = gfx_replayed_submits();
@@ -681,7 +688,7 @@ const char *nvn_op_name(uint32_t op) {
         "DRAW_IDX", "DISPATCH", "BARRIER", "SET_TEX_POOL", "SET_SAMP_POOL", "COPY_B2T", "COPY_STRIDE", "BLEND_COLOR",
         "COPY_T2B", "BIND_IMG", "COPY_T2T", "RESET_COUNTER", "CLEAR_TEX", "DEPTH_CLAMP", "RENDER_ENABLE",
         "RASTER_DISCARD", "RENDER_COND", "PRIM_RESTART", "DRAW_IDX_IND", "DISPATCH_IND", "CLEAR_BUF", "DRAW_MESH", "ALPHA_REF",
-        "WAIT_EVENT", "QUEUE",
+        "WAIT_EVENT", "QUEUE", "FENCE_SYNC",
     };
     _Static_assert(sizeof names / sizeof *names == OP_COUNT_, "one name per op");
     return op < OP_COUNT_ ? names[op] : "?";

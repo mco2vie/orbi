@@ -468,6 +468,7 @@ int vk_exec_state_op(VkExec *ex, uint32_t op, const void *a) {
         break;
     case OP_ALPHA_REF: ex->alpha_ref = ((const p_alpha_ref *)a)->ref; break;
     case OP_WAIT_EVENT: break;   // the order of the queues' work is nvn_qorder.c's, at submit
+    case OP_FENCE_SYNC: break;   // nvnQueueSubmitCommands sets the sync to the submission's fence
     case OP_DEPTH_CLAMP: ex->pipe.depth_clamp = ((const p_flag *)a)->value != 0; break;
     case OP_RASTER_DISCARD: ex->pipe.raster_discard = ((const p_flag *)a)->value != 0; break;
     case OP_PRIM_RESTART: ex->prim_restart = *(const p_prim_restart *)a; break;
