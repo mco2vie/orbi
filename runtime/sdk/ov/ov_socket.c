@@ -550,6 +550,12 @@ static void ov_getaddrinfo(Cpu *c) {
 }
 
 HOST_OVERRIDE("_ZN2nn6socket8internal10InitializeEi", ov_init);
+// The forms with a memory pool (Orbitals calls detail::Initialize(pool, size, alloc size, concurrency) from
+// main+0x3764e48): the SDK's code opens bsd:u over IPC; the host's sockets keep their own memory
+HOST_OVERRIDE("_ZN2nn6socket10InitializeEPvmmi", ov_init);
+HOST_OVERRIDE("_ZN2nn6socket10InitializeERKNS0_6ConfigE", ov_init);
+HOST_OVERRIDE("_ZN2nn6socket6detail10InitializeEPvmmi", ov_init);
+HOST_OVERRIDE("_ZN2nn6socket6detail10InitializeERKNS0_6ConfigE", ov_init);
 HOST_OVERRIDE("_ZN2nn6socket8FinalizeEv", ov_finalize);
 HOST_OVERRIDE("_ZN2nn6socket13IsInitializedEv", ov_is_initialized);
 HOST_OVERRIDE("_ZN2nn6socket12SetAllocatorEPNS_14MemoryResourceE", ov_nothing);
