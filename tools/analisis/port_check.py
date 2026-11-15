@@ -75,6 +75,15 @@ def load_exefs(src: Path) -> tuple[dict[str, bytes], str]:
         files = {name: pkg.read(e) for name, e in pkg.files("exefs").items() if "/" not in name}
         kinds = {0: "base", 1: "update", 2: "add-on"}
         recs = ", ".join(f"{t:016X} {kinds.get(k, f'kind {k}')} v{v}" for t, k, _, _, v in pkg.packages)
+        # each record's own RomFS: Orbitals' setup copied 54 files, the update's alone (port-step1l), so what the
+        # base record holds and how its fields read is printed with the raw record
+        for i, (t, k, ex, ro, v) in enumerate(pkg.packages):
+            own = pkg._walk(ro) if ro != nup.NONE else {}
+            tops = sorted({p.split("/", 1)[0] for p in own})
+            raw = pkg._t[0x30 + i * 0x40 : 0x70 + i * 0x40].hex(" ", 4)
+            recs += (f"\n#   record {i}: {t:016X} kind {k} exefs dir {ex:#x} romfs dir {ro:#x}: {len(own)} RomFS files"
+                     f" (top: {', '.join(tops[:8]) or '-'}); raw {raw}")  # fmt: skip
+        recs += f"\n#   RomFS as the setup reads it (base and updates overlaid): {len(pkg.files('romfs'))} files"
         return files, f"{src.name}: .nup, game {pkg.title_id} version {pkg.version}; packages: {recs}"
     d = src / "exefs" if (src / "exefs").is_dir() else src
     if not d.is_dir():

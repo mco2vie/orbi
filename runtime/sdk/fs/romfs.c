@@ -782,10 +782,29 @@ void romfs_close(uint64_t h) {
     free(mem);
 }
 
+// A folder's path as the index names it: romfs_path_relative, and also the root ("rom:/" -> "") and a trailing '/'
+// ("rom:/Orbitals/Content/Paks/" -> "Orbitals/Content/Paks"), which Unreal's directory scans pass (Orbitals,
+// port-step1l: both were "not found"). NULL when it is neither.
+static const char *folder_path(const char *path, char *buf, size_t cap) {
+    if (!path || !*mount_name) return NULL;
+    size_t m = strlen(mount_name), n = strlen(path);
+    if (strncmp(path, mount_name, m) || path[m] != ':') return NULL;
+    while (n > m + 1 && path[n - 1] == '/') n--;
+    if (n == m + 1) return "";   // "rom:" or "rom:/" or "rom://"
+    if (n >= cap) return NULL;
+    memcpy(buf, path, n), buf[n] = 0;
+    return romfs_path_relative(mount_name, buf);
+}
+
 uint32_t romfs_entry_type(int *out, const char *path) {
     if (!out) return FS_R_INVALID;
-    const char *p = romfs_path_relative(mount_name, path);
+    char buf[4096];
+    const char *p = folder_path(path, buf, sizeof buf);
     if (!p) return FS_R_PATH_NOT_FOUND;
+    if (!*p) {
+        *out = FS_ENTRY_DIRECTORY;
+        return 0;
+    }
     if (file_index(p) != UINT64_MAX) {
         *out = FS_ENTRY_FILE;
         return 0;
@@ -814,7 +833,8 @@ static int list_from(const char *prefix, size_t n, const char *name, uint64_t si
 }
 
 uint32_t romfs_list(const char *path, int (*add)(const char *name, int is_dir, uint64_t size, void *ctx), void *ctx) {
-    const char *p = romfs_path_relative(mount_name, path);
+    char buf[4096];
+    const char *p = folder_path(path, buf, sizeof buf);
     if (!p) return FS_R_PATH_NOT_FOUND;
     char prefix[4096], last[1024] = "";
     if (snprintf(prefix, sizeof prefix, *p ? "%s/" : "%s", p) >= (int)sizeof prefix) return FS_R_INVALID;
