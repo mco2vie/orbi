@@ -161,3 +161,23 @@ HOST_OVERRIDE("nnsslConnectionSetSessionCacheMode", ov_ssl_fail);
 HOST_OVERRIDE("nnsslConnectionSetSocketDescriptor", ov_ssl_fail);
 HOST_OVERRIDE("nnsslConnectionSetVerifyOption", ov_ssl_fail);
 HOST_OVERRIDE("nnsslConnectionWrite", ov_ssl_fail);
+
+// ---- nn::ec (eShop, nim:eca): Orbitals sets up its shop accessors early in its start (Lichii's log of the game
+// shows nim's IsLargeResourceAvailable and CreateAccessorInterface right after its sockets, build-177). The
+// accessors start; every request fails as offline, and the shop pages show nothing.
+#define EC_R_UNAVAILABLE (164u | (1u << 9))   // a hypothesis, as nifm's: any failure reads as no shop
+static void ov_ec_fail(Cpu *c) { ret_x(c, EC_R_UNAVAILABLE); }
+HOST_OVERRIDE("_ZN2nn2ec33InitializeForShopServiceAccessorsEPvm", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec31FinalizeForShopServiceAccessorsEv", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec19ShopServiceAccessor10InitializeERKNS0_11ShopServiceE", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec19ShopServiceAccessor7RequestEPNS1_13AsyncResponseERKNS_7account3UidENS0_11ShopService6MethodEPKcRKNS1_8PostDataENS_8TimeSpanE",
+              ov_ec_fail);
+HOST_OVERRIDE("_ZN2nn2ec24ShowShopAddOnContentListENS_13ApplicationIdERKNS_7account10UserHandleE", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec24ShowShopSubscriptionListENS_13ApplicationIdERKNS_7account10UserHandleE", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec26ShowShopConsumableItemListENS_13ApplicationIdERKNS_7account10UserHandleE", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec27ShowShopSubscriptionDetailsERKNS0_8CourseIdENS0_5NsUidERKNS_7account10UserHandleE", ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec28ShowShopConsumableItemDetailENS_13ApplicationIdERKNS0_12ConsumableIdENS0_5NsUidERKNS_7account10UserHandleE",
+              ov_ok);
+HOST_OVERRIDE("_ZN2nn2ec30ShowShopApplicationInformationENS_13ApplicationIdERKNS_7account10UserHandleE", ov_ok);
+// Result nifm::GetCurrentPrimaryIpAddress(socket::InAddr *): no address, offline
+HOST_OVERRIDE("_ZN2nn4nifm26GetCurrentPrimaryIpAddressEPNS_6socket6InAddrE", ov_no_network);

@@ -127,6 +127,48 @@ static void ov_states_full_key(Cpu *c) { npad_states(c, STYLE_FULL_KEY); }
 static void ov_states_handheld(Cpu *c) { npad_states(c, STYLE_HANDHELD); }
 static void ov_states_joycon(Cpu *c) { npad_states(c, 0); }
 
+// void GetNpadState(<State> *out, const NpadIdType &id): the one-state form Orbitals (Unreal) calls; as npad_states
+// with a count of 1
+static void npad_state(Cpu *c, uint32_t want) {
+    NpadState *out = arg_p(c, 0);
+    uint32_t id = *need_id(c, 1, "GetNpadState");
+    if (!out) rt_fatal("nn::hid::GetNpadState: null output");
+    plat_mutex_lock(&lock);
+    NpadState s = {.sampling = ++sample};
+    uint32_t style = 0;
+    int player = want ? id_player(id, &style) : -1;
+    int live = player >= 0 && want == style && (styles & want);
+    plat_mutex_unlock(&lock);
+    if (live) {
+        s.attributes = ATTR_CONNECTED;
+        input_poll_player(player, &s.buttons, &s.lx, &s.ly, &s.rx, &s.ry);
+    }
+    *out = s;
+}
+static void ov_state_full_key(Cpu *c) { npad_state(c, STYLE_FULL_KEY); }
+static void ov_state_handheld(Cpu *c) { npad_state(c, STYLE_HANDHELD); }
+static void ov_state_joycon(Cpu *c) { npad_state(c, 0); }
+
+// Mouse and keyboard (Orbitals: InitializeMouse/Keyboard, GetMouseState/GetKeyboardState): none connected. The
+// states are zeroed whole: MouseState is 0x28 bytes (sampling, x, y, dx, dy, wheel x/y, buttons, attributes),
+// KeyboardState 0x30 (sampling, modifiers, attributes, 256 key bits); attributes 0 = not connected.
+static int64_t kb_sample, mouse_sample;
+static void ov_input_nothing(Cpu *c) { (void)c; }
+static void ov_mouse_state(Cpu *c) {
+    uint8_t *s = arg_p(c, 0);
+    if (!s) return;
+    memset(s, 0, 0x28);
+    *(int64_t *)s = ++mouse_sample;
+}
+static void ov_keyboard_state(Cpu *c) {
+    uint8_t *s = arg_p(c, 0);
+    if (!s) return;
+    memset(s, 0, 0x30);
+    *(int64_t *)s = ++kb_sample;
+}
+// NpadJoyHoldType GetNpadJoyHoldType(): horizontal (1), the SDK's default after InitializeNpad
+static void ov_get_hold_type(Cpu *c) { ret_x(c, 1); }
+
 // void SetNpadJoyHoldType(NpadJoyHoldType type)
 static void ov_hold_type(Cpu *c) {
     int64_t t = (int32_t)arg_x(c, 0);
@@ -553,6 +595,34 @@ HOST_OVERRIDE("_ZN2nn3hid6detail22GetSixAxisSensorStatesEPiPNS0_18SixAxisSensorS
               ov_six_states);
 HOST_OVERRIDE("_ZN2nn3hid6detail21GetSixAxisSensorStateEPNS0_18SixAxisSensorStateERKNS0_19SixAxisSensorHandleE",
               ov_six_state);
+
+// ---- the public forms another game (Orbitals) imports where MKW calls the detail:: ones; void returns, so the
+// detail handlers' x0 is ignored
+HOST_OVERRIDE("_ZN2nn3hid12GetNpadStateEPNS0_16NpadFullKeyStateERKj", ov_state_full_key);
+HOST_OVERRIDE("_ZN2nn3hid12GetNpadStateEPNS0_17NpadHandheldStateERKj", ov_state_handheld);
+HOST_OVERRIDE("_ZN2nn3hid12GetNpadStateEPNS0_16NpadJoyDualStateERKj", ov_state_joycon);
+HOST_OVERRIDE("_ZN2nn3hid12GetNpadStateEPNS0_16NpadJoyLeftStateERKj", ov_state_joycon);
+HOST_OVERRIDE("_ZN2nn3hid12GetNpadStateEPNS0_17NpadJoyRightStateERKj", ov_state_joycon);
+HOST_OVERRIDE("_ZN2nn3hid18GetNpadJoyHoldTypeEv", ov_get_hold_type);
+HOST_OVERRIDE("_ZN2nn3hid15InitializeMouseEv", ov_input_nothing);
+HOST_OVERRIDE("_ZN2nn3hid18InitializeKeyboardEv", ov_input_nothing);
+HOST_OVERRIDE("_ZN2nn3hid13GetMouseStateEPNS0_10MouseStateE", ov_mouse_state);
+HOST_OVERRIDE("_ZN2nn3hid16GetKeyboardStateEPNS0_13KeyboardStateE", ov_keyboard_state);
+HOST_OVERRIDE("_ZN2nn3hid25InitializeVibrationDeviceERKNS0_21VibrationDeviceHandleE", ov_vib_init);
+HOST_OVERRIDE("_ZN2nn3hid18SendVibrationValueERKNS0_21VibrationDeviceHandleERKNS0_14VibrationValueE", ov_vib_send);
+HOST_OVERRIDE("_ZN2nn3hid22GetVibrationDeviceInfoEPNS0_19VibrationDeviceInfoERKNS0_21VibrationDeviceHandleE",
+              ov_vib_info);
+HOST_OVERRIDE("_ZN2nn3hid18StartSixAxisSensorERKNS0_19SixAxisSensorHandleE", ov_six_start);
+HOST_OVERRIDE("_ZN2nn3hid17StopSixAxisSensorERKNS0_19SixAxisSensorHandleE", ov_six_stop);
+HOST_OVERRIDE("_ZN2nn3hid25SetGyroscopeZeroDriftModeERKNS0_19SixAxisSensorHandleERKNS0_22GyroscopeZeroDriftModeE",
+              ov_input_nothing);
+// int GetSixAxisSensorStates(SixAxisSensorState *out, int count, const SixAxisSensorHandle &): detail's without the
+// count pointer
+static void ov_six_states_public(Cpu *c) {
+    ret_x(c, (uint64_t)six_fill(arg_p(c, 0), (int)arg_x(c, 1), arg_p(c, 2), "GetSixAxisSensorStates"));
+}
+HOST_OVERRIDE("_ZN2nn3hid22GetSixAxisSensorStatesEPNS0_18SixAxisSensorStateEiRKNS0_19SixAxisSensorHandleE",
+              ov_six_states_public);
 
 // ---- 1.8.0's mouse APIs (none in 1.0.0): the Joy-Con 2 as a mouse (Jcms) and a USB mouse (Nmouse). A PC is a
 // console with neither attached: Jcms handles exist but report no samples, and there is no mouse. Their SDK versions

@@ -269,6 +269,13 @@ static void ov_pop(Cpu *c) {
     ret_x(c, m);
 }
 
+// void GetPseudoDeviceId(util::Uuid *out): per console and program on Horizon; here the local account's uid (stable
+// across runs of this profile, which is what the game keys on)
+static void ov_pseudo_device_id(Cpu *c) {
+    uint64_t *out = arg_p(c, 0);
+    if (out) account_uid(out);
+}
+
 // bool TryPopNotificationMessage(Message *out): ov_pop without the wait (Orbitals polls it each frame)
 static void ov_try_pop(Cpu *c) {
     uint32_t *out = arg_p(c, 0);
@@ -511,6 +518,27 @@ static void ov_open_user_by_uid(Cpu *c) {
         }
     plat_mutex_unlock(&account_lock);
     ret_x(c, ok ? 0 : ACCOUNT_R_INVALID);
+}
+
+// ---- Orbitals: the open-users list (one local user, open from the start as the preselected one).
+// void PushOpenUsers(): the list is kept for the next program; one program here
+static void ov_push_open_users(Cpu *c) { (void)c; }
+// void PopOpenUsers(int *count, UserHandle *out, int max): the local user, opened
+static void ov_pop_open_users(Cpu *c) {
+    int32_t *count = arg_p(c, 0);
+    UserHandle *out = arg_p(c, 1);
+    int max = (int)arg_x(c, 2);
+    int n = 0;
+    plat_mutex_lock(&account_lock);
+    load_uid();
+    for (int i = 0; i < 64 && max > 0 && out && !n; i++)
+        if (!tokens[i]) {
+            tokens[i] = next_token++;
+            out[0] = (UserHandle){local, tokens[i]};
+            n = 1;
+        }
+    plat_mutex_unlock(&account_lock);
+    if (count) *count = n;
 }
 
 // Result IsNetworkServiceAccountAvailable(bool *out, const UserHandle &): never, offline.
@@ -852,6 +880,14 @@ HOST_OVERRIDE("_ZN2nn2oe38SetUserInactivityDetectionTimeExtendedEb", ov_inactivi
 HOST_OVERRIDE("_ZN2nn2oe17FinishStartupLogoEv", ov_finish_logo);
 HOST_OVERRIDE("_ZN2nn2oe22PopNotificationMessageEv", ov_pop);
 HOST_OVERRIDE("_ZN2nn2oe25TryPopNotificationMessageEPj", ov_try_pop);
+// Orbitals: capture permissions (no system capture on the host) and a stable pseudo device id
+HOST_OVERRIDE("_ZN2nn2oe16EnableScreenShotEv", ov_inactivity_extended);
+HOST_OVERRIDE("_ZN2nn2oe17DisableScreenShotEv", ov_inactivity_extended);
+HOST_OVERRIDE("_ZN2nn2oe15EnableRecordingEv", ov_inactivity_extended);
+HOST_OVERRIDE("_ZN2nn2oe16DisableRecordingEv", ov_inactivity_extended);
+HOST_OVERRIDE("_ZN2nn2oe13MuteRecordingEv", ov_inactivity_extended);
+HOST_OVERRIDE("_ZN2nn2oe15UnmuteRecordingEv", ov_inactivity_extended);
+HOST_OVERRIDE("_ZN2nn2oe17GetPseudoDeviceIdEPNS_4util4UuidE", ov_pseudo_device_id);
 HOST_OVERRIDE("_ZN2nn5prepo10PlayReport4SaveEv", ov_report_save);
 HOST_OVERRIDE("_ZN2nn5prepo10PlayReport4SaveERKNS_7account3UidE", ov_report_save);
 HOST_OVERRIDE("_ZN2nn5prepo28RequestImmediateTransmissionEv", ov_result_ok);
@@ -888,6 +924,11 @@ HOST_OVERRIDE("_ZN2nn7account22TryOpenPreselectedUserEPNS0_10UserHandleE", ov_op
 HOST_OVERRIDE("_ZN2nn7account9CloseUserERKNS0_10UserHandleE", ov_close_user);
 HOST_OVERRIDE("_ZN2nn7account9GetUserIdEPNS0_3UidERKNS0_10UserHandleE", ov_user_id);
 HOST_OVERRIDE("_ZN2nn7account12ListAllUsersEPiPNS0_3UidEi", ov_list_all_users);
+// Orbitals: the open and qualified users are the one local user
+HOST_OVERRIDE("_ZN2nn7account13ListOpenUsersEPiPNS0_3UidEi", ov_list_all_users);
+HOST_OVERRIDE("_ZN2nn7account18ListQualifiedUsersEPiPNS0_3UidEi", ov_list_all_users);
+HOST_OVERRIDE("_ZN2nn7account13PushOpenUsersEv", ov_push_open_users);
+HOST_OVERRIDE("_ZN2nn7account12PopOpenUsersEPiPNS0_10UserHandleEi", ov_pop_open_users);
 HOST_OVERRIDE("_ZN2nn7account8OpenUserEPNS0_10UserHandleERKNS0_3UidE", ov_open_user_by_uid);
 HOST_OVERRIDE("_ZN2nn7account32IsNetworkServiceAccountAvailableEPbRKNS0_10UserHandleE", ov_nsa_available);
 HOST_OVERRIDE("_ZN2nn7account36EnsureNetworkServiceAccountAvailableERKNS0_10UserHandleE", ov_nsa_unavailable);
