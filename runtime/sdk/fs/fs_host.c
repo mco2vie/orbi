@@ -1139,6 +1139,18 @@ static uint32_t read_directory(int64_t *count, DirectoryEntry *out, uint64_t h, 
     return 0;
 }
 
+// Result GetDirectoryEntryCount(int64_t *out, DirectoryHandle): the entries the open mode lists, whatever was read
+static uint32_t directory_entry_count(int64_t *out, uint64_t h) {
+    if (h < DIR_BASE || h >= DIR_BASE + NDIRS || !out) return FS_R_INVALID_ARGUMENT;
+    const Dir *d = &dirs[h - DIR_BASE];
+    if (!d->used) return FS_R_INVALID_ARGUMENT;
+    int64_t n = 0;
+    for (int i = 0; i < d->n; i++)
+        if (strlen(d->e[i].name) < 769 && (d->mode & (d->e[i].kind == PLAT_FS_DIR ? 1 : 2))) n++;
+    *out = n;
+    return 0;
+}
+
 static void close_directory(uint64_t h) {
     if (h < DIR_BASE || h >= DIR_BASE + NDIRS || !dirs[h - DIR_BASE].used)
         rt_fatal("fs: close of invalid directory handle %#llx", (unsigned long long)h);
@@ -1217,6 +1229,31 @@ static void ov_free_space(Cpu *c) {
 // void EnableGlobalFileDataCache(void *buffer, size_t size): a cache inside the console's fs process; host reads
 // go to the OS file cache, so the buffer is not used
 static void ov_enable_data_cache(Cpu *c) { (void)c; }
+static void ov_disable_data_cache(Cpu *c) { (void)c; }   // void DisableGlobalFileDataCache()
+static void ov_dir_entry_count(Cpu *c) { ret_x(c, directory_entry_count(arg_p(c, 0), arg_x(c, 1))); }
+// FsContext *GetCurrentThreadFsContext() / void SetCurrentThreadFsContext(const FsContext *): how the SDK's fs code
+// treats a failed result on this thread (abort or return it). The host returns results and never aborts, so one
+// context, kept per thread for the game to read back.
+static _Thread_local uint64_t fs_context;
+static void ov_get_fs_context(Cpu *c) { ret_x(c, fs_context); }
+static void ov_set_fs_context(Cpu *c) { fs_context = arg_x(c, 0); }
+// Result GetCacheStorageSize(int64_t *data, int64_t *journal, int index): the sizes a console cache storage was
+// made with; the host's is a folder with no quota, so 1 GiB (ov_free_space's figure) and no journal
+static void ov_cache_size(Cpu *c) {
+    int64_t *data = arg_p(c, 0), *journal = arg_p(c, 1);
+    if (data) *data = (int64_t)1 << 30;
+    if (journal) *journal = 0;
+    ret_x(c, data ? 0 : FS_R_INVALID);
+}
+// Result GetSaveDataSize(int64_t *data, int64_t *journal, const Uid &) / ExtendSaveData(const Uid &, data, journal):
+// the save is a folder on the host, with room for any size the game asks
+static void ov_save_size(Cpu *c) {
+    int64_t *data = arg_p(c, 0), *journal = arg_p(c, 1);
+    if (data) *data = (int64_t)1 << 30;
+    if (journal) *journal = 0;
+    ret_x(c, data ? 0 : FS_R_INVALID);
+}
+static void ov_extend_save(Cpu *c) { ret_x(c, 0); }
 // Result QueryMountAddOnContentCacheSize(size_t *out, int index) / MountAddOnContent(name, index, cache, size):
 // no add-on is installed on the host (ov_system.c's aoc count is 0)
 static void ov_aoc_cache_size(Cpu *c) {
@@ -1300,6 +1337,13 @@ HOST_OVERRIDE("_ZN2nn2fs14EnsureSaveDataERKNS_7account3UidE", ov_ensure_save);
 HOST_OVERRIDE("_ZN2nn2fs17MountCacheStorageEPKc", ov_mount_cache0);
 HOST_OVERRIDE("_ZN2nn2fs16GetFreeSpaceSizeEPlPKc", ov_free_space);
 HOST_OVERRIDE("_ZN2nn2fs25EnableGlobalFileDataCacheEPvm", ov_enable_data_cache);
+HOST_OVERRIDE("_ZN2nn2fs26DisableGlobalFileDataCacheEv", ov_disable_data_cache);
+HOST_OVERRIDE("_ZN2nn2fs22GetDirectoryEntryCountEPlNS0_15DirectoryHandleE", ov_dir_entry_count);
+HOST_OVERRIDE("_ZN2nn2fs25GetCurrentThreadFsContextEv", ov_get_fs_context);
+HOST_OVERRIDE("_ZN2nn2fs25SetCurrentThreadFsContextEPKNS0_9FsContextE", ov_set_fs_context);
+HOST_OVERRIDE("_ZN2nn2fs19GetCacheStorageSizeEPlS1_i", ov_cache_size);
+HOST_OVERRIDE("_ZN2nn2fs15GetSaveDataSizeEPlS1_RKNS_7account3UidE", ov_save_size);
+HOST_OVERRIDE("_ZN2nn2fs14ExtendSaveDataERKNS_7account3UidEll", ov_extend_save);
 HOST_OVERRIDE("_ZN2nn2fs31QueryMountAddOnContentCacheSizeEPmi", ov_aoc_cache_size);
 HOST_OVERRIDE("_ZN2nn2fs17MountAddOnContentEPKciPvm", ov_mount_aoc);
 
