@@ -25,19 +25,27 @@ static uint64_t main_lo, main_hi;
 static uint64_t keys[HSIZE];   // callee address, 0 = free; claimed once by CAS, never freed
 static uint64_t calls[HSIZE], first_frame[HSIZE];
 static const char *out_path;
+static int live;                        // port mode: each function's first call logged as it happens
+static volatile int64_t live_lines;
 volatile int impcensus_on;
 
 static uint32_t h(uint64_t a) { return (uint32_t)((a >> 2) * 0x9E3779B1u) & (HSIZE - 1); }
 
 void impcensus_init(void) {
     const char *p = cfg_get("MKW_IMPORT_CENSUS");
-    if (!p || !*p) return;
+    // Another game (port mode): on without a file, and each SDK function's first call from main is logged when it
+    // happens, so a run that stops (Orbitals' Unreal PreInit failed with no file opened) shows what it called last
+    live = rt_game_present() && rt_game()->port;
+    // and the host replacements' first calls (MKW_TRACE=host's "host call" lines), which the census does not see:
+    // the two in one order say what the game did up to where it stops
+    if (live) rt_trace |= RT_TRACE_HOSTCALL;
+    if ((!p || !*p) && !live) return;
     const RtLoaded *m = ldr_module(0);
     if (strcmp(m->name, "main")) rt_fatal("impcensus: module 0 is %s, not main", m->name);
-    main_lo = m->base, main_hi = m->base + m->size, out_path = p;
+    main_lo = m->base, main_hi = m->base + m->size, out_path = p && *p ? p : NULL;
     impcensus_on = 1;
     rt_fnprof_set(1);
-    rt_log("impcensus: counting calls from main into the SDK modules (MKW_IMPORT_CENSUS=%s)", p);
+    rt_log("impcensus: counting calls from main into the SDK modules (%s)", out_path ? out_path : "port mode, live");
 }
 
 void impcensus_hit(uint64_t addr, uint64_t lr) {
@@ -51,6 +59,12 @@ void impcensus_hit(uint64_t addr, uint64_t lr) {
                 __atomic_store_n(&first_frame[i], __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED),
                                  __ATOMIC_RELAXED);
                 k = addr;
+                int64_t n = live ? plat_inc64(&live_lines) : 0;
+                if (n && n <= 3000) {
+                    char where[512], from[160];
+                    rt_log("sdk call %lld: %s from %s", (long long)n, ldr_describe(addr, where, sizeof where),
+                           ldr_describe(lr, from, sizeof from));
+                }
             }
         }
         if (k == addr) {
@@ -62,7 +76,7 @@ void impcensus_hit(uint64_t addr, uint64_t lr) {
 }
 
 void impcensus_write(void) {
-    if (!impcensus_on) return;
+    if (!impcensus_on || !out_path) return;
     FILE *f = fopen(out_path, "w");
     if (!f) { rt_log("impcensus: cannot write %s", out_path); return; }
     fprintf(f, "# module\toffset\tcalls\tfirst_frame\tsymbol (MKW_IMPORT_CENSUS, runtime/core/diag/impcensus.c)\n");
