@@ -123,3 +123,41 @@ HOST_OVERRIDE("_ZN2nn3nsd9ResolveExEPNS0_4FqdnERKS1_", ov_nsd_none);
 HOST_OVERRIDE("_ZN2nn5prepo28RequestImmediateTransmissionEv", ov_ok);
 
 // ---- nn::socket: ov_socket.c, over the host's sockets (it also covers #63: Initialize needs no bsd service).
+
+// ---- nn::ssl (Orbitals' Unreal HTTP: nnsslInitialize from main+0x70b9e48; the SDK's opens the ssl service through
+// sm, svc 0x1f). No internet server is reachable from the runtime (nifm above stays offline), so the library starts
+// and every context, certificate or connection request fails with an ssl result: the game sees TLS unavailable, as
+// with no network, instead of a session that cannot work. The description number is a hypothesis, as nifm's.
+#define SSL_R_UNAVAILABLE (123u | (1u << 9))
+static void ov_ssl_fail(Cpu *c) { ret_x(c, SSL_R_UNAVAILABLE); }
+HOST_OVERRIDE("_ZN2nn3ssl10InitializeEv", ov_ok);
+HOST_OVERRIDE("nnsslInitialize", ov_ok);
+HOST_OVERRIDE("nnsslFinalize", ov_ok);
+HOST_OVERRIDE("nnsslContextDestroy", ov_ok);
+HOST_OVERRIDE("nnsslConnectionDestroy", ov_ok);
+HOST_OVERRIDE("_ZN2nn3ssl7Context6CreateENS1_10SslVersionE", ov_ssl_fail);
+HOST_OVERRIDE("_ZN2nn3ssl7Context15ImportServerPkiEPmPKcjNS0_17CertificateFormatE", ov_ssl_fail);
+HOST_OVERRIDE("_ZN2nn3ssl7Context15ImportClientPkiEPmPKcS4_jj", ov_ssl_fail);
+HOST_OVERRIDE("_ZN2nn3ssl7Context9ImportCrlEPmPKcj", ov_ssl_fail);
+HOST_OVERRIDE("_ZN2nn3ssl14BuiltInManager28GetBuiltInCertificateBufSizeEPjPNS0_15CaCertificateIdEj", ov_ssl_fail);
+HOST_OVERRIDE("_ZN2nn3ssl14BuiltInManager22GetBuiltInCertificatesEPPNS0_26BuiltInCertificateInfoBaseEPhjPNS0_15CaCertificateIdEj",
+              ov_ssl_fail);
+HOST_OVERRIDE("nnsslContextGetContextId", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionCreate", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionDoHandshakeWithCertBuffer", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionGetConnectionId", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionGetNextAlpnProto", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionGetServerCertDetail", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionGetVerifyCertError", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionPeek", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionPending", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionRead", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetHostName", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetIoMode", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetNextAlpnProto", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetOption", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetServerCertBuffer", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetSessionCacheMode", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetSocketDescriptor", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionSetVerifyOption", ov_ssl_fail);
+HOST_OVERRIDE("nnsslConnectionWrite", ov_ssl_fail);
