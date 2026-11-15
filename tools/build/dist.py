@@ -277,7 +277,12 @@ def main() -> None:
             if p.suffix in (".exe", ".dll"):
                 shutil.copy2(p, glslc / p.name)
         (setup / "lib").mkdir(exist_ok=True)
-        shutil.copy2(ROOT / "build/obj-dist-win/libmkw.dll.a", setup / "lib/libmkw.dll.a")
+        # orbitals-port: the package's program is orbitals-recomp.exe (release.py renames it), and a DLL imports
+        # from its exe by file name. lld's import library names mkw.exe, so the setup's mkwgame.dll would load a
+        # second, unstarted copy of an old mkw.exe (or fail without it). The same exports (mkw.def), renamed.
+        subprocess.run([str(ROOT / "build/win/llvm-mingw/bin/llvm-dlltool"), "-m", "i386:x86-64",
+                        "-d", str(ROOT / "build/obj-dist-win/mkw.def"), "-D", "orbitals-recomp.exe",
+                        "-l", str(setup / "lib/libmkw.dll.a")], check=True)  # fmt: skip
         windows_crt(setup / "lib/crt")
         for dll in WIN_DLLS:
             shutil.copy2(ROOT / "build/win/deps/bin" / dll, out / dll)
