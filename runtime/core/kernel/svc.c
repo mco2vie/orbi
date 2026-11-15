@@ -46,8 +46,8 @@ void kern_backtrace(const Cpu *c) {
 }
 
 static const struct { uint32_t imm; const char *name; } unimplemented[] = {
-    {0x13, "MapSharedMemory"}, {0x14, "UnmapSharedMemory"},
-    {0x23, "SendAsyncRequestWithUserBuffer"}, {0x28, "ReturnFromException"}, {0x2A, "FlushEntireDataCache"},
+    {0x13, "MapSharedMemory"}, {0x14, "UnmapSharedMemory"}, {0x23, "SendAsyncRequestWithUserBuffer"},
+    {0x26, "Break"}, {0x28, "ReturnFromException"}, {0x2A, "FlushEntireDataCache"},
     {0x2F, "GetLastThreadInfo"}, {0x32, "SetThreadActivity"}, {0x33, "GetThreadContext3"},
     {0x36, "SynchronizePreemptionState"}, {0x40, "CreateSession"}, {0x41, "AcceptSession"},
     {0x43, "ReplyAndReceive"}, {0x44, "ReplyAndReceiveWithUserBuffer"}, {0x48, "MapPhysicalMemoryUnsafe"},
@@ -75,7 +75,7 @@ static int guest_text(uint64_t a, char *out, size_t cap) {
             if (k + 1 < cap) out[k] = (char)ch;
             k++;
         }
-        if (k >= 6 && i + step <= n) {   // ended by its 0, not by the window
+        if (k >= 6 && i + step <= n) {
             out[k + 1 < cap ? k : cap - 1] = 0;
             return 1;
         }
@@ -121,9 +121,7 @@ static __attribute__((noreturn)) void svc_fatal(Cpu *c, uint32_t imm, uint64_t p
     kern_backtrace(c);
     if (imm == 0x26) {
         abort_texts(c);
-        kern_threads_dump();   // a timeout abort ("GameThread timed out waiting for RenderThread") needs the others
-        // A timeout abort is only plausible after its timeout: Unreal's waits about 25 s. Both clocks since the start:
-        // the host's, and the guest's GetSystemTick (rt_ticks, turbo included), which the game measures with.
+        kern_threads_dump();
         rt_logf("  run time at the abort: %.2f s by the host clock, %.2f s by the guest's GetSystemTick\n",
                 (plat_now_ns() - g_start_ns) / 1e9, (double)(rt_ticks() - g_start_ticks) / RT_TICK_HZ);
         rt_logf("  (the run time counts from the guest's first SVC, at its boot)\n");
@@ -180,16 +178,16 @@ static void get_info(Cpu *c, uint64_t pc) {
         return;
     }
     switch (id) {
-    case 0: v = 0x3f; break;                    // core mask: Switch 2 gives applications cores 0-5 (main.npdm)
-    case 1: v = 0x0ffffffff0000000ull; break;   // priority mask
-    case 8: v = 0; break;                       // debugger attached
-    case 10: v = 0; break;                      // idle tick count
-    case 11:                                    // random entropy
-        if (seed_random(c->x[3], &v)) break;   // core/hacks/seed.c: MKW_SEED
+    case 0: v = 0x3f; break;
+    case 1: v = 0x0ffffffff0000000ull; break;
+    case 8: v = 0; break;
+    case 10: v = 0; break;
+    case 11:
+        if (seed_random(c->x[3], &v)) break;
         if (!plat_random(&v, sizeof v)) rt_fatal("GetInfo 11: no random bytes from the system");
         break;
-    case 18: v = rt_game()->port ? rt_game()->port->program_id : PROGRAM_ID; break;   // another game: its own
-    case 20: v = user_exception_context(); break;   // the SDK keeps e.g. the dying message at +0x1C0
+    case 18: v = rt_game()->port ? rt_game()->port->program_id : PROGRAM_ID; break;
+    case 20: v = user_exception_context(); break;
     case 23: v = 1; break;
     default: {
         char why[64];
@@ -210,7 +208,7 @@ void rt_svc(Cpu *c, uint32_t imm, uint64_t pc) {
         svc_body(c, imm, pc);
         return;
     }
-    void *t = c->thread;   // kern_host_track: the SVC counted in the thread's host depth (hostfn.c hostfn_tracked)
+    void *t = c->thread;
     int *d = kern_host_depth(t);
     __atomic_store_n(d, *d + 1, __ATOMIC_RELAXED);
     svc_body(c, imm, pc);
@@ -233,11 +231,8 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
     if (kern_svc(c, imm)) return;
     uint64_t *x = c->x;
     switch (imm) {
-    // The SDK's calls to console services are replaced by name (runtime/sdk, runtime/audio/audren_sf.c): a message
-    // to a service means an SDK path that still reaches one.
     case 0x1F: case 0x21: case 0x22: svc_fatal(c, imm, pc, "IPC to a console service: replace its SDK call by name");
-    case 0x15: {   // CreateTransferMemory(x1 address, x2 size, w3 permission -> w1 handle): OpenAudioRenderer's
-                   // work buffer (audren_sf.c reads it back)
+    case 0x15: {
         if ((x[1] & 0xfff) || x[1] + x[2] < x[1] || x[1] + x[2] > RT_ADDRESS_LIMIT) {
             x[0] = KERN_R_INVALID_ADDRESS;
             return;
@@ -253,7 +248,7 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
         x[1] = kern_handle_new(KERN_TMEM, t);
         return;
     }
-    case 0x01: {   // SetHeapSize(x1 size -> x1 address)
+    case 0x01: {
         uint64_t a = 0;
         uint32_t r = mem_set_heap_size(x[1], &a);
         x[0] = r;
@@ -262,11 +257,11 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
     }
     case 0x02: x[0] = mem_set_permission(x[0], x[1], (uint32_t)x[2]); return;
     case 0x03: x[0] = mem_set_attribute(x[0], x[1], (uint32_t)x[2], (uint32_t)x[3]); return;
-    case 0x04:   // MapMemory(x0 dst, x1 src, x2 size)
+    case 0x04:
         x[0] = on_main_stack(x[0], x[2]) ? KERN_R_INVALID_STATE_MEM : mem_map(x[0], x[1], x[2]);
         return;
     case 0x05: x[0] = mem_unmap(x[0], x[1], x[2]); return;
-    case 0x06: {   // QueryMemory(x0 MemoryInfo*, x2 address -> w1 page info)
+    case 0x06: {
         RtMemoryInfo mi;
         uint32_t r = mem_query(x[2], &mi);
         main_stack_query(x[2], &mi);
@@ -277,7 +272,7 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
     }
     case 0x2C: x[0] = mem_map_physical(x[0], x[1]); return;
     case 0x2D: x[0] = mem_unmap_physical(x[0], x[1]); return;
-    case 0x26: {   // Break(x0 reason, x1 info, x2 info size); bit 31 of the reason: notification only
+    case 0x26: {
         uint32_t result = 0;
         if (x[1] && x[2] >= 4 && readable(x[1], 4)) memcpy(&result, (const void *)(uintptr_t)x[1], 4);
         char at[160];
@@ -289,7 +284,7 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
         }
         svc_fatal(c, imm, pc, "Break (the SDK aborted)");
     }
-    case 0x27: {   // OutputDebugString(x0 text, x1 size)
+    case 0x27: {
         uint64_t n = x[1];
         if (n > 65536) svc_fatal(c, imm, pc, "debug string longer than 64 KiB");
         if (n) {
@@ -300,8 +295,7 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
         return;
     }
     case 0x29: get_info(c, pc); return;
-    case 0x07: {   // ExitProcess, as closing the window (gfx_window_closed): pipeline cache, shader records and
-                   // profile saved, logs flushed, exit code 0
+    case 0x07: {
         char at[160];
         rt_log("guest ExitProcess at %s; exiting", ldr_describe(pc, at, sizeof at));
         fs_save_flush();
