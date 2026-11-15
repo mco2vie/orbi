@@ -196,3 +196,17 @@ HOST_OVERRIDE("_ZN2nn2vi30ClearLayerExtendedSwapIntervalEPNS0_5LayerE", ov_vi_no
 HOST_OVERRIDE("_ZN2nn2vi35SetLayerNextHdrContentGamutMetadataEPNS0_5LayerENS0_15HdrContentGamutE", ov_vi_nothing);
 HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrAdjustableBezierMetadataEPNS0_5LayerEfff", ov_vi_nothing);
 HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrToSdrToneMappingMetadataEPNS0_5LayerENS0_14HdrToneMappingE", ov_vi_nothing);
+
+// ---- frame history (Orbitals' Unreal reads it each frame, main+0x153f994; the import was unresolved, a call to 0).
+// Result GetLatestFrameNumber(uint64_t *out, const Layer *): the frames presented so far
+static void ov_latest_frame(Cpu *c) {
+    uint64_t *out = arg_p(c, 0);
+    if (out) *out = gfx_stats().frames;
+    ret_x(c, out ? 0 : 1);
+}
+// int ListFrameHistory(FrameInfo *out, int count, const Layer *): no per-frame timing records kept
+static void ov_frame_history(Cpu *c) { ret_x(c, 0); }
+HOST_OVERRIDE("_ZN2nn2vi20GetLatestFrameNumberEPmPKNS0_5LayerE", ov_latest_frame);
+HOST_OVERRIDE("_ZN2nn2vi16ListFrameHistoryEPNS0_9FrameInfoEiPKNS0_5LayerE", ov_frame_history);
+HOST_OVERRIDE("_ZN2nn2vi36SetDisplay120HzRefreshRateCapabilityEPNS0_7DisplayEb", ov_vi_nothing);
+HOST_OVERRIDE("_ZN2nn2vi8FinalizeEv", ov_vi_nothing);

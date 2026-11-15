@@ -370,6 +370,9 @@ static Res resolve(Mod *m, uint32_t si, int jump) {
         r = (Res){guest, RES_GUEST};
     } else if ((m->syms[si].info >> 4) == STB_WEAK) {
         r = (Res){0, RES_WEAK};
+        // another game (port mode): named, since a weak import no module defines is 0, and code that calls it
+        // without a check stops at pc 0 (Orbitals' nn::vi::GetLatestFrameNumber, main+0x153f994)
+        if (rt_game_present() && rt_game()->port) rt_log("%s: weak import %s is unresolved (0)", m->pub.name, name);
     } else {
         r = (Res){hostfn_register(name, unresolved_stub), RES_STUB};
         stubs++;
