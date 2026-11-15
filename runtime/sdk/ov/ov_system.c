@@ -683,7 +683,10 @@ static int local_calendar(int64_t t, CalendarTime *c, CalendarInfo *info) {
 }
 
 
+void ov_musl_clock_hooks(void);   // ov_time2.c: the SDK's musl reads its clocks through these
+
 static void ov_time_initialize(Cpu *c) {
+    ov_musl_clock_hooks();
     plat_once(&source_once, make_source, NULL);
     plat_xchg32(&time_ready, 1);
     ret_x(c, 0);

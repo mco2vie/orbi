@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gamelib.h"
 #include "host.h"
 #include "platform/platform.h"
 
@@ -81,3 +82,78 @@ HOST_OVERRIDE("gettimeofday", ov_gettimeofday);
 HOST_OVERRIDE("time", ov_time);
 HOST_OVERRIDE("_ZNSt3__16chrono12steady_clock3nowEv", ov_steady_now);
 HOST_OVERRIDE("_ZNSt3__16chrono12system_clock3nowEv", ov_system_now);
+// ---- the SDK's musl clocks (Orbitals, port-step1w). The overrides above reach only calls through a GOT. musl's own
+// callers (pthread_cond_clockwait / timedwait, sdk+0x173970 in Orbitals' SDK) call its clock_gettime with a bl, and
+// its body (sdk+0xb5430) reads CLOCK_REALTIME and CLOCK_MONOTONIC through two function pointers in the SDK's .data:
+// `bl thunk; cbnz w0, EAGAIN`, each thunk `adrp x8, page; ldr x1, [x8, #off]; br x1`. Left as they are, those
+// pointers return nonzero, so musl sets errno 11 (EAGAIN): libc++'s condition_variable::wait_until then threw
+// "condition_variable timed_wait failed: Resource temporarily unavailable". The pointers get host clocks here: the
+// same two clocks clock_gettime above returns, so a deadline from steady_clock::now matches musl's own reading.
+// They take (timespec *) in x0 and return 0.
+static void ov_musl_realtime(Cpu *c) {
+    int64_t *ts = arg_p(c, 0);
+    uint64_t ns = plat_unix_time_ns();
+    if (ts) ts[0] = (int64_t)(ns / 1000000000u), ts[1] = (int64_t)(ns % 1000000000u);
+    ret_x(c, ts ? 0 : 22);
+}
+static void ov_musl_monotonic(Cpu *c) {
+    int64_t *ts = arg_p(c, 0);
+    uint64_t ns = plat_now_ns();
+    if (ts) ts[0] = (int64_t)(ns / 1000000000u), ts[1] = (int64_t)(ns % 1000000000u);
+    ret_x(c, ts ? 0 : 22);
+}
+HOST_FUNCTION("<musl clock realtime>", ov_musl_realtime);
+HOST_FUNCTION("<musl clock monotonic>", ov_musl_monotonic);
+
+static uint64_t branch_target(uint64_t pc, uint32_t w) {   // b / bl imm26
+    int64_t imm = (int64_t)((uint64_t)(w & 0x3FFFFFFu) << 38) >> 36;
+    return pc + (uint64_t)imm;
+}
+
+// The .data slot a `adrp x8, page; ldr x1, [x8, #off]; br x1` thunk at a jumps through, 0 for other code.
+static uint64_t thunk_slot(uint64_t a) {
+    const uint32_t *w = (const uint32_t *)(uintptr_t)a;
+    if ((w[0] & 0x9F00001Fu) != 0x90000008u || (w[1] & 0xFFC003FFu) != 0xF9400101u || w[2] != 0xD61F0020u) return 0;
+    int64_t imm = (int64_t)((uint64_t)(((w[0] >> 5) & 0x7FFFFu) << 2 | ((w[0] >> 29) & 3u)) << 43) >> 31;   // 21 bits, << 12
+    return (a & ~0xFFFull) + (uint64_t)imm + ((w[1] >> 10) & 0xFFFu) * 8;
+}
+
+static int in_data(uint64_t a) {   // a writable word of a loaded module (after .text/.rodata, which are sealed)
+    for (int i = 0; i < ldr_count(); i++) {
+        const RtLoaded *m = ldr_module(i);
+        if (a >= m->base + m->data_off && a + 8 <= m->base + m->size) return 1;
+    }
+    return 0;
+}
+
+void ov_musl_clock_hooks(void) {
+    if (!rt_game_present() || !rt_game()->port) return;   // MKW's SDK: its clock_gettime works as it is
+    static int done;
+    if (done++) return;
+    uint64_t f = ldr_symbol("clock_gettime");
+    if (!f) { rt_log("time: no clock_gettime in the SDK; musl's clock hooks left alone"); return; }
+    uint32_t w = *(const uint32_t *)(uintptr_t)f;
+    if ((w & 0xFC000000u) == 0x14000000u) f = branch_target(f, w);   // the export is `b body`
+    // The body: the first two bl to a thunk, CLOCK_REALTIME's first (Orbitals: sdk+0xb5478 and sdk+0xb5488)
+    uint64_t slot[2] = {0, 0};
+    int n = 0;
+    for (int i = 0; i < 48 && n < 2; i++) {
+        uint64_t pc = f + 4u * (uint64_t)i;
+        uint32_t x = *(const uint32_t *)(uintptr_t)pc;
+        if ((x & 0xFC000000u) != 0x94000000u) continue;
+        uint64_t s = thunk_slot(branch_target(pc, x));
+        if (s && in_data(s) && (!n || s != slot[0])) slot[n++] = s;
+    }
+    char d0[160], d1[160], b0[160], b1[160];
+    if (n != 2) {
+        rt_log("time: musl's clock_gettime at %s has not the two clock pointers (%d found); left alone",
+               ldr_describe(f, d0, sizeof d0), n);
+        return;
+    }
+    uint64_t *p0 = (uint64_t *)(uintptr_t)slot[0], *p1 = (uint64_t *)(uintptr_t)slot[1];
+    rt_log("time: musl's clock pointers %s (realtime, was %s) and %s (monotonic, was %s) set to the host clocks",
+           ldr_describe(slot[0], d0, sizeof d0), ldr_describe(*p0, b0, sizeof b0), ldr_describe(slot[1], d1, sizeof d1),
+           ldr_describe(*p1, b1, sizeof b1));
+    __atomic_store_n(p0, hostfn_address(ov_musl_realtime), __ATOMIC_RELEASE);
+    __atomic_store_n(p1, hostfn_address(ov_musl_monotonic), __ATOMIC_RELEASE);
+}
