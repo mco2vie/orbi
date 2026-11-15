@@ -116,7 +116,10 @@ static __attribute__((noreturn)) void svc_fatal(Cpu *c, uint32_t imm, uint64_t p
             ldr_describe(pc, at, sizeof at), why, (unsigned long long)c->x[0], (unsigned long long)c->x[1],
             (unsigned long long)c->x[2], (unsigned long long)c->x[3]);
     kern_backtrace(c);
-    if (imm == 0x26) abort_texts(c);
+    if (imm == 0x26) {
+        abort_texts(c);
+        kern_threads_dump();   // a timeout abort ("GameThread timed out waiting for RenderThread") needs the others
+    }
     rt_fatal("svc #%#x %s is not implemented", imm, name);
 }
 

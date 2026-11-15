@@ -442,3 +442,55 @@ void kern_sched_report(uint64_t frame) {
                    rw[k][j].st == S_HOST ? "exe+" : "", (unsigned long long)rw[k][j].obj, by, 100.0 * rw[k][j].ns / span);
         }
 }
+
+// ---- every guest thread at a fatal abort
+// An abort that is a timeout names the thread waited for but not why it is late: Orbitals (Unreal), port-step2c,
+// "GameThread timed out waiting for RenderThread". Each thread's wait and its guest frame-pointer chain say where the
+// other one stands. Blocked threads have their registers in their Cpu (published at the SVC or host call); a running
+// thread's are read while it changes them, so its lines are a hint.
+
+// The name nn::os::SetThreadName left: a pointer to short text inside the SDK's ThreadType, which TLR+0x1F8 points at.
+static int thread_name(const RtThread *t, char *out, size_t cap) {
+    uint64_t obj = *(const uint64_t *)(t->tlr + 0x1F8);
+    if (!obj || (obj & 7) || !plat_mem_readable(obj, 0x200)) return 0;
+    for (uint64_t off = 0; off < 0x200; off += 8) {
+        uint64_t p = *(const uint64_t *)(uintptr_t)(obj + off);
+        if (!p || (p >> 48) || !plat_mem_readable(p, 1)) continue;
+        uint64_t room = 4096 - (p & 4095);
+        const char *s = (const char *)(uintptr_t)p;
+        size_t n = 0;
+        while (n < room && n < 32 && s[n] >= 0x20 && s[n] <= 0x7e) n++;
+        if (n < 3 || n >= 32 || n >= room || s[n]) continue;
+        snprintf(out, cap, "%.*s", (int)n, s);
+        return 1;
+    }
+    return 0;
+}
+
+void kern_threads_dump(void) {
+    static const char *const wk[] = {"running or ready", "waiting on a mutex", "waiting on a condition variable",
+                                     "waiting on an address", "waiting on handles"};
+    int locked = 0;
+    for (int i = 0; i < 200 && !(locked = plat_mutex_trylock(&G)); i++) plat_sleep_ns(1000000);
+    rt_logf("  every guest thread%s:\n", locked ? "" : " (the kernel lock is held elsewhere: read without it)");
+    int n = 0;
+    for (RtThread *t = g_all; t && n < 256; t = t->all, n++) {
+        if (t->exited) continue;
+        const Cpu *c = t->cur ? t->cur : t->cpu;
+        char name[40] = "", d[160];
+        if (!thread_name(t, name, sizeof name)) snprintf(name, sizeof name, "?");
+        int k = t->wkind >= 0 && t->wkind < 5 ? t->wkind : 0;
+        rt_logf("  thread %#x \"%s\" prio %d core %d%s: %s %#llx%s\n", t->handle, name, t->prio, t->cur_core,
+                t == tcur ? " (this one)" : "", wk[k], (unsigned long long)(k ? t->waddr : 0),
+                dg_in_host(t) ? ", in a host call" : "");
+        rt_logf("    lr %s\n", ldr_describe(c->x[30], d, sizeof d));
+        uint64_t fp = c->x[29];
+        for (int f = 0; f < 12 && fp && !(fp & 7) && plat_mem_readable(fp, 16); f++) {
+            uint64_t next = *(const uint64_t *)(uintptr_t)fp, lr = *(const uint64_t *)(uintptr_t)(fp + 8);
+            rt_logf("    frame %2d: %s\n", f, ldr_describe(lr, d, sizeof d));
+            if (next <= fp || next - fp > (64u << 20)) break;
+            fp = next;
+        }
+    }
+    if (locked) plat_mutex_unlock(&G);
+}

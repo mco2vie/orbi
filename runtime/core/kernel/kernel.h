@@ -29,6 +29,8 @@ uint64_t kern_threads_created(void);
 
 // The guest frame-pointer chain from c->x[29] to stderr.
 void kern_backtrace(const Cpu *c);
+// Every guest thread's name, wait and frame-pointer chain to the log, at a fatal guest abort (kernel_diag.c).
+void kern_threads_dump(void);
 
 // ---- probe support
 enum { KERN_WAIT_NONE, KERN_WAIT_LOCK, KERN_WAIT_CONDVAR, KERN_WAIT_ADDRESS, KERN_WAIT_SYNC };
