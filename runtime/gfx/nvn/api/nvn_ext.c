@@ -427,3 +427,40 @@ NVN_API(nvnCommandBufferOverrideSubtileSize) { (void)c; }          // NVN 55 hin
 NVN_API(nvnCommandBufferSetZCullZF32CompressionEnable) { (void)c; }
 // nvnProgramGetSubtileSize (NVN 55): its signature is not identified
 NVN_API(nvnProgramGetSubtileSize) { (void)c; rt_fatal("nvn: nvnProgramGetSubtileSize: signature not identified"); }
+
+// ---------- getters of stored builder and pool state another game calls (Orbitals, Unreal's NVN RHI, from
+// nvnTexturePoolGetSize on); each reads back what its setter stored (nvn_obj.h, nvn_api.h)
+// const NVNmemoryPool *nvnTexturePoolGetMemoryPool / ptrdiff_t ...GetMemoryOffset / int ...GetSize(const pool *),
+// and the same three for the sampler pool
+NVN_API(nvnTexturePoolGetMemoryPool) { ret_x(c, (uintptr_t)((const dpool_t *)arg_p(c, 0))->pool); }
+NVN_API(nvnTexturePoolGetMemoryOffset) { ret_x(c, (uint64_t)((const dpool_t *)arg_p(c, 0))->off); }
+NVN_API(nvnTexturePoolGetSize) { ret_x(c, (uint64_t)(int64_t)((const dpool_t *)arg_p(c, 0))->n); }
+NVN_API(nvnSamplerPoolGetMemoryPool) { ret_x(c, (uintptr_t)((const dpool_t *)arg_p(c, 0))->pool); }
+NVN_API(nvnSamplerPoolGetMemoryOffset) { ret_x(c, (uint64_t)((const dpool_t *)arg_p(c, 0))->off); }
+NVN_API(nvnSamplerPoolGetSize) { ret_x(c, (uint64_t)(int64_t)((const dpool_t *)arg_p(c, 0))->n); }
+// NVNmemoryPool *nvnBufferBuilderGetMemoryPool / ptrdiff_t ...GetMemoryOffset / size_t ...GetSize(const builder *)
+NVN_API(nvnBufferBuilderGetMemoryPool) { ret_x(c, (uintptr_t)((const buf_builder_t *)arg_p(c, 0))->pool); }
+NVN_API(nvnBufferBuilderGetMemoryOffset) { ret_x(c, (uint64_t)((const buf_builder_t *)arg_p(c, 0))->off); }
+NVN_API(nvnBufferBuilderGetSize) { ret_x(c, ((const buf_builder_t *)arg_p(c, 0))->size); }
+// void *nvnMemoryPoolBuilderGetMemory / size_t ...GetSize / int ...GetFlags(const builder *)
+NVN_API(nvnMemoryPoolBuilderGetMemory) { ret_x(c, (uintptr_t)((const pool_builder_t *)arg_p(c, 0))->mem); }
+NVN_API(nvnMemoryPoolBuilderGetSize) { ret_x(c, ((const pool_builder_t *)arg_p(c, 0))->size); }
+NVN_API(nvnMemoryPoolBuilderGetFlags) { ret_x(c, ((const pool_builder_t *)arg_p(c, 0))->flags); }
+// const NVNmemoryPool *nvnEventBuilderGetMemoryPool / int64_t ...GetMemoryOffset(const builder *)
+NVN_API(nvnEventBuilderGetMemoryPool) { ret_x(c, (uintptr_t)((const ev_builder_t *)arg_p(c, 0))->pool); }
+NVN_API(nvnEventBuilderGetMemoryOffset) { ret_x(c, (uint64_t)((const ev_builder_t *)arg_p(c, 0))->off); }
+// Queue builder: NVNdevice *GetDevice, int GetFlags, void *GetMemory, size_t GetMemorySize; the four sizes are
+// NVNboolean Get...(const builder *, int *out), true when set
+NVN_API(nvnQueueBuilderGetDevice) { ret_x(c, (uintptr_t)((const queue_builder_t *)arg_p(c, 0))->dev); }
+NVN_API(nvnQueueBuilderGetFlags) { ret_x(c, ((const queue_builder_t *)arg_p(c, 0))->flags); }
+NVN_API(nvnQueueBuilderGetMemory) { ret_x(c, (uintptr_t)((const queue_builder_t *)arg_p(c, 0))->mem); }
+NVN_API(nvnQueueBuilderGetMemorySize) { ret_x(c, ((const queue_builder_t *)arg_p(c, 0))->mem_sz); }
+static void queue_size(Cpu *c, uint64_t v) {
+    int32_t *out = arg_p(c, 1);
+    if (out) *out = (int32_t)v;
+    ret_x(c, v != 0);
+}
+NVN_API(nvnQueueBuilderGetCommandMemorySize) { queue_size(c, ((const queue_builder_t *)arg_p(c, 0))->cmd_sz); }
+NVN_API(nvnQueueBuilderGetComputeMemorySize) { queue_size(c, ((const queue_builder_t *)arg_p(c, 0))->comp_sz); }
+NVN_API(nvnQueueBuilderGetControlMemorySize) { queue_size(c, ((const queue_builder_t *)arg_p(c, 0))->ctl_sz); }
+NVN_API(nvnQueueBuilderGetCommandFlushThreshold) { queue_size(c, ((const queue_builder_t *)arg_p(c, 0))->flush); }
