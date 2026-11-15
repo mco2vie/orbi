@@ -36,7 +36,8 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-REPO = os.environ.get("MKW_UPDATE_REPO") or "adriadam10/mkw-recomp"
+# orbitals-port: never offer MKW's releases as an update of this package
+REPO = os.environ.get("MKW_UPDATE_REPO") or "sinedgiveaways/orbitals-recomp"
 CHECK_TIMEOUT = 5  # s: the start screen waits for nothing, but a hung request should not linger
 FETCH_TIMEOUT = 30
 ASSET_SUFFIX = {  # tools/build/release.py's names
@@ -142,8 +143,8 @@ def fetch(args: argparse.Namespace) -> None:
         z.extractall(new)
     part.unlink()
     tops = [p for p in new.iterdir() if p.is_dir()]
-    if len(tops) != 1 or not (tops[0] / "mkw.exe").is_file():
-        raise ValueError(f"{asset['name']} is not a package of the port (no mkw-recomp/mkw.exe)")
+    if len(tops) != 1 or not (tops[0] / "orbitals-recomp.exe").is_file():
+        raise ValueError(f"{asset['name']} is not a package of the Orbitals port (no orbitals-recomp.exe)")
     emit("ready", tops[0])
 
 

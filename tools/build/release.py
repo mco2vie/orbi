@@ -159,14 +159,16 @@ def _glibc_versions(text: str) -> list[str]:
 
 
 def windows(dist: Path, version: str) -> Path:
-    out = OUT / f"mkw-recomp-{version}-windows-x64.zip"
+    # orbitals-port: its own folder and program name, so it is not taken for the real mkw-recomp
+    out = OUT / f"orbitals-recomp-{version}-windows-x64.zip"
     files = [dist / "mkw.exe", *(dist / d for d in WIN_DLLS), *sorted((dist / "setup").rglob("*"))]
     check_no_game(dist / "setup")
-    top = Path("mkw-recomp")
+    top = Path("orbitals-recomp")
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for p in files:
             if p.is_file():
-                z.write(p, top / p.relative_to(dist))
+                rel = Path("orbitals-recomp.exe") if p.name == "mkw.exe" and p.parent == dist else p.relative_to(dist)
+                z.write(p, top / rel)
         z.write(ROOT / "LICENSE", top / "licenses/mkw-recomp-LICENSE")
         # the libraries in mkw.exe and beside it (tools/build/windeps.py keeps each package's licence files)
         for p in sorted((ROOT / "build/win/deps/share/licenses").rglob("*")):

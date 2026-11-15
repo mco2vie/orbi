@@ -242,7 +242,7 @@ static void make_shortcut(void) {
     const char *appimage = getenv("APPIMAGE");
     if (appimage && *appimage && strlen(appimage) < sizeof exe) snprintf(exe, sizeof exe, "%s", appimage);
     else if (!plat_exe_path(exe, sizeof exe)) return;
-    int ok = plat_desktop_shortcut("Mario Kart World", exe, L.exe_dir, made, sizeof made);
+    int ok = plat_desktop_shortcut("Orbitals Recomp", exe, L.exe_dir, made, sizeof made);
     snprintf(L.shortcut_note, sizeof L.shortcut_note, menu_text(ok ? UI_LAUNCH_SHORTCUT_DONE : UI_LAUNCH_SHORTCUT_FAILED),
              made);
     rt_log("launcher: desktop shortcut %s %s", ok ? "made:" : "failed", ok ? made : "");
@@ -333,10 +333,10 @@ static void page_main(float w, float h) {
     int v0 = dl->VtxBuffer.Size;
     launcher_logo(dl, p, mark);
     float ts = L.big->FontSize, tx = p.x + mark + 24 * s, by = p.y + (mark - ts - 4 * s - lh) * 0.5f;
-    dl->AddText(L.big, ts, ImVec2(tx, by - ts * 0.06f), LOOK_TEXT, "Mario Kart World");
+    dl->AddText(L.big, ts, ImVec2(tx, by - ts * 0.06f), LOOK_TEXT, "Orbitals");
     dl->AddText(ImVec2(tx, by + ts + 4 * s), LOOK_HEADING, menu_text(UI_LAUNCH_SUBTITLE));
     intro_apply(dl, v0, intro(0));
-    float title_w = mark + 24 * s + L.big->CalcTextSizeA(ts, FLT_MAX, 0, "Mario Kart World").x;
+    float title_w = mark + 24 * s + L.big->CalcTextSizeA(ts, FLT_MAX, 0, "Orbitals").x;
     ImGui::Dummy(ImVec2(fmaxf(cw, title_w), mark + 48 * s - gap));   // the window as wide as the title: it clips
     update_row(cw);
     lastrun_row(cw);
@@ -408,7 +408,7 @@ static void page_main(float w, float h) {
     fg->AddCircleFilled(ImVec2(left + r, y + lh * 0.5f), r, ready ? LOOK_OK : LOOK_WARN, 16);
     fg->AddText(ImVec2(left + r * 2 + 10 * s, y), ready ? LOOK_HEADING : LOOK_WARN, state);
     char ver[96];
-    snprintf(ver, sizeof ver, "MKW Recomp %s", rt_port_version);
+    snprintf(ver, sizeof ver, "Orbitals Recomp %s", rt_port_version);
     const char *note = menu_text(UI_LAUNCH_NO_GAME_DATA);
     float right = w - 56 * s;
     fg->AddText(ImVec2(right - ImGui::CalcTextSize(ver).x, y), LOOK_DIM, ver);
@@ -1008,7 +1008,7 @@ static bool open_window(void) {
     // minimized and without focus (tools/run/kwin-rule.sh), as gfx_window_sdl.c does for the game's window.
     const char *bg = getenv("MKW_BACKGROUND_WINDOW");
     bool background = bg && *bg && strcmp(bg, "0");
-    SDL_SetHint(SDL_HINT_APP_ID, background ? "mkw-recomp-run" : "mkw-recomp");
+    SDL_SetHint(SDL_HINT_APP_ID, background ? "orbitals-recomp-run" : "orbitals-recomp");
     if (background) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         rt_log("launcher: SDL_Init failed: %s", SDL_GetError());
@@ -1020,7 +1020,7 @@ static bool open_window(void) {
     // Hidden until its first frame is drawn (launcher_run): shown at once, it is black while the first frame is made.
     SDL_WindowFlags f = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN |
                         (background ? SDL_WINDOW_NOT_FOCUSABLE : 0);
-    L.win = SDL_CreateWindow("Mario Kart World", (int)(1280 * ds), (int)(720 * ds), f);
+    L.win = SDL_CreateWindow("Orbitals Recomp", (int)(1280 * ds), (int)(720 * ds), f);
     if (L.win) app_icon_set(L.win);
     L.ren = L.win ? SDL_CreateRenderer(L.win, nullptr) : nullptr;
     if (!L.ren) {
@@ -1048,7 +1048,7 @@ extern "C" void launcher_set_exefs(const char *exefs) { mods_set_exefs(exefs); }
 extern "C" void launcher_set_profile(const char *profile) { launcher_players_set_base(profile); }
 
 extern "C" void launcher_gb_install(const char *url) {
-    const char *p = !strncmp(url, "mkw-recomp:", 11) ? url + 11 : url;
+    const char *p = !strncmp(url, "orbitals-recomp:", 16) ? url + 16 : !strncmp(url, "mkw-recomp:", 11) ? url + 11 : url;
     int file = 0, mod = 0;
     char tail = 0;
     if (sscanf(p, "https://gamebanana.com/mmdl/%d,Mod,%d%c", &file, &mod, &tail) == 2 && file > 0 && mod > 0) {
@@ -1095,8 +1095,9 @@ extern "C" int launcher_run(void) {
         const char *appimage = getenv("APPIMAGE");   // Linux: the AppImage, not the mounted copy inside it
         if (appimage && *appimage) snprintf(exe, sizeof exe, "%s", appimage);
         else if (!plat_exe_path(exe, sizeof exe)) exe[0] = 0;
-        if (exe[0] && !plat_url_scheme("mkw-recomp", "MKW Recomp mods", exe, "--gb-install"))
-            rt_log("launcher: the mkw-recomp: links (GameBanana 1-Click) could not be registered");
+        // orbitals-port: its own scheme, so the real mkw-recomp keeps the mkw-recomp: links
+        if (exe[0] && !plat_url_scheme("orbitals-recomp", "Orbitals Recomp mods", exe, "--gb-install"))
+            rt_log("launcher: the orbitals-recomp: links could not be registered");
     }
     int updated = update_just_installed(L.exe_dir, L.updated, sizeof L.updated);
     int other = !updated && !L.shot_at && setup_from_other_version(state);

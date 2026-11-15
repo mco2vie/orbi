@@ -263,7 +263,8 @@ int update_apply(const char *exe_dir) {
 void update_relaunch(const char *exe_dir) {
 #ifdef _WIN32
     char exe[1200];
-    snprintf(exe, sizeof exe, "%s/mkw.exe", exe_dir);
+    // the program that is running, whatever its name (orbitals-recomp.exe on this branch)
+    if (!plat_exe_path(exe, sizeof exe)) snprintf(exe, sizeof exe, "%s/orbitals-recomp.exe", exe_dir);
     const char *args[] = {exe, nullptr};
     SDL_Process *p = SDL_CreateProcess(args, false);
     if (!p) rt_log("update: cannot start %s: %s", exe, SDL_GetError());

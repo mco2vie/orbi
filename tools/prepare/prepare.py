@@ -71,7 +71,7 @@ import game_texts  # (build_all: the game's texts in ca, gl, eu)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gamecode import compile_game
-from gamesource import check, is_nx, loose_romfs, unpack
+from gamesource import check, is_nx, loose_romfs, runtime_exe, unpack
 from gamecopy import clear_dir, copy_tree, remove_stale
 from nup import Nup
 from machine import (
@@ -134,7 +134,6 @@ def code_mods(game: Path) -> tuple[list[dict], str]:
         return [], ""
     blob = json.dumps([image, switchable], sort_keys=True).encode()
     return image, hashlib.sha256(blob).hexdigest()[:16]
-
 
 
 def spin_table(exefs: Path, work: Path) -> Path:
@@ -200,7 +199,7 @@ def warm(game: Path, work: Path, runtime: Path | None = None) -> None:
     """The game run once to its title, so the first real start finds pipeline-cache.bin and pipeline-keys.bin. Its
     saves go to a scratch profile: the player's first start stays a first start. The window opens without taking focus
     and without sound; the run is ended after WARM_SECONDS."""
-    exe = (runtime or game) / ("mkw.exe" if os.name == "nt" else "mkw")
+    exe = runtime_exe(runtime or game)
     env = dict(os.environ, MKW_LAUNCHED="1", MKW_ASSUME_FOCUS="1", MKW_AUDIO="none",
                MKW_GAME_DIR=str(game), MKW_PROFILE_DIR=str(work / "warm-profile"))  # fmt: skip
     p = subprocess.Popen([str(exe)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -319,7 +318,8 @@ def main() -> None:
         keys = {
             "exefs": str(exefs_src),
             # another game: " overlay" since its .nup RomFS is the base's with the update's files over it (port-step1c)
-            "romfs": (f"copy {version.name}" + ("" if version.number else " overlay")) if args.romfs == "copy"
+            "romfs": (f"copy {version.name}" + ("" if version.number else " overlay"))
+            if args.romfs == "copy"
             else f"link {romfs_src}",
             "generate": f"{build.game_id()} {version.name} {code_key(GENERATOR)}{with_mods}",
             "compile": f"{build.game_id()} {version.name} {args.target} {code_key(COMPILER)}{with_mods}",
@@ -362,8 +362,9 @@ def main() -> None:
                     nup.extract("exefs", game / "exefs", lambda d, t: emit("progress", d, t))
                     remove_stale(game / "exefs", exefs_src, set(nup.files("exefs")), version.name)
                 else:
-                    copy_tree(exefs_src, game / "exefs", sum(1 for p in exefs_src.iterdir() if p.is_file()),
-                              version.name)
+                    copy_tree(
+                        exefs_src, game / "exefs", sum(1 for p in exefs_src.iterdir() if p.is_file()), version.name
+                    )
             elif step == "romfs":
                 if args.romfs == "copy" and is_nx(romfs_src):
                     clear_dir(romfs, romfs_src)
@@ -395,7 +396,7 @@ def main() -> None:
                         shutil.rmtree(p, ignore_errors=True)
                 # the languages the game does not ship (ca, gl, eu), from this version's translations (the step runs
                 # at every setup, so an update brings its new texts); about a second
-                if version.number:   # MKW's message archives only
+                if version.number:  # MKW's message archives only
                     game_texts.build_all(game, loose_romfs(runtime, romfs, work, "Mals"))
                 shutil.rmtree(work / "pack", ignore_errors=True)
             state["done"][step] = key

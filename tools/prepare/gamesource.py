@@ -29,10 +29,19 @@ def is_nx(path: Path) -> bool:
         return False
 
 
+def runtime_exe(folder: Path) -> Path:
+    """The runtime program in folder: orbitals-recomp.exe in this branch's Windows package (renamed so it is not
+    taken for the real mkw-recomp), mkw.exe in a build of the tree, mkw on Linux."""
+    if os.name != "nt":
+        return folder / "mkw"
+    renamed = folder / "orbitals-recomp.exe"
+    return renamed if renamed.is_file() else folder / "mkw.exe"
+
+
 def unpack(runtime: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:
     """Files of a packed dump (.nup or .nx) under dest as loose files, by the runtime: only those under the prefixes
     ("exefs", "romfs/Mals"). Returns its "unpack: N files, B bytes" line (the log lines come first); dest "-" counts only."""
-    exe = runtime / ("mkw.exe" if os.name == "nt" else "mkw")
+    exe = runtime_exe(runtime)
     p = subprocess.Popen([str(exe), "--unpack", str(pkg), str(dest), *prefixes], stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True)  # fmt: skip
     head, tail = "", []

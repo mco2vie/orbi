@@ -63,5 +63,5 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --title "$GITHUB_REF_NAME" \
-              --notes "The start screen and setup of the orbitals-port branch, for Windows. Unzip, run mkw.exe, Game files > choose your .nup > Set up, then Play, and send logs/setup.log and logs/mkw.log."
+              --notes "The start screen and setup of the orbitals-port branch, for Windows. Unzip, run orbitals-recomp.exe, Game files > choose your .nup > Set up, then Play, and send logs/setup.log and logs/mkw.log."
           gh release upload "$GITHUB_REF_NAME" build/release/*.zip --repo "$GITHUB_REPOSITORY" --clobber
