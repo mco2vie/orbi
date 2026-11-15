@@ -24,6 +24,7 @@
 
 #include "cfg.h"
 #include "fs.h"
+#include "gamelib.h"
 #include "hacks.h"
 #include "host.h"
 #include "platform/platform.h"
@@ -1152,10 +1153,23 @@ static void close_directory(uint64_t h) {
 // and ApplicationId are 8-byte structs passed in one register; Uid, ReadOption and WriteOption by reference.
 #define I32(i) ((int32_t)arg_x(c, i))
 #define I64(i) ((int64_t)arg_x(c, i))
-static void ov_open_file(Cpu *c) { ret_x(c, open_file(arg_p(c, 0), arg_p(c, 1), I32(2))); }
+// Another game (port mode) or MKW_TRACE=fs: the paths the game asks for and the result each got, the first 600
+// calls. Orbitals' Unreal PreInit fails (LaunchNintendo.cpp:241) without saying why in a shipping build; what it
+// looked for and did not find is the first thing to know.
+static uint32_t fs_answer(const char *what, const char *path, uint32_t r) {
+    static volatile int64_t lines;
+    static volatile int32_t port = -1;   // asked once: rt_game_present may look for the library on disk
+    if (port < 0) plat_xchg32(&port, rt_game_present() && rt_game()->port ? 1 : 0);
+    if ((port || (rt_trace & RT_TRACE_FS)) && plat_inc64(&lines) <= 600)
+        rt_log("fs %s %s -> %#x", what, path ? path : "(null)", r);
+    return r;
+}
+static void ov_open_file(Cpu *c) {
+    ret_x(c, fs_answer("open", arg_p(c, 1), open_file(arg_p(c, 0), arg_p(c, 1), I32(2))));
+}
 static void ov_file_size(Cpu *c) { ret_x(c, file_size(arg_p(c, 0), arg_x(c, 1))); }
 static void ov_close_file(Cpu *c) { close_file(arg_x(c, 0)); }
-static void ov_entry_type(Cpu *c) { ret_x(c, entry_type(arg_p(c, 0), arg_p(c, 1))); }
+static void ov_entry_type(Cpu *c) { ret_x(c, fs_answer("entry", arg_p(c, 1), entry_type(arg_p(c, 0), arg_p(c, 1)))); }
 static void ov_read_file(Cpu *c) { ret_x(c, read_file(arg_p(c, 0), arg_x(c, 1), I64(2), arg_p(c, 3), arg_x(c, 4))); }
 static void ov_read_options(Cpu *c) { ret_x(c, read_file(arg_p(c, 0), arg_x(c, 1), I64(2), arg_p(c, 3), arg_x(c, 4))); }
 static void ov_read_exact(Cpu *c) { ret_x(c, read_exact(arg_x(c, 0), I64(1), arg_p(c, 2), arg_x(c, 3))); }
@@ -1167,10 +1181,12 @@ static void ov_delete_file(Cpu *c) { ret_x(c, delete_file(arg_p(c, 0))); }
 static void ov_rename_file(Cpu *c) { ret_x(c, rename_file(arg_p(c, 0), arg_p(c, 1))); }
 static void ov_create_directory(Cpu *c) { ret_x(c, create_directory(arg_p(c, 0))); }
 static void ov_delete_recursive(Cpu *c) { ret_x(c, delete_recursive(arg_p(c, 0))); }
-static void ov_open_directory(Cpu *c) { ret_x(c, open_directory(arg_p(c, 0), arg_p(c, 1), I32(2))); }
+static void ov_open_directory(Cpu *c) {
+    ret_x(c, fs_answer("opendir", arg_p(c, 1), open_directory(arg_p(c, 0), arg_p(c, 1), I32(2))));
+}
 static void ov_read_directory(Cpu *c) { ret_x(c, read_directory(arg_p(c, 0), arg_p(c, 1), arg_x(c, 2), I64(3))); }
 static void ov_close_directory(Cpu *c) { close_directory(arg_x(c, 0)); }
-static void ov_mount_save(Cpu *c) { ret_x(c, mount_save(arg_p(c, 0), arg_p(c, 1))); }
+static void ov_mount_save(Cpu *c) { ret_x(c, fs_answer("mount save", arg_p(c, 0), mount_save(arg_p(c, 0), arg_p(c, 1)))); }
 static void ov_mount_save_ro(Cpu *c) { ret_x(c, mount_save_ro(arg_p(c, 0), arg_x(c, 1), arg_p(c, 2))); }
 static void ov_save_exists(Cpu *c) { ret_x(c, save_exists(arg_x(c, 0), arg_p(c, 1))); }
 static void ov_mount_temp(Cpu *c) { ret_x(c, mount_temp(arg_p(c, 0))); }
@@ -1178,7 +1194,7 @@ static void ov_unmount(Cpu *c) { unmount(arg_p(c, 0)); }
 static void ov_commit(Cpu *c) { ret_x(c, commit(arg_p(c, 0))); }
 static void ov_create_cache(Cpu *c) { ret_x(c, create_cache(I32(0), I64(1), I64(2))); }
 static void ov_delete_cache(Cpu *c) { ret_x(c, delete_cache(I32(0))); }
-static void ov_mount_cache(Cpu *c) { ret_x(c, mount_cache(arg_p(c, 0), I32(1))); }
+static void ov_mount_cache(Cpu *c) { ret_x(c, fs_answer("mount cache", arg_p(c, 0), mount_cache(arg_p(c, 0), I32(1)))); }
 static void ov_open_cache_list(Cpu *c) { ret_x(c, open_cache_list(arg_p(c, 0))); }
 static void ov_read_cache_list(Cpu *c) { ret_x(c, read_cache_list(arg_p(c, 0), arg_p(c, 1), arg_x(c, 2), I32(3))); }
 static void ov_close_cache_list(Cpu *c) { close_cache_list(arg_x(c, 0)); }
@@ -1190,7 +1206,7 @@ static void ov_ensure_save(Cpu *c) {
     ret_x(c, my_uid(arg_p(c, 0)) ? 0 : FS_R_TARGET_NOT_FOUND);
 }
 // Result MountCacheStorage(const char *name): the form without an index is index 0
-static void ov_mount_cache0(Cpu *c) { ret_x(c, mount_cache(arg_p(c, 0), 0)); }
+static void ov_mount_cache0(Cpu *c) { ret_x(c, fs_answer("mount cache", arg_p(c, 0), mount_cache(arg_p(c, 0), 0))); }
 // Result GetFreeSpaceSize(int64_t *out, const char *mount): a console save has its own fixed quota; the host disk
 // is not that quota, so a fixed 1 GiB (more than any Switch save asks for) says "there is room"
 static void ov_free_space(Cpu *c) {
