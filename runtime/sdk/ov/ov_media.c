@@ -166,7 +166,22 @@ static void ov_decode(Cpu *c) {
     ret_x(c, 0);
 }
 
+// size_t GetHardwareOpusDecoderManagerWorkBufferSize(int sample_rate, int channels, TimeSpan, int, int): the newer
+// SDK's decoder manager (Orbitals, port-step1x: from main+0x6a46c68, with 48000, then the SDK asks the hwopus service
+// through IPC). The meaning of the last three arguments is not known yet; they are logged. The memory is the game's
+// and the host does not use it, so the answer only has to be large enough for what the game puts there.
+#define OPUS_MANAGER_WORK_SIZE 0x40000u
+static void ov_manager_work_size(Cpu *c) {
+    static volatile int32_t n;
+    if (plat_inc32(&n) <= 8)
+        rt_log("nn::codec: manager work buffer for %d Hz, %d channels, span %lld ns, %d, %d: %#x",
+               (int)arg_x(c, 0), (int)arg_x(c, 1), (long long)arg_x(c, 2), (int)arg_x(c, 3), (int)arg_x(c, 4),
+               OPUS_MANAGER_WORK_SIZE);
+    ret_x(c, OPUS_MANAGER_WORK_SIZE);
+}
+
 HOST_OVERRIDE("_ZN2nn5codec36GetHardwareOpusDecoderWorkBufferSizeEiii", ov_work_size);
+HOST_OVERRIDE("_ZN2nn5codec43GetHardwareOpusDecoderManagerWorkBufferSizeEiiNS_8TimeSpanEii", ov_manager_work_size);
 HOST_OVERRIDE("_ZN2nn5codec29InitializeHardwareOpusDecoderEPNS0_23HardwareOpusDecoderTypeEiiPvmi", ov_initialize);
 HOST_OVERRIDE("_ZN2nn5codec27FinalizeHardwareOpusDecoderEPNS0_23HardwareOpusDecoderTypeE", ov_finalize);
 HOST_OVERRIDE("_ZN2nn5codec32GetHardwareOpusDecoderSampleRateEPKNS0_23HardwareOpusDecoderTypeE", ov_sample_rate);

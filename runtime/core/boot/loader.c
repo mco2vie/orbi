@@ -447,6 +447,41 @@ static void count_imports(Mod *m) {
     }
 }
 
+// Port mode: main's and subsdk0's imports of nn::codec by name, and how many imports of each nn:: namespace reach the
+// SDK with no host override (the SDK's own versions of those may talk to console services by IPC, which stops the run
+// one call at a time). Orbitals, port-step1x: nn::codec's hardware Opus decoder manager was the first.
+static void log_port_imports(void) {
+    if (!rt_game_present() || !rt_game()->port) return;
+    for (int k = 0; k < nmods; k++) {
+        Mod *m = &mods[k];
+        if (!strcmp(m->pub.name, "sdk")) continue;
+        char seen[64][24];
+        unsigned counts[64] = {0}, nns = 0, codec = 0;
+        for (uint32_t i = 1; i < m->nsyms; i++) {
+            const char *name = sym_name(m, i);
+            if (sym_defined(m, i) || !*name || strncmp(name, "_ZN2nn", 6) || hostfn_override(name)) continue;
+            if (strstr(name, "5codec")) rt_log("imports: %s calls the SDK's %s (no host override)", m->pub.name, name), codec++;
+            // the namespace: "_ZN2nn" then <len><name>
+            const char *p = name + 6;
+            int len = 0;
+            while (*p >= '0' && *p <= '9') len = len * 10 + (*p++ - '0');
+            if (len <= 0 || len > 23) continue;
+            char ns[24];
+            memcpy(ns, p, (size_t)len), ns[len] = 0;
+            unsigned j = 0;
+            while (j < nns && strcmp(seen[j], ns)) j++;
+            if (j == nns && nns < 64) memcpy(seen[nns++], ns, (size_t)len + 1);
+            if (j < 64) counts[j]++;
+        }
+        char line[1600];
+        size_t at = 0;
+        line[0] = 0;
+        for (unsigned j = 0; j < nns && at < sizeof line - 40; j++)
+            at += (size_t)snprintf(line + at, sizeof line - at, "%s%s %u", j ? ", " : "", seen[j], counts[j]);
+        rt_log("imports: %s calls %u nn::codec functions with no host override; per namespace: %s", m->pub.name, codec, line);
+    }
+}
+
 // Every non-JUMP_SLOT reference to nnMain holds the real address (MNG loader.c:229-239).
 static void verify_identity(void) {
     uint64_t real = ldr_symbol("nnMain");
@@ -493,6 +528,7 @@ void ldr_load(const char *exefs_dir) {
         mods[i].pub.ctor_flag = decode_ctor_flag(&mods[i]);
     }
     verify_identity();
+    log_port_imports();
     for (int i = 0; i < nmods; i++) seal(&mods[i]);
     for (int i = 0; i < nmods; i++) {
         const Mod *m = &mods[i];
