@@ -81,9 +81,9 @@ void opt_bind_icon(int cell, int pad, int kind);   // before opt_bind_row: cell 
 int opt_bind_row(const char *key, const char *label, UiTextId desc, const char *const cells[3], const bool enabled[3],
                  const char *note = nullptr);
 
-// mkw.ini is written a moment after the last change (a held slider would rewrite it every frame) and when the menu
+// orbital.ini is written a moment after the last change (a held slider would rewrite it every frame) and when the menu
 // closes. opt_save_tick: on every frame the menu lays out; force: write now if anything is pending. 1 while a write is
 // pending.
 int opt_save_tick(int force);
-// A change made outside a row (Reset, F10): mkw.ini is written as after a row's change.
+// A change made outside a row (Reset, F10): orbital.ini is written as after a row's change.
 void opt_save_soon(void);

@@ -1,6 +1,6 @@
 """Pack a release from the player's folder (build/dist/<target>, after build.py --dist --runtime-only and dist.py): the
 Linux AppImage or the Windows zip. Only the runtime, its libraries and setup/ go in, never anything of the game: a dev
-folder that also holds the built game (mkwgame.*, spirv/, the caches) packs the same release.
+folder that also holds the built game (orbitalgame.*, spirv/, the caches) packs the same release.
 
 Linux: the AppImage's AppRun keeps a copy of mkw in ${XDG_DATA_HOME:-~/.local/share}/mkw-recomp, updated when the
 AppImage brings a new one, links setup/ there to the mount (a new path on every start) and starts it with the bundled

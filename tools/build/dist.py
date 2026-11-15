@@ -8,7 +8,7 @@ not go in: the setup builds it (sm86/spec/spec.py). Every download is pinned by 
 mismatch stops.
 
 Layout of build/dist/<target>/ (after build.py --dist):
-    mkw, mkwgame.id                 the runtime (mkw.exe and its DLLs on Windows; mkwgame.* comes from the setup)
+    mkw, orbitalgame.id                 the runtime (mkw.exe and its DLLs on Windows; orbitalgame.* comes from the setup)
     setup/python, setup/zig, setup/glslc
     setup/src/                      recomp/, sm86/, tools/{build,prepare,romfs,shaders}, runtime/{cpu,core/boot/gamelib.h}
     setup/lib/libmkw.dll.a          (Windows) the runtime's import library the game code library links against
@@ -278,7 +278,7 @@ def main() -> None:
                 shutil.copy2(p, glslc / p.name)
         (setup / "lib").mkdir(exist_ok=True)
         # orbitals-port: the package's program is orbitals-recomp.exe (release.py renames it), and a DLL imports
-        # from its exe by file name. lld's import library names mkw.exe, so the setup's mkwgame.dll would load a
+        # from its exe by file name. lld's import library names mkw.exe, so the setup's orbitalgame.dll would load a
         # second, unstarted copy of an old mkw.exe (or fail without it). The same exports (mkw.def), renamed.
         subprocess.run([str(ROOT / "build/win/llvm-mingw/bin/llvm-dlltool"), "-m", "i386:x86-64",
                         "-d", str(ROOT / "build/obj-dist-win/mkw.def"), "-D", "orbitals-recomp.exe",

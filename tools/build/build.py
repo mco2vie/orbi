@@ -159,7 +159,7 @@ def port_glue(exefs: Path) -> list[str]:
 def module_glue(gen: Path, exefs: Path, library: bool) -> str:
     """modules.c: the game code's tables (runtime/core/boot/gamelib.h): layout, function tables, the SHA-256 of each ExeFS
     file read now from the game copy, the patch sets of the generated patches.h, and the data the generated code reads
-    on every call. library: the entry point of mkwgame.so / mkwgame.dll instead of rt_game_builtin."""
+    on every call. library: the entry point of orbitalgame.so / orbitalgame.dll instead of rt_game_builtin."""
     layout = [m["name"] for m in json.loads((gen / "layout.json").read_text())]
     number = detect_version(exefs).number
     out = ["// Game code tables written by tools/build/build.py; do not edit.", '#include "gamelib.h"',
@@ -191,7 +191,7 @@ def module_glue(gen: Path, exefs: Path, library: bool) -> str:
             "                            exefs_sha256, sizeof exefs_sha256 / sizeof *exefs_sha256, patch_sets,",
             f"                            RT_PATCH_COUNT, RT_PATCH_PAGE, {number}, &g_fnprof, rt_patch_on,",
             f"                            image_patches, RT_IMAGE_PATCH_COUNT, {'0' if number else '&port'}}};", "",
-            "RT_GAME_EXPORT const RtGame *mkwgame_tables(void) { return &game; }" if library
+            "RT_GAME_EXPORT const RtGame *orbitalgame_tables(void) { return &game; }" if library
             else "const RtGame *rt_game_builtin(void) { return &game; }", ""]  # fmt: skip
     return "\n".join(out)
 
@@ -224,8 +224,8 @@ RT_EXPORTS = ("rt_dispatch", "rt_sj_owner", "rt_svc", "rt_brk", "rt_udf", "rt_ti
 def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: Path | None,
                runtime_only: bool = False, ld_extra: list[str] | None = None,
                sys_flags: list[str] | None = None) -> str:  # fmt: skip
-    """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (mkwgame.so,
-    mkwgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
+    """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (orbitalgame.so,
+    orbitalgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
     release ships and the CI builds, without the game's generated C."""
     inc = " ".join(f"-I{d}" for d in sorted({RUNTIME} | {p.parent for p in RUNTIME.rglob("*.h")}))
     gid = f'-DRT_GAME_ID=\\"{game_id()}\\"'
@@ -313,12 +313,12 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     lines.append(f"build {tab}: tabcc {out / 'rt/modules.c'}")
     if target is LINUX:
         lines.append(f"build {exe}: link {' '.join(rt_objs)}")
-        lines.append(f"build {dist / 'mkwgame.so'}: solink {tab} {' '.join(libs)}")
+        lines.append(f"build {dist / 'orbitalgame.so'}: solink {tab} {' '.join(libs)}")
         lines.append("  solibs = -Wl,-z,noexecstack")
     else:
         implib = out / "libmkw.dll.a"
         lines.append(f"build {exe} | {implib}: link {' '.join(rt_objs)}")
-        lines.append(f"build {dist / 'mkwgame.dll'}: solink {tab} {' '.join(libs)} | {implib}")
+        lines.append(f"build {dist / 'orbitalgame.dll'}: solink {tab} {' '.join(libs)} | {implib}")
         lines.append(f"  solibs = {implib}")
     return "\n".join(lines) + "\n"
 
@@ -386,7 +386,7 @@ def main() -> None:
     # which headers the library is built with, for the start screen (runtime/core/boot/gamelib.c rt_game_present)
     if dist:
         dist.mkdir(parents=True, exist_ok=True)
-        (dist / "mkwgame.id").write_text(game_id())
+        (dist / "orbitalgame.id").write_text(game_id())
     fp = ["-fno-omit-frame-pointer", "-mno-omit-leaf-frame-pointer"] if args.frame_pointers else []
     (args.out / "build.ninja").write_text(
         # the lifted code and its library take the sysroot only for another CPU: an x86-64 release's stay as they were

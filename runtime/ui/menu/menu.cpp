@@ -235,7 +235,7 @@ extern "C" void menu_vk_release(void) {
 // <frames per page> frames (default 30) and its last frame's swapchain image goes to MKW_MENU_TEST_DIR (default: the
 // working directory) as menu-test-<frame>-<page>.png; after the last tab the menu closes.
 // MKW_MENU_TEST_SET=<frame>:<key>=<value>[,<key>=<value>...][;<frame>:...]: cfg_set of each key (MKW_ prefix
-// optional) at that presented frame; changes live settings with no input, menu open or not. mkw.ini is written only by
+// optional) at that presented frame; changes live settings with no input, menu open or not. orbital.ini is written only by
 // the pseudo-key SAVE=1 (cfg_save, as a row change does; a failed write shows the menu's save note).
 enum { TEST_PAGE_FRAMES = 30, TEST_SETS = 16 };
 struct TestSet { uint64_t frame; char key[64], value[64]; };
@@ -415,7 +415,7 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
     ImGui::End();
 }
 
-static int g_save_pending;   // a changed setting still waits for its write to mkw.ini (opt_save_tick)
+static int g_save_pending;   // a changed setting still waits for its write to orbital.ini (opt_save_tick)
 
 // ---- the performance overlay (MKW_PERF_OVERLAY), in the top right corner. "fps": the frame rate over the presents of
 // the last half second; with frame generation on (MKW_FRAMEGEN), the game's frames and the presents, "60/240 fps" as
@@ -424,7 +424,7 @@ static int g_save_pending;   // a changed setting still waits for its write to m
 // Off, it costs a cfg_version load per present.
 static unsigned g_perf_ver = ~0u;
 static int g_perf_mode;                  // 0 off, 1 fps, 2 full
-static std::atomic<int> g_perf_save;     // F10 changed the mode: mkw.ini is written on the present thread
+static std::atomic<int> g_perf_save;     // F10 changed the mode: orbital.ini is written on the present thread
 static uint64_t g_perf_last_ns, g_perf_win_ns, g_perf_max_ns;
 static int g_perf_frames, g_perf_game;   // presents and game frames in the window
 static uint64_t g_perf_last_frame;
@@ -681,7 +681,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     bool open = g_open.load(std::memory_order_relaxed);
     if (!open && g_choice_up.load()) choice_answer(-1);   // F1 or Esc closed the menu over a choice: no answer
     if (!open) {
-        if (g_save_pending) g_save_pending = opt_save_tick(1);   // closed: the last change goes to mkw.ini now
+        if (g_save_pending) g_save_pending = opt_save_tick(1);   // closed: the last change goes to orbital.ini now
         if (g_test.at && !g_test.opened && frame >= g_test.at) {
             g_test.opened = frame;
             g_test.page = 0;

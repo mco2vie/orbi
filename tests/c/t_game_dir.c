@@ -68,7 +68,7 @@ int plat_file_write_atomic(const char *path, const void *data, size_t size) {
     snprintf(selector, sizeof selector, "%s", exe);
     char *cut = plat_last_sep(selector);
     if (!cut) return 0;
-    strcpy(cut + 1, "mkw.ini");
+    strcpy(cut + 1, "orbital.ini");
     if (fail_selector && !strcmp(selector, path)) return 0;
     FILE *f = open_file(path, "wb");
     if (!f) return 0;

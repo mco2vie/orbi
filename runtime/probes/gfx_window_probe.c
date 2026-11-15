@@ -131,7 +131,7 @@ static int present_and_check(Source *s, int first, int i, int *w_out, int *h_out
 }
 
 int probe_window(void) {
-    // The exact colour checks need the plain picture, whatever mkw.ini says: the SDR swapchain (HDR10, MKW_HDR auto on an
+    // The exact colour checks need the plain picture, whatever orbital.ini says: the SDR swapchain (HDR10, MKW_HDR auto on an
     // HDR screen, encodes them in PQ) and no performance overlay (it draws over the top right corner)
     plat_setenv("MKW_HDR", "off");
     plat_setenv("MKW_PERF_OVERLAY", "off");

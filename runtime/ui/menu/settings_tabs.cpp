@@ -263,7 +263,7 @@ static void rows_remote_play(void) {
     static int link_ok;
     opt_group(UI_MENU_GROUP_RPT);
     // the App ID: off, the game Steam started, RetroArch (docs/remote-play.md's example), the numbers typed in the row
-    // under it (steam_appids, oldest first) and a number from mkw.ini the list lacks
+    // under it (steam_appids, oldest first) and a number from orbital.ini the list lacks
     {
         enum { SAVED = STEAM_RPT_SAVED };
         static char ids[SAVED + 1][16], names_buf[SAVED + 1][64];
@@ -282,7 +282,7 @@ static void rows_remote_play(void) {
         int n_saved = steam_rpt_saved_ids(cfg_get("MKW_STEAM_APPIDS"), saved, SAVED);
         for (int i = 0; i < n_saved; i++) add(saved[i]);
         const char *v = cfg_get("MKW_STEAM_APPID");
-        if (v && *v && strlen(v) < 16) add(v);   // a number only mkw.ini has
+        if (v && *v && strlen(v) < 16) add(v);   // a number only orbital.ini has
         opt_choice_list("MKW_STEAM_APPID", UI_MENU_RPT_APPID, vals, names, n, UI_MENU_RPT_APPID_DESC);
 
         // a typed number: the App ID from the next start, and the newest in steam_appids
@@ -437,7 +437,7 @@ static bool validation_layer_present(void) {
     return have != 0;
 }
 
-// Every setting the menu shows back to its default (the environment's keys stay), written to mkw.ini. The Mods page's
+// Every setting the menu shows back to its default (the environment's keys stay), written to orbital.ini. The Mods page's
 // keys have rows too but are the player's choices, not settings: a reset left every mod disabled.
 static void reset_all(void) {
     static const char *const keep[] = {"MODS", "MODS_ACK", "MODS_PLAYED"};

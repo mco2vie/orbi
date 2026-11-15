@@ -1,5 +1,5 @@
 // The remapping rows of the Controls tab (binds_page.h): edits a copy of the input tables (input_map.h), writes the MKW_BIND_* lines that
-// give the copy, and input_sdl.c applies them at its next poll; mkw.ini follows a moment later (opt_save_soon). The
+// give the copy, and input_sdl.c applies them at its next poll; orbital.ini follows a moment later (opt_save_soon). The
 // gamepad cells show and change the table of the button layout in use (MKW_PAD_LAYOUT).
 #include <stdio.h>
 #include <string.h>
@@ -62,7 +62,7 @@ static void utf8(uint32_t c, char *out, size_t n) {
 }
 
 // A key as the player sees it: its catalog name, the numpad format, the character on a punctuation key in the keyboard
-// layout in use, else its mkw.ini name in capitals (letters, digits, F keys).
+// layout in use, else its orbital.ini name in capitals (letters, digits, F keys).
 static const char *key_label(int k, char *buf, size_t n) {
     if (k == KEY_NONE) return "";
     if (k >= KEY_SPACE && k <= KEY_PAGEDOWN) return menu_text((UiTextId)(UI_KEY_SPACE + (k - KEY_SPACE)));

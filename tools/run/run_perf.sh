@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run build/mkw under perf record (user space, flat) for up to $2 s (default 120) with the GPU memory cap; then the
 # 40 hottest symbols of the boot. Usage: run_perf.sh NAME [SECONDS]; WORLD_SECS (default 30): the game's own --seconds
-# limit, world clock. MKW_RUN_BIN: another executable (a player folder's mkw, to compare its mkwgame.so).
+# limit, world clock. MKW_RUN_BIN: another executable (a player folder's mkw, to compare its orbitalgame.so).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 # GPU memory cap 4096 MiB: with 3072 both heaps fill and the race's 1280x720 targets are not created, so the scene is

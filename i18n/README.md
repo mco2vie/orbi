@@ -1,7 +1,7 @@
 # i18n
 
 The texts of the in-game menu (F1), the start screen, the setup page and the performance overlay, as gettext files.
-The game's own texts are not here: the game ships them in 16 languages and picks one with `lang` in `mkw.ini`.
+The game's own texts are not here: the game ships them in 16 languages and picks one with `lang` in `orbital.ini`.
 
 | File | Contents |
 |---|---|

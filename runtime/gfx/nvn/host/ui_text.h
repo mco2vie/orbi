@@ -16,7 +16,7 @@ typedef enum {
     UI_MENU_AFTER_RESTART,    // note on a setting that is read at start
     UI_MENU_SET_BY_ENV,       // note on a setting an environment variable fixes
     UI_MENU_SAVE_FAILED,
-    UI_MENU_VERSION,          // "MKW Recomp %s, game %s": the port version and the game update, beside the title
+    UI_MENU_VERSION,          // "Orbitals Recomp %s, game %s": the port version and the game update, beside the title
 
     // Screen
     UI_MENU_FULLSCREEN, UI_MENU_FULLSCREEN_DESC,
@@ -231,7 +231,7 @@ typedef enum {
     // CHOICE "%d ... %d" (players, controllers) and its two buttons
     UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
     // the Game tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
-    // from mkw.ini that the list lacks)
+    // from orbital.ini that the list lacks)
     UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
     // the row under it that takes a typed App ID (opt_digits; steam_appids keeps them for the list): label, description,
     // and the hint shown while nothing is typed

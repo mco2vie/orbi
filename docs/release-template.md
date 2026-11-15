@@ -32,5 +32,5 @@ skipped).
 
 ## Reporting a problem
 
-Open an issue with the bug form and attach the logs: `logs/mkw.log` (the game and the start screen) and
+Open an issue with the bug form and attach the logs: `logs/orbital.log` (the game and the start screen) and
 `logs/setup.log` (the setup's tools), in `~/.local/share/mkw-recomp` on Linux and next to `mkw.exe` on Windows.

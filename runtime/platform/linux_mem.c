@@ -312,18 +312,18 @@ static void fault_handler(int sig, siginfo_t *si, void *uc) {
     if (sig == SIGSEGV && fault_hook && fault_hook((uint64_t)(uintptr_t)si->si_addr)) return;   // reads too: traps
     uintptr_t rip = (uintptr_t)UC_PC(u);
     Dl_info at = {0}, self = {0};
-    // Ours: this executable, the game code library (mkwgame.so), or no module at all (a jump to a wild address)
+    // Ours: this executable, the game code library (orbitalgame.so), or no module at all (a jump to a wild address)
     int in_module = dladdr((void *)rip, &at) != 0, ours_exe = 0, ours_game = 0;
     if (in_module && dladdr((void *)plat_crash_hook, &self)) {
         ours_exe = at.dli_fbase == self.dli_fbase;
         const char *base = at.dli_fname ? strrchr(at.dli_fname, '/') : NULL;
-        ours_game = base && !strcmp(base + 1, "mkwgame.so");
+        ours_game = base && !strcmp(base + 1, "orbitalgame.so");
     }
     if (crash_fn && (!in_module || ours_exe || ours_game)) {
         PlatCrash c = {sig == SIGSEGV ? "access violation" : sig == SIGBUS ? "bus error"
                        : sig == SIGILL ? "illegal instruction" : "arithmetic exception",
                        (uint32_t)sig, rip, in_module ? rip - (uintptr_t)at.dli_fbase : rip, -1, 0,
-                       !in_module ? "no module" : ours_exe ? "mkw" : "mkwgame", 0};
+                       !in_module ? "no module" : ours_exe ? "mkw" : "orbitalgame", 0};
 #if defined(__aarch64__)
         if (!in_module) c.ret = (uintptr_t)UC_RET(u);   // a wild call left its return address in x30
 #else

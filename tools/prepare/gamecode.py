@@ -1,4 +1,4 @@
-"""The compile step of prepare.py: the generated C into mkwgame.so / mkwgame.dll with the package's zig (or clang).
+"""The compile step of prepare.py: the generated C into orbitalgame.so / orbitalgame.dll with the package's zig (or clang).
 
 Why apart: prepare.py holds the order of the steps and their keys; this step is the largest and has its own reuse of
 earlier objects. Not run on its own.
@@ -42,7 +42,7 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
         # zig cc turns -O1 into -O2 with both vectorizers, keeps frame pointers, adds debug info and UBSan, and spells
         # the CPU its own way: 182 126 instructions on a chunk clang -O1 makes in 150 969. With these, 150 745 (the
         # rest is LLVM 22 against 23), as SavageWindRecomp's GAMELIB_ZIGFLAGS (runtime/gamebuild.c, MIT).
-        # AArch64: zig ignores -ffixed-x18 without a word (mkwgame.so used x18 73 079 times and crashed at the first
+        # AArch64: zig ignores -ffixed-x18 without a word (orbitalgame.so used x18 73 079 times and crashed at the first
         # preemption, Odin 2, 10/11/2026); its CPU feature reserve_x18 keeps the register out.
         flags = [f.replace("-march=x86-64-v3", "-mcpu=x86_64_v3")
                  .replace("-march=armv8.2-a+fp16+rcpc+dotprod+crc",
@@ -81,7 +81,7 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
         stamp.write_text(key)
         return ""
 
-    lib = game / ("mkwgame.dll" if windows else "mkwgame.so")
+    lib = game / ("orbitalgame.dll" if windows else "orbitalgame.so")
     part = lib.with_name(lib.name + ".part")
     rsp = obj / "link.rsp"  # ~360 objects: past the Windows command line limit
     link = crt_link(game, cc, lib, part, obj, [f"@{rsp}", *extra]) if windows else None
@@ -111,7 +111,7 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
         raise Failed(f"linking the game code failed: {r.stderr.strip()[-300:]}")
     part.replace(lib)
     emit("progress", total, total)
-    (game / "mkwgame.id").write_text(build.game_id())  # runtime/core/boot/gamelib.c rt_game_present
+    (game / "orbitalgame.id").write_text(build.game_id())  # runtime/core/boot/gamelib.c rt_game_present
 
 
 def common_key(cc: list[str], gen: Path) -> str:

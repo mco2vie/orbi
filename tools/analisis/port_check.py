@@ -19,7 +19,7 @@ Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_c
        executable (.github/workflows/port_check.yml): port_check.exe carries that file instead of the sources.
        --disasm main+0x181bf8[:0x180] ...: instead of the report, those ranges disassembled (capstone), with calls
        through the PLT named by their import and the module + offset of every branch target, to port_disasm.txt (a
-       crash in mkw.log names the addresses). It is the game's own code: send it, never commit it.
+       crash in orbital.log names the addresses). It is the game's own code: send it, never commit it.
 Windows executable: drop the .nup on port_check.exe (or run it and paste the path); the report goes next to the exe.
 Run it with no argument and it also asks for the --disasm ranges (Enter for the report).
 """

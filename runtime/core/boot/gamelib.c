@@ -1,5 +1,5 @@
 // The game code's tables (gamelib.h) and what the runtime reads from them. build/mkw links them in; the player's build
-// loads them from mkwgame.so / mkwgame.dll in the selected game folder, which the start screen's setup builds from their own
+// loads them from orbitalgame.so / orbitalgame.dll in the selected game folder, which the start screen's setup builds from their own
 // game files (SavageWindRecomp runtime/gamelib.c, MIT: same idea, one entry point found by name, an id check).
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,7 +65,7 @@ int rt_game_present(void) {
     char path[PLAT_PATH_MAX * 2];
     snprintf(path, sizeof path, "%s/%s", cfg_game_dir(), RT_GAME_LIB);
     if (!plat_file_exists(path)) return 0;
-    snprintf(path, sizeof path, "%s/mkwgame.id", cfg_game_dir());
+    snprintf(path, sizeof path, "%s/orbitalgame.id", cfg_game_dir());
     uint64_t size = 0;
     char *id = (char *)plat_file_read(path, &size);
     int ok = id && size >= strlen(RT_GAME_ID) && !strncmp(id, RT_GAME_ID, strlen(RT_GAME_ID));

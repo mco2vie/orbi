@@ -1,4 +1,4 @@
-// mkw.ini: file-backed defaults for the MKW_* environment variables (docs/controls.md, mkw.ini.example).
+// orbital.ini: file-backed defaults for the MKW_* environment variables (docs/controls.md, orbital.ini.example).
 // Format: "key = value" lines, '#' or ';' at the start of a line begins a comment, [sections] only group. A key is a
 // variable name without "MKW_" (an optional MKW_ prefix is accepted), case-insensitive. A value is the rest of the
 // line, trimmed, optionally in double quotes; an empty value counts as unset. The environment wins over the file.
@@ -57,7 +57,7 @@ static const char *const known[] = {
     "UPDATE_AS", "UPDATE_CHECK", "UPDATE_REPO", "WINDOW_SIZE", "ZSTD_CHECK", "ZSTD_NATIVE",
 };
 
-// The mkw.ini section a key cfg_set may write goes to when the file lacks it (mkw.ini.example's sections).
+// The orbital.ini section a key cfg_set may write goes to when the file lacks it (orbital.ini.example's sections).
 static const struct { const char *key, *section; } sections[] = {
     {"FULLSCREEN", "display"}, {"WINDOW_SIZE", "display"}, {"PERF_OVERLAY", "display"}, {"VK_PRESENT", "display"},
     {"GPU_INDEX", "display"}, {"UPSCALER", "display"}, {"HDR", "display"}, {"SHARPNESS", "display"}, {"PICTURE_FIT", "display"},
@@ -181,7 +181,7 @@ static void add(char *key, char *value, int line) {
     size_t vl = strlen(value);
     if (vl >= 2 && value[0] == '"' && value[vl - 1] == '"') value[vl - 1] = 0, value++;
     if (!*key) return;
-    if (!is_known(key)) rt_log("cfg: mkw.ini line %d: unknown key '%s'", line, key);
+    if (!is_known(key)) rt_log("cfg: orbital.ini line %d: unknown key '%s'", line, key);
     if (!*value) return;   // "key =" leaves the setting at its default
     for (int i = 0; i < n_entries; i++)
         if (!strcmp(entries[i].key, key)) {   // a repeated key: the later line wins
@@ -206,7 +206,7 @@ int cfg_load(const char *path) {
         char *s = trim(p);
         char *eq = strchr(s, '=');
         if (*s && *s != '#' && *s != ';' && *s != '[') {
-            if (!eq) rt_log("cfg: mkw.ini line %d: no '=' in '%s'", line, s);
+            if (!eq) rt_log("cfg: orbital.ini line %d: no '=' in '%s'", line, s);
             else {
                 *eq = 0;
                 add(trim(s), trim(eq + 1), line);
@@ -219,7 +219,7 @@ int cfg_load(const char *path) {
     return 1;
 }
 
-// ---- device profiles: defaults for a known machine, below the environment and mkw.ini and above the table, so any
+// ---- device profiles: defaults for a known machine, below the environment and orbital.ini and above the table, so any
 // key the player sets wins and resetting a key in the menu returns to the profile's value. MKW_DEVICE_PROFILE = auto
 // (default: the Steam Deck when the firmware says so), desktop (none) or deck.
 //
@@ -460,7 +460,7 @@ static void put(Out *o, const char *s, size_t n) {
     if (o->n + n + 1 > o->cap) {
         o->cap = (o->n + n + 1) * 2;
         o->buf = realloc(o->buf, o->cap);
-        if (!o->buf) rt_fatal("cfg: out of memory writing mkw.ini");
+        if (!o->buf) rt_fatal("cfg: out of memory writing orbital.ini");
     }
     memcpy(o->buf + o->n, s, n);
     o->n += n;
@@ -517,7 +517,7 @@ int cfg_save_to(const char *path) {
     // after[i]: entries to write after line i (-1 = none); replace[i]: the entry whose value line i now carries
     int *replace = malloc(sizeof(int) * ((size_t)nl + 1)), *after_key = malloc(sizeof(int) * (size_t)(n + 1));
     char *drop = calloc((size_t)nl + 1, 1);   // lines of a reset key
-    if (!lines || !replace || !after_key || !drop) rt_fatal("cfg: out of memory writing mkw.ini");
+    if (!lines || !replace || !after_key || !drop) rt_fatal("cfg: out of memory writing orbital.ini");
     for (int i = 0, at = 0; i < nl; i++) {
         size_t start = (size_t)at;
         while ((uint64_t)at < size && text[at] != '\n') at++;
@@ -643,14 +643,26 @@ static int resolve_game_dir(const char *path, char *out, size_t cap) {
     return 1;
 }
 
+// An installation from before the rename keeps its settings: its mkw.ini becomes orbital.ini when orbital.ini is missing.
+static void migrate_ini(const char *path) {
+    size_t n = strlen(path);
+    if (n < sizeof "orbital.ini" - 1 || plat_file_exists(path)) return;
+    char old[PLAT_PATH_MAX * 3];
+    if (n - (sizeof "orbital.ini" - 1) + sizeof "mkw.ini" > sizeof old) return;
+    memcpy(old, path, n - (sizeof "orbital.ini" - 1));
+    strcpy(old + n - (sizeof "orbital.ini" - 1), "mkw.ini");
+    if (plat_file_exists(old) && plat_file_replace(old, path)) rt_log("cfg: %s renamed to orbital.ini", old);
+}
+
 static int find_ini(void) {
     if (ini_path[0]) return 1;
     char path[PLAT_PATH_MAX * 2];
     if (!plat_exe_path(path, sizeof path)) return 0;
     char *cut = plat_last_sep(path);
     if (!cut) cut = strrchr(path, '/');
-    if (!cut || cut + 10 >= path + sizeof path) return 0;
-    strcpy(cut + 1, "mkw.ini");
+    if (!cut || cut + 14 >= path + sizeof path) return 0;
+    strcpy(cut + 1, "orbital.ini");
+    migrate_ini(path);
     snprintf(ini_path, sizeof ini_path, "%s", path);
     snprintf(launcher_ini, sizeof launcher_ini, "%s", path);
     *cut = 0;
@@ -709,7 +721,7 @@ static void load_ini(void) {
     for (int i = 0; i < n_entries; i++) {
         char var[128];
         snprintf(var, sizeof var, PREFIX "%s", entries[i].key);
-        if (getenv(var)) rt_log("cfg: %s is set in the environment and overrides mkw.ini", var);
+        if (getenv(var)) rt_log("cfg: %s is set in the environment and overrides orbital.ini", var);
     }
 }
 
@@ -732,7 +744,8 @@ void cfg_init(void) {
 #endif
         } else if (strcmp(game_dir, dir)) {
             snprintf(game_dir, sizeof game_dir, "%s", dir);
-            snprintf(ini_path, sizeof ini_path, "%s/mkw.ini", game_dir);
+            snprintf(ini_path, sizeof ini_path, "%s/orbital.ini", game_dir);
+            migrate_ini(ini_path);
             // Each installation keeps its own RomFS path and settings. The launcher ini holds the selection only.
             cfg_load(ini_path);
             char key[] = "GAME_DIR", value[sizeof game_dir];
@@ -742,6 +755,6 @@ void cfg_init(void) {
         }
     }
     if (profile_of())
-        rt_log("cfg: device profile Steam Deck: defaults for the keys mkw.ini does not set (MKW_DEVICE_PROFILE=desktop "
+        rt_log("cfg: device profile Steam Deck: defaults for the keys orbital.ini does not set (MKW_DEVICE_PROFILE=desktop "
                "turns it off)");
 }

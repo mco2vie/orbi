@@ -10,9 +10,9 @@ Steps, into --game (by default the folder of mkw / mkw.exe):
   check     exefs/main is a version of MKW the port knows (NSO build id, recomp/versions.py: 1.0.0, 1.8.0), the RomFS
             has at least 95 % of that version's files (1.0.0: 205 660)
   exefs     exefs/ copied (40 MB)
-  romfs     romfs/ copied (23 GB), or --romfs link: its path written to mkw.ini (romfs = ...)
+  romfs     romfs/ copied (23 GB), or --romfs link: its path written to orbital.ini (romfs = ...)
   generate  recomp/gen.py: the game code as C, in <game>/setup-work
-  compile   that C with the package's zig (or clang) into mkwgame.so / mkwgame.dll
+  compile   that C with the package's zig (or clang) into orbitalgame.so / orbitalgame.dll
   shaders   the SM86 spec built here from NVIDIA's nvdisasm (sm86/spec/spec.py, into sm86/; never shipped), then
             tools/shaders/extract.py and translate.py into spirv/
   warm      the game run once for a minute: the driver's pipeline cache and the pipeline keys for the first start
@@ -96,8 +96,16 @@ STEPS = ("check", "exefs", "romfs", "generate", "compile", "shaders", "warm", "c
 WARM_SECONDS = 60  # the driver cache is saved every 20 s and the pipeline keys every 2 (vk_pipeline.c, vk_pipe_keys.c)
 
 
+def migrate_ini(ini: Path) -> None:
+    """An installation from before the rename: its mkw.ini becomes orbital.ini (runtime/core/base/cfg.c migrate_ini)."""
+    old = ini.with_name("mkw.ini")
+    if ini.name == "orbital.ini" and not ini.exists() and old.is_file():
+        old.replace(ini)
+
+
 def ini_set(ini: Path, key: str, value: str) -> None:
-    """key = value in mkw.ini (runtime/core/base/cfg.c format), replacing a line with that key."""
+    """key = value in orbital.ini (runtime/core/base/cfg.c format), replacing a line with that key."""
+    migrate_ini(ini)
     lines = ini.read_text(encoding="utf-8").splitlines() if ini.is_file() else []
     norm = key.upper().removeprefix("MKW_")
     keep = [ln for ln in lines if ln.split("=", 1)[0].strip().upper().removeprefix("MKW_") != norm]
@@ -105,7 +113,8 @@ def ini_set(ini: Path, key: str, value: str) -> None:
 
 
 def ini_get(ini: Path, key: str) -> str:
-    """key's value in mkw.ini, "" when it has none."""
+    """key's value in orbital.ini, "" when it has none."""
+    migrate_ini(ini)
     norm = key.upper().removeprefix("MKW_")
     for ln in ini.read_text(encoding="utf-8").splitlines() if ini.is_file() else []:
         k, sep, v = ln.partition("=")
@@ -118,7 +127,7 @@ def code_mods(game: Path) -> tuple[list[dict], str]:
     """The enabled mods' code bytes (mod.json "image", tools/mod/ips.py), each with its mod's name, for gen.py --image;
     and a key over them and every installed mod's switchable "patches" (gen.py compiles those in, recomp/patches.py
     load_mods): "" without any, so a setup without code mods keeps its keys."""
-    enabled = [m.strip() for m in ini_get(game / "mkw.ini", "mods").split(",") if m.strip()]
+    enabled = [m.strip() for m in ini_get(game / "orbital.ini", "mods").split(",") if m.strip()]
     image, switchable = [], {}
     mods = game / "mods"
     for mj in sorted(mods.glob("*/mod.json")) if mods.is_dir() else []:
@@ -309,7 +318,7 @@ def main() -> None:
         exefs_src, romfs_src, version = check(src, game, runtime)
         romfs = game / "romfs" if args.romfs == "copy" else romfs_src
         # The version (from exefs/main's build id) says which game a step built from; the folder only matters to the
-        # steps that copy from it or point mkw.ini at it. With the folder in every key, moving or renaming it redid
+        # steps that copy from it or point orbital.ini at it. With the folder in every key, moving or renaming it redid
         # generate, compile and the shaders (#188: 16 min on Linux, 31 on Windows)
         # code mods: their key joins generate's and compile's only when there are some (a mod enabled, disabled,
         # imported or deleted builds the game code again; tools/mod/ips.py)
@@ -348,7 +357,10 @@ def main() -> None:
                 print(f"setup: {step} skipped for {version.name} (not Mario Kart World)", file=sys.stderr)
                 emit("skip", step)
                 continue
-            if step != "cleanup" and state["done"].get(step) == key:
+            # a library built before the rename (mkwgame.*) is not the one the runtime loads: compile again
+            lib = game / ("orbitalgame.dll" if args.target == "windows" else "orbitalgame.so")
+            lost = step == "compile" and not lib.is_file()
+            if step != "cleanup" and state["done"].get(step) == key and not lost:
                 emit("skip", step)
                 continue
             emit("step", step)
@@ -369,17 +381,17 @@ def main() -> None:
                 if args.romfs == "copy" and is_nx(romfs_src):
                     clear_dir(romfs, romfs_src)
                     unpack(runtime, romfs_src, game, "romfs")
-                    ini_set(game / "mkw.ini", "romfs", "romfs")
+                    ini_set(game / "orbital.ini", "romfs", "romfs")
                 elif args.romfs == "copy" and romfs_src.is_file():
                     nup = Nup(romfs_src)
                     nup.extract("romfs", romfs, lambda d, t: emit("progress", d, t))
                     remove_stale(romfs, romfs_src, set(nup.files("romfs")), version.name)
-                    ini_set(game / "mkw.ini", "romfs", "romfs")
+                    ini_set(game / "orbital.ini", "romfs", "romfs")
                 elif args.romfs == "copy":
                     copy_tree(romfs_src, romfs, version.romfs_files, version.name)
-                    ini_set(game / "mkw.ini", "romfs", "romfs")
+                    ini_set(game / "orbital.ini", "romfs", "romfs")
                 else:
-                    ini_set(game / "mkw.ini", "romfs", str(romfs_src))
+                    ini_set(game / "orbital.ini", "romfs", str(romfs_src))
             elif step == "generate":
                 generate(game / "exefs", work, gen_jobs, version, image)
             elif step == "compile":

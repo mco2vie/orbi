@@ -247,8 +247,8 @@ msgstr "無法儲存設定"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_VERSION"
-msgid "MKW Recomp %s, game %s"
-msgstr "MKW Recomp %s，遊戲 %s"
+msgid "Orbitals Recomp %s, game %s"
+msgstr "Orbitals Recomp %s，遊戲 %s"
 
 msgctxt "UI_MENU_FULLSCREEN"
 msgid "Fullscreen"
@@ -2096,8 +2096,8 @@ msgstr "上次遊戲因 %s 已修正的問題停止。請更新以取得修正�
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/mkw.log attached helps to fix it."
-msgstr "上次遊戲因錯誤停止。附上 logs/mkw.log 回報有助於修正。"
+"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
+msgstr "上次遊戲因錯誤停止。附上 logs/orbital.log 回報有助於修正。"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2203,10 +2203,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "正在等待 Steam"
 
-#. steam_appid and mkw.ini are a setting and a file name: keep them.
+#. steam_appid and orbital.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in mkw.ini"
-msgstr "需要在 mkw.ini 中設定 steam_appid"
+msgid "Needs steam_appid in orbital.ini"
+msgstr "需要在 orbital.ini 中設定 steam_appid"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2279,10 +2279,10 @@ msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
 "The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
 "start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
 msgstr ""
 "mkw 在遠端同樂中所使用的 Steam 遊戲。自動：透過啟動選項啟動 mkw 的遊戲 (\"C:\\...\\mkw.exe\" %command%)，因此你擁有的任何支援遠端同樂的 "
-"Steam 遊戲都可以。其他編號：mkw.ini 中的 steam_appid。下次啟動時生效。"
+"Steam 遊戲都可以。其他編號：orbital.ini 中的 steam_appid。下次啟動時生效。"
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2294,8 +2294,8 @@ msgstr "自動（Steam 啟動的遊戲）"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (mkw.ini)"
-msgstr "%s（mkw.ini）"
+msgid "%s (orbital.ini)"
+msgstr "%s（orbital.ini）"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2306,10 +2306,10 @@ msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
 "press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in mkw.ini). Backspace deletes a digit."
+"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
 msgstr ""
 "用鍵盤的數字鍵輸入你擁有且支援遠端同樂的 Steam 遊戲的應用程式 ID（即該遊戲商店網址中的數字，store.steampowered.com/app/<number>/），然後按 "
-"Enter 或 A。下次啟動起 mkw 會以該遊戲執行，上方的 Steam 應用程式 ID 一列會把它保留在清單中（mkw.ini 中的 steam_appids）。Backspace "
+"Enter 或 A。下次啟動起 mkw 會以該遊戲執行，上方的 Steam 應用程式 ID 一列會把它保留在清單中（orbital.ini 中的 steam_appids）。Backspace "
 "刪除一位數字。"
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"

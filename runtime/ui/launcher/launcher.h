@@ -7,7 +7,7 @@ extern "C" {
 
 enum { LAUNCHER_QUIT = 0, LAUNCHER_PLAY = 1 };
 int launcher_run(void);   // after cfg_init, before mem_init; LAUNCHER_PLAY: start the game, LAUNCHER_QUIT: end
-// The romfs the game will boot (argv, MKW_ROMFS/mkw.ini, the exe folder or the baked-in default): the Mods page
+// The romfs the game will boot (argv, MKW_ROMFS/orbital.ini, the exe folder or the baked-in default): the Mods page
 // merges and imports against it, so overlays validate against the same originals the game reads.
 void launcher_set_romfs(const char *romfs);
 // The profile folder the game will use: the Profiles page lists and makes its players (core/base/players.h), and a

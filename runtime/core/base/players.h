@@ -8,7 +8,7 @@
 //   <folder>/nickname.txt        the player's name, UTF-8; missing: PLAYER_DEFAULT_NAME
 //
 // base is the profile folder of main.c (MKW_PROFILE_DIR, profile/ in the selected installation, or --profile).
-// mkw.ini's MKW_PLAYER names the player the next start plays: n, or empty for the first one.
+// orbital.ini's MKW_PLAYER names the player the next start plays: n, or empty for the first one.
 #pragma once
 #include <stddef.h>
 
@@ -42,7 +42,7 @@ int player_create(const char *base, const char *name, char *id_out, size_t cap);
 int player_rename(const char *base, const char *id, const char *name);
 // Moves player id's folder into players/deleted/; never the first one. 1 when moved.
 int player_remove(const char *base, const char *id);
-// The folder of the player mkw.ini's MKW_PLAYER names; base when it is empty or its folder is missing (a player
+// The folder of the player orbital.ini's MKW_PLAYER names; base when it is empty or its folder is missing (a player
 // removed, or a --profile / MKW_PROFILE_DIR of a test run without players).
 void player_active_dir(const char *base, char *out, size_t cap);
 

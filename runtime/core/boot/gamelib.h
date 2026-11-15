@@ -1,7 +1,7 @@
 // The game code's tables: module layout, lifted function tables, the ExeFS hashes the code was generated from and the
 // code patch sets. tools/build/build.py writes them (build/obj/rt/modules.c) from the generator's layout.json and
 // patches.h. The development build links them into build/mkw (rt_game_builtin); the player's build compiles them into
-// the game code library, mkwgame.so / mkwgame.dll (SavageWindRecomp runtime/gamelib.h, MIT).
+// the game code library, orbitalgame.so / orbitalgame.dll (SavageWindRecomp runtime/gamelib.h, MIT).
 #pragma once
 #include <stdint.h>
 
@@ -73,10 +73,10 @@ int rt_game_present(void);             // linked tables, or a library beside the
 void rt_fnprof_set(int on);            // the function-entry hook of the generated code on or off
 
 #if defined(_WIN32)
-#define RT_GAME_LIB "mkwgame.dll"
+#define RT_GAME_LIB "orbitalgame.dll"
 #define RT_GAME_EXPORT __declspec(dllexport)
 #else
-#define RT_GAME_LIB "mkwgame.so"
+#define RT_GAME_LIB "orbitalgame.so"
 #define RT_GAME_EXPORT __attribute__((visibility("default")))
 #endif
-#define RT_GAME_ENTRY "mkwgame_tables"   // the library's one export: const RtGame *mkwgame_tables(void)
+#define RT_GAME_ENTRY "orbitalgame_tables"   // the library's one export: const RtGame *orbitalgame_tables(void)

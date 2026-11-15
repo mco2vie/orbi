@@ -282,7 +282,7 @@ static void probe_oe(void) {
     char *keep_lang = cfg_get("MKW_LANG") ? strdup(cfg_get("MKW_LANG")) : NULL;
     char *keep_locale = cfg_get("MKW_LOCALE") ? strdup(cfg_get("MKW_LOCALE")) : NULL;
     char *keep_menu = cfg_get("MKW_MENU_LANG") ? strdup(cfg_get("MKW_MENU_LANG")) : NULL;
-    set_env("MKW_MENU_LANG", NULL);   // the locale cases: a menu language from mkw.ini would decide instead
+    set_env("MKW_MENU_LANG", NULL);   // the locale cases: a menu language from orbital.ini would decide instead
     static const struct { const char *lang, *locale, *want; } cases[] = {
         {NULL, "en-US", "en-US"}, {NULL, "be-BY", "en-US"}, {NULL, "xx", "en-US"},     {NULL, "ja-JP", "ja"},
         {NULL, "fr-CA", "fr-CA"}, {NULL, "es-MX", "es-419"}, {NULL, "es_ES", "es"},     {NULL, "zh-Hant-TW", "zh-Hant"},

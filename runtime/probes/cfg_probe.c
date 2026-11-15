@@ -1,4 +1,4 @@
-// --probe-cfg: mkw.ini parsing, the environment override and a missing file (cfg.c). Needs no game files.
+// --probe-cfg: orbital.ini parsing, the environment override and a missing file (cfg.c). Needs no game files.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,7 +146,7 @@ int probe_cfg(void) {
     CHECK(cfg_meta("BIND_A") == NULL && cfg_meta("FPS_COUNTER") == NULL && cfg_meta("NO_SUCH") == NULL,
           "meta: keys the menu does not show are NULL");
 
-    // cfg_reset: the key's active lines leave mkw.ini, the commented example stays
+    // cfg_reset: the key's active lines leave orbital.ini, the commented example stays
     static const char rbase[] = "[audio]\n# volume = 100\n[input]\nmotion = 0\n";
     static const char *const vol[] = {"VOLUME"};
     plat_setenv("MKW_VOLUME", "");

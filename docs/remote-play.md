@@ -29,7 +29,7 @@ It is off by default and changes nothing until you set it up.
    another folder: the one that holds `mkw`. The Linux AppImage runs its copy of `mkw` in `~/.local/share/mkw-recomp`,
    so that is the folder there.
 
-2. **The App ID.** In `mkw.ini` next to `mkw`:
+2. **The App ID.** In `orbital.ini` next to `mkw`:
 
    ```ini
    [steam]
@@ -42,7 +42,7 @@ It is off by default and changes nothing until you set it up.
    **Your own App ID in the menu.** Under that row, select **Enter a Steam App ID**, type the number with the
    keyboard's number keys (Backspace deletes a digit) and press Enter or A. mkw runs as that game from the next start,
    and the Steam App ID row keeps the number in its list, so you can switch back to it later. The list is
-   `steam_appids` in `mkw.ini` (comma-separated, 16 at most: the oldest goes first); delete a number there to take it
+   `steam_appids` in `orbital.ini` (comma-separated, 16 at most: the oldest goes first); delete a number there to take it
    off the list.
 
    **Another Steam game.** Any game you own whose store page lists Remote Play Together can stand in for
@@ -64,7 +64,7 @@ It is off by default and changes nothing until you set it up.
    | 1361510 (TMNT: Shredder's Revenge), Steam Input on | none: Steam lists no controller at all | none |
    | 1361510, Steam Input off (Properties > Controller) | works | listed, but no button reaches mkw |
 
-   To check another one, look in `logs/mkw.log` after a friend has joined for `input: ... Steam virtual ...` and
+   To check another one, look in `logs/orbital.log` after a friend has joined for `input: ... Steam virtual ...` and
    `input: gamepad ... for player 2 (... a Remote Play guest's)`, then make sure player 2 moves in a race. The log
    lists every controller SDL sees (`input: SDL lists N joysticks`) each time the list changes.
 
@@ -101,7 +101,7 @@ join:
 B or Esc closes the question without choosing. Either way the game goes back to its menu first, as it does without
 Steam: the game does not wait inside its controller screen, because the picture (and with it the overlay and your
 friends' stream) would freeze meanwhile. With a controller for every player, the game starts at once, with no
-question. `steam_invite` in `mkw.ini` changes this: `ask` (the default) as above; `auto` opens the invite list without
+question. `steam_invite` in `orbital.ini` changes this: `ask` (the default) as above; `auto` opens the invite list without
 asking while no friend has joined yet or controllers are missing; `always` opens it every time; `off` never asks nor
 opens it.
 
@@ -125,7 +125,7 @@ per player.
   `-pipewire-dmabuf` when guests get a black picture).
 - The App ID is read at start: changing it needs a restart of the game.
 - A device loss with "instruction pointer invalid" in the log on NVIDIA cards is the port's known issue #22, with or
-  without Steam; `skip_programs` in `mkw.ini` helps find its cause (CHANGELOG, 0.1.10).
+  without Steam; `skip_programs` in `orbital.ini` helps find its cause (CHANGELOG, 0.1.10).
 
 ## Tested
 

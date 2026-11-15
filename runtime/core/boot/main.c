@@ -50,8 +50,8 @@
 unsigned rt_trace;
 
 // Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\mkw.log in the selected game folder, so a player has one to attach to a report; run_game.py and
-// `2> file` keep their own file. Each start moves the earlier logs to mkw.1.log .. mkw.4.log. A file stops at 64 MiB
+// writes its log to logs\orbital.log in the selected game folder, so a player has one to attach to a report; run_game.py and
+// `2> file` keep their own file. Each start moves the earlier logs to orbital.1.log .. orbital.4.log. A file stops at 64 MiB
 // (MKW_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
 #define LOG_KEEP 5
@@ -122,13 +122,13 @@ static void log_open(int game) {
     if (cut && (size_t)(cut - dir) + sizeof "/logs" <= sizeof dir) {
         strcpy(cut, "/logs");
         plat_file_mkdir_p(dir);
-        for (int i = LOG_KEEP - 1; i > 0; i--) {   // mkw.3.log -> mkw.4.log, ..., mkw.log -> mkw.1.log
-            if (i > 1) snprintf(from, sizeof from, "%s/mkw.%d.log", dir, i - 1);
-            else snprintf(from, sizeof from, "%s/mkw.log", dir);
-            snprintf(to, sizeof to, "%s/mkw.%d.log", dir, i);
+        for (int i = LOG_KEEP - 1; i > 0; i--) {   // orbital.3.log -> orbital.4.log, ..., orbital.log -> orbital.1.log
+            if (i > 1) snprintf(from, sizeof from, "%s/orbital.%d.log", dir, i - 1);
+            else snprintf(from, sizeof from, "%s/orbital.log", dir);
+            snprintf(to, sizeof to, "%s/orbital.%d.log", dir, i);
             if (plat_file_exists(from)) plat_file_replace(from, to);
         }
-        snprintf(g_log_path, sizeof g_log_path, "%s/mkw.log", dir);
+        snprintf(g_log_path, sizeof g_log_path, "%s/orbital.log", dir);
         g_log_file = plat_append_open(g_log_path);
     }
     if (!g_log_file) {
@@ -143,7 +143,7 @@ static void log_open(int game) {
     // the port's version as git describe gave it at build time (tools/build/build.py port_version): "-dirty" or a
     // commit no release has tells a report from a build with local changes (#88 on 11/11/2026: a log line of a
     // transcoder that is in no commit)
-    rt_log("log: %s (MKW Recomp %s)", g_log_path, rt_port_version);
+    rt_log("log: %s (Orbitals Recomp %s)", g_log_path, rt_port_version);
 }
 
 static void parse_trace(void) {
@@ -507,7 +507,7 @@ static const char *portable_path(const char *dir, const char *var, const char *s
 static void portable_paths(RtConfig *c) {
     const char *exe = cfg_game_dir();
     c->exefs = portable_path(exe, "MKW_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
-    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (MKW_ROMFS, mkw.ini's romfs and
+    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (MKW_ROMFS, orbital.ini's romfs and
     // --romfs may also name a .nup package, romfs.c).
     c->romfs = portable_path(exe, "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs, c->romfs);
     c->profile = portable_path(exe, "MKW_PROFILE_DIR", "profile", ".", pp_profile, sizeof pp_profile, c->profile);
@@ -548,8 +548,8 @@ static int want_launcher(int argc, char **argv) {
 }
 
 static int run_launcher(int argc, char **argv) {
-    cfg_init();   // mkw.ini: the settings pages read and write it
-    // the Mods page merges against the same romfs the game will boot: argv wins, else MKW_ROMFS / mkw.ini,
+    cfg_init();   // orbital.ini: the settings pages read and write it
+    // the Mods page merges against the same romfs the game will boot: argv wins, else MKW_ROMFS / orbital.ini,
     // else the selected installation, else the baked-in default (nup packages cannot merge: no loose files)
     const char *romfs = NULL;
     for (int i = 1; i + 1 < argc; i++)
@@ -559,7 +559,7 @@ static int run_launcher(int argc, char **argv) {
                               rt_default_romfs);
     if (romfs) launcher_set_romfs(romfs);
     // the players (Profiles page) live in the profile folder the game will use: --profile, else MKW_PROFILE_DIR /
-    // mkw.ini, else profile/ in the selected installation
+    // orbital.ini, else profile/ in the selected installation
     const char *profile = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--profile")) profile = argv[i + 1];
@@ -594,7 +594,7 @@ int main(int argc, char **argv) {
     const char *pt = getenv("MKW_ALLOW_PTRACE");
     if (pt && !strcmp(pt, "1")) prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
 #endif
-    mem_init();   // first: claim the guest address space before anything else can land there; reads mkw.ini
+    mem_init();   // first: claim the guest address space before anything else can land there; reads orbital.ini
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
     plat_crash_hook(crash_handler);
