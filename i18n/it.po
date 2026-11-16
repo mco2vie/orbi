@@ -112,18 +112,6 @@ msgstr ""
 "F3 ferma il gioco sul fotogramma a schermo e lo fa ripartire; F4 lo fa avanzare di uno. Per "
 "osservare un momento da vicino."
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Sblocca tutto"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Ogni pilota e costume, veicolo e adesivo, il Trofeo Speciale e Speculare. Entra nel salvataggio "
-"quando il gioco salva: disattivarlo non li blocca di nuovo."
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "Vai subito a"

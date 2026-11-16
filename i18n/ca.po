@@ -112,18 +112,6 @@ msgstr ""
 "F3 atura el joc en el fotograma que es veu i el torna a engegar; F4 l'avança un fotograma. Per "
 "mirar un moment amb calma."
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Desbloquejar tot"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Tots els pilots i vestits, vehicles i adhesius, la Copa Especial i el Mirall. Passa a la teva "
-"partida desada quan el joc desa: apagar-ho no els torna a bloquejar."
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "Directe a"

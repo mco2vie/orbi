@@ -17,7 +17,9 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | Artifact names: `mkw.exe`, `libmkw.dll.a`, `mkw.def`, `mkw.rc`, linker sections, `orbital.ini`, logs, Linux data folder | `285e3cf` | Product name `orbitals-recomp` |
 | `romfs_res.c`, the settings Resolution and Detail distance, `tools/romfs/resolution.py` | `b2ed262` | Reads a RomFS file Orbitals does not have ([romfs-res-audit.md](romfs-res-audit.md)) |
 | Links to `adriadam10/mkw-recomp`, the `mkw-recomp:` link scheme | `09ea19e` | The project's repository is `sinedgiveaways/pmocer-latibro` |
-| Known-issues signatures list (`tools/github/signatures.toml`) | this commit | Known-issues signatures list emptied: the MKW entries referenced issues from the original repo. Orbitals-specific signatures will be added as errors are discovered |
+| Known-issues signatures list (`tools/github/signatures.toml`) | `d4ee6d3` | Known-issues signatures list emptied: the MKW entries referenced issues from the original repo. Orbitals-specific signatures will be added as errors are discovered |
+| Texts naming the first game, and the texts of removed settings, in `i18n/` | `1b5e55e` | The missing-game help and wrong-build error name Orbitals; 13 ids of removed settings dropped from the 21 catalogs |
+| Unlock everything (`runtime/core/hacks/unlock.c`, `unlock_ids.c`, `ORBITALS_UNLOCK_ALL`) | this commit | See "unlock.c audit" below |
 
 ## Kept, with the reason
 
@@ -28,6 +30,15 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | Third-party sources named in comments: `seedds/mkw-neo`, MacNativeGames' `mkw_vpool.c`, `mkw_xlate` and `mkw_nvn_ext.c`, MKW-THWOMP | Attribution of where code or ideas came from; comments, not in the executable |
 | `tools/migrate_config.py`, `tools/migrate/mkw-to-orbitals.tsv`, `docs/environment-variables.md`'s former names | One-shot migration and its reference; never loaded by the runtime |
 | `docs/performance.md`'s table of MKW reports | Historical measurements with links to the reports in the original repository; to be replaced |
+
+## unlock.c audit
+
+`unlock.c` edited the save when the game opened `Play/account.sav`: it added every driver, vehicle and sticker id to
+the owned lists, revealed the Special Cup and opened Mirror. Everything in it is the first game's: the file name, the
+save's magic and key hashes, a fallback to that game's 1.0.0 offsets, and 1 100 item ids taken from Ca1nM's Mario Kart
+World save editor (MIT). For any other save it logged "not a layout this knows" and changed nothing, so for Orbitals the
+Hacks tab's "Unlock everything" row did nothing. Removed with its setting, menu row and texts; an Orbitals equivalent
+would need its own save format, found from its saves.
 
 ## Proof in the executable
 

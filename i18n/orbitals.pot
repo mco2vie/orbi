@@ -104,16 +104,6 @@ msgid ""
 "look at a moment closely."
 msgstr ""
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr ""
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr ""

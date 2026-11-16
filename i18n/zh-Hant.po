@@ -104,16 +104,6 @@ msgid ""
 "look at a moment closely."
 msgstr "F3 在目前幀暫停遊戲並可再次繼續；F4 前進一幀。用於仔細查看某一瞬間。"
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "全部解鎖"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr "解鎖所有角色和服裝、載具、貼紙、特別盃以及鏡像。遊戲存檔時會寫入存檔，關閉後也不會再次鎖定。"
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "直接進入"

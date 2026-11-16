@@ -110,18 +110,6 @@ msgstr ""
 "F3 oyunu ekrandaki karede durdurur ve yeniden başlatır; F4 onu bir kare ilerletir. Bir anı "
 "yakından incelemek için."
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Her şeyin kilidini aç"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Tüm sürücüler ve kıyafetler, araçlar ve çıkartmalar, Özel Kupa ve Ayna. Oyun kaydettiğinde kayda "
-"geçer: kapatmak onları yeniden kilitlemez."
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "Doğrudan şuraya"

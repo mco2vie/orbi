@@ -112,18 +112,6 @@ msgstr ""
 "F3 para el juego en la imagen de la pantalla y lo vuelve a arrancar; F4 lo avanza una imagen. "
 "Para mirar un momento con calma."
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Desbloquear todo"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Todos los pilotos y trajes, vehículos y pegatinas, la Copa Especial y Espejo. Pasa a tu partida "
-"guardada cuando el juego guarda: apagarlo no los vuelve a bloquear."
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "Directo a"

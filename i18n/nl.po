@@ -112,18 +112,6 @@ msgstr ""
 "F3 zet het spel stil op het beeld op het scherm en laat het weer doorgaan; F4 gaat één beeld "
 "verder. Om een moment van dichtbij te bekijken."
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Alles vrijspelen"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Alle personages en outfits, voertuigen en stickers, de Speciale beker en Spiegel. Het komt in je "
-"spelgegevens als het spel opslaat: uitzetten vergrendelt ze niet opnieuw."
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "Meteen naar"

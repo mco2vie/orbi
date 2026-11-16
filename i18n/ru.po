@@ -112,18 +112,6 @@ msgstr ""
 "F3 останавливает игру на текущем кадре и запускает снова; F4 продвигает на один кадр. Чтобы "
 "рассмотреть момент."
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Открыть всё"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Все гонщики и костюмы, машины и наклейки, а также Особый кубок и Зеркало. Попадает в ваше "
-"сохранение, когда игра сохраняется: выключение не закроет их снова."
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "Сразу в"

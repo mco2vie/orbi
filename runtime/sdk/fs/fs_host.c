@@ -882,24 +882,6 @@ static int64_t host_read_at(PlatFile *f, void *buf, uint32_t n, uint64_t off) {
     return got < 0 ? -1 : got;
 }
 
-// ORBITALS_UNLOCK_ALL (core/hacks/unlock.c): Play/account.sav's working copy edited once a session, before the game's first
-// read of it; the committed save changes only when the game saves.
-static void unlock_on_open(const char *host_path, int kind) {
-    static int done;
-    size_t n = strlen(host_path);
-    if (done || n < 16 || strcmp(host_path + n - 16, "Play/account.sav") || !cfg_bool("ORBITALS_UNLOCK_ALL")) return;
-    done = 1;
-    if (kind != M_SAVE) {
-        rt_log("unlock: account.sav opened from a read-only mount: not edited");
-        return;
-    }
-    uint64_t size = 0;
-    uint8_t *data = plat_file_read(host_path, &size);
-    if (data && unlock_save(data, size) && !plat_file_write_atomic(host_path, data, size))
-        rt_log("unlock: cannot write %s", host_path);
-    free(data);
-}
-
 static uint32_t open_file(uint64_t *out, const char *path, int mode) {
     if (romfs_owns(path)) {
         skip_file_opened(path);   // core/hacks/skip.c: ORBITALS_SKIP_MOVIES
@@ -913,7 +895,6 @@ static uint32_t open_file(uint64_t *out, const char *path, int mode) {
     if (r) return r;
     if (plat_fs_kind(p) != PLAT_FS_FILE) return FS_R_PATH_NOT_FOUND;
     if (kind == M_SAVE_RO && (mode & FS_OPEN_WRITE)) return FS_R_UNSUPPORTED_OPEN;
-    unlock_on_open(p, kind);
     int save_writer = kind == M_SAVE && (mode & FS_OPEN_WRITE);
     int err = 0;
     PlatFile *f = plat_fs_open(p, (mode & FS_OPEN_WRITE) != 0, &err);

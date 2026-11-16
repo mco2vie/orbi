@@ -27,5 +27,3 @@ uint64_t seed_tick(uint64_t lr);                // a seed patch set: the clock v
 void freeze_set(int on, int64_t steps);  // on: stop after `steps` more frames
 void freeze_present(void);               // the game's present: waits while frozen
 
-// ---- unlock everything (unlock.c): ORBITALS_UNLOCK_ALL=1 edits Play/account.sav when the game opens it
-int unlock_save(uint8_t *save, uint64_t size);  // the changes made; 0 for a save of another layout

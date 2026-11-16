@@ -104,16 +104,6 @@ msgid ""
 "look at a moment closely."
 msgstr "F3で画面に出ているフレームでゲームを止め、もう一度押すと再開します。F4で1フレームずつ進みます。ある瞬間をじっくり見るためのものです。"
 
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "すべて解放"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr "すべてのドライバーとコスチューム、マシン、ステッカー、スペシャルカップ、そしてミラーを解放します。ゲームがセーブするときにセーブデータに反映され、OFFにしても元には戻りません。"
-
 msgctxt "UI_MENU_QUICK_RACE"
 msgid "Straight to"
 msgstr "すぐに開始"
