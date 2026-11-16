@@ -127,7 +127,7 @@ def main():
     for line in lines:
         if re.search(r'\bvk: using gpu\b', line, re.I):
             backend.append(line.strip())
-        if re.search(r'\bMKW_GPU\s*=\s*null\b', line, re.I):
+        if re.search(r'\bORBITALS_GPU\s*=\s*null\b', line, re.I):
             backend.append(line.strip())
     if backend:
         print('\nGraphics backend evidence:')
