@@ -1,5 +1,5 @@
-// Fixed seed: MKW_SEED=<number> seeds the game's random generator (sead's, main+0xf0c80, from
-// the clock on the console: set seed of recomp/patches-mkw.txt calls seed_tick) and the system's entropy (svc GetInfo
+// Fixed seed: MKW_SEED=<number> seeds the game's random generator (seed_tick, for a patch set that replaces the clock
+// read the game seeds with; none for Orbitals yet) and the system's entropy (svc GetInfo
 // 11, which seeds
 // nn::os::GenerateRandomBytes's TinyMt in the sdk, InitializeRandomImpl sdk+0x14e9f0) a sequence from that number, so
 // what the game draws from it comes out the same each run (the title's course is the check, runs

@@ -627,19 +627,8 @@ uint64_t ldr_plt_stub(const char *module, const char *name) {
 }
 
 // ---- --probe-loader
-// Expected values of MKW 1.0.0, measured by this probe on the dump (30/10/2026): relocation kinds RELATIVE, ABS64,
-// GLOB_DAT, JUMP_SLOT; imports resolved into main, subsdk0, sdk; DT_INIT offset and init_array entries.
-typedef struct {
-    const char *name;
-    uint64_t kinds[K_COUNT], total, sym_import, sym_own;
-    uint32_t imports, to[RT_MAX_MODULES], weak, init_off, init_array;
-} Expect;
-static const Expect expect[] = {
-    {"main", {266547, 3873, 54, 1209}, 271683, 5136, 0, 1289, {0, 2, 1273}, 14, 0xe8d2a0, 2866},
-    {"subsdk0", {2972, 1, 7, 223}, 3203, 219, 12, 216, {2, 0, 214}, 0, 0x20, 4},
-    {"sdk", {14176, 9602, 1502, 9637}, 34917, 10, 20731, 8, {8, 0, 0}, 0, 0x4a0, 86},
-};
-
+// The modules, their imports, DT_INIT and relocation kinds are printed; what is checked is what holds for every game:
+// .text and .rodata unchanged and sealed after relocation, and a host override reaching main's GOT and PLT.
 static int failures;
 #define CHECK(cond, ...) do { if (!(cond)) { failures++; printf("  FAIL: " __VA_ARGS__); putchar('\n'); } } while (0)
 
@@ -729,13 +718,6 @@ int probe_loader(void) {
     const RtConfig *cfg = rt_config();
     hostfn_add_override(PROBE_SYMBOL, probe_override);
     ldr_load(cfg->exefs);
-    // The reference numbers are 1.0.0's; another version's are printed, not compared.
-    int ref = rt_version()->number == 100;
-    if (!ref) printf("probe-loader: no reference numbers for game version %s: printed, not checked\n", rt_version()->display);
-    if (ref && nmods != (int)(sizeof expect / sizeof *expect)) {
-        printf("probe-loader: FAILED (%d modules, expected 3)\n", nmods);
-        return 1;
-    }
     printf("modules (exefs %s):\n", cfg->exefs);
     for (int i = 0; i < nmods; i++) {
         const Mod *m = &mods[i];
@@ -748,13 +730,6 @@ int probe_loader(void) {
                "%u\n", m->pub.name, (unsigned long long)m->pub.base, (unsigned long long)m->pub.size, m->init_off,
                (unsigned long long)(m->pub.init_array_size / 8), (unsigned long long)m->pub.init_array_size,
                m->imports, to, m->weak_unresolved);
-        if (!ref) continue;
-        CHECK(!strcmp(m->pub.name, expect[i].name), "module %d is %s", i, m->pub.name);
-        CHECK(m->imports == expect[i].imports && m->weak_unresolved == expect[i].weak &&
-              !memcmp(m->import_to, expect[i].to, sizeof m->import_to), "%s import table differs from MKW 1.0.0's",
-              m->pub.name);
-        CHECK(m->init_off == expect[i].init_off && m->pub.init_array_size / 8 == expect[i].init_array,
-              "%s DT_INIT/init_array differ from MKW 1.0.0's", m->pub.name);
     }
     printf("relocations:\n");
     for (int i = 0; i < nmods; i++) {
@@ -765,9 +740,6 @@ int probe_loader(void) {
                (unsigned long long)m->kinds[K_ABS64], (unsigned long long)m->kinds[K_GLOB_DAT],
                (unsigned long long)m->kinds[K_JUMP_SLOT], (unsigned long long)total,
                (unsigned long long)m->sym_import, (unsigned long long)m->sym_own);
-        CHECK(!ref || (!memcmp(m->kinds, expect[i].kinds, sizeof m->kinds) && total == expect[i].total &&
-              m->sym_import == expect[i].sym_import && m->sym_own == expect[i].sym_own),
-              "%s relocations differ from MKW 1.0.0's", m->pub.name);
     }
     printf("constructors:\n");
     for (int i = 0; i < nmods; i++) {

@@ -20,14 +20,12 @@
 #include "version.h"
 
 #define SYM_INIT_START "_ZN2nn4init5StartEmmPFvvES2_S2_"
-// The first nvnBootstrapLoader call (version.c nvn_ret: 1.0.0 main+0xcf3a5c in the graphics bring-up main+0xcf39b4,
-// 1.8.0 main+0xdd07c8 in main+0xdd0720). MKW 1.0.0 does not call SetFocusHandlingMode before it (its calls sit at
-// main+0x1d5a44 and main+0xc782e0), so that checkpoint is only logged when it comes.
+// The first nvnBootstrapLoader call is checked against version.c nvn_ret when the row has one; without it, where it
+// comes from is logged and the run goes on.
 #define CTOR_DONE 2                      // a module's constructor flag after its DT_INIT ran the init_array
 
-// The init_array sizes of the game version (version.c inits: DT_INIT_ARRAYSZ, measured by --probe-loader on 1.0.0,
-// read from the NSOs for 1.8.0); a different count means a different game build. Every module of the version runs
-// its DT_INIT, in load order (1.8.0: main, subsdk0, subsdk1, sdk).
+// The init_array sizes of the game version (version.c inits: DT_INIT_ARRAYSZ, measured by --probe-loader); a
+// different count means a different game build. Every module of the version runs its DT_INIT, in load order.
 
 static volatile int32_t inits_done, checkpoint_seen;
 uint64_t rt_guest_start_ns;
@@ -43,7 +41,8 @@ static uint32_t ctor_state(const RtLoaded *m) { return LD32(m->ctor_flag); }
 static const char *caller(const Cpu *c, char *buf, int n) { return ldr_describe(c->x[30] - 4, buf, n); }
 
 // main.npdm META: the main thread's priority (+0xE), core (+0xF) and stack size (+0x1C). kernel.c builds the main
-// thread with the 1.2.1 values; a different npdm means a different game build.
+// thread with fixed values (44, core 0, 1 MiB); a game whose npdm asks for others is told in the log.
+// TODO: kernel.c should build the main thread with the npdm's values.
 static void check_npdm(void) {
     size_t n;
     uint8_t *npdm = ldr_read_verified(rt_config()->exefs, "main.npdm", &n);
@@ -52,14 +51,9 @@ static void check_npdm(void) {
     memcpy(&stack, npdm + 0x1C, 4);
     int prio = npdm[0xE], core = npdm[0xF];
     free(npdm);
-    if ((prio != 44 || core != 0 || stack != 0x100000) && rt_version()->number == 0) {   // another game: say so, go on
-        rt_log("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000 (MKW's)",
-               prio, core, stack);
-        return;
-    }
     if (prio != 44 || core != 0 || stack != 0x100000)
-        rt_fatal("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000", prio,
-                 core, stack);
+        rt_log("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000", prio, core,
+               stack);
 }
 
 // ---- the three callbacks of nn::init::Start (rtld's job on hardware)
@@ -75,7 +69,7 @@ void ov_musl_clock_hooks(const char *when);   // sdk/ov/ov_time2.c
 static void cb_module_inits(Cpu *c) {
     if (plat_cas32(&inits_done, 0, 0)) rt_fatal("boot: module constructors requested twice");
     const RtInitCount *expected_inits = rt_version()->inits;
-    if (!expected_inits[0].name) {   // version 0, another game: every module's DT_INIT in load order, counts logged
+    if (!expected_inits[0].name) {   // no counts in the row: every module's DT_INIT in load order, counts logged
         for (int k = 0; k < ldr_count(); k++) {
             const RtLoaded *m = ldr_module(k);
             uint64_t entries = m->init_array_size / 8;
@@ -137,7 +131,7 @@ void rt_boot_event(const char *what, Cpu *c, const char *detail) {
     }
     if (!strcmp(what, "nvn")) {
         uint64_t nvn_ret = rt_version()->nvn_ret;
-        if (!nvn_ret) {   // version 0, another game: where its first NVN call comes from, and the run goes on
+        if (!nvn_ret) {   // not in the row: where the first NVN call comes from, and the run goes on
             rt_logf("boot: first NVN call nvnBootstrapLoader(\"%s\") from %s\n", detail, at);
             stats_line();
             return;

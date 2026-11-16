@@ -51,7 +51,7 @@ GEN_FLAGS = ["-O1", "-fno-strict-aliasing", "-Wno-return-type", "-Wno-unused-lab
              *ARCH_FLAGS[ARCH], *GEN_ARCH_FLAGS[ARCH]]  # fmt: skip
 RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", *ARCH_FLAGS[ARCH]]
 sys.path.insert(0, str(ROOT / "recomp"))
-from versions import detect_any as detect_version  # noqa: E402  (the game version of a dump; 0: another game)
+from versions import detect_any as detect_version  # noqa: E402  (the game version of a dump; 0: a build not listed)
 
 
 def gen_modules(gen: Path) -> list[str]:
@@ -132,8 +132,8 @@ def game_id() -> str:
 
 
 def port_glue(exefs: Path) -> list[str]:
-    """RtGame.port for a game without a version row (gamelib.h RtPort): its program id from main.npdm's ACI0, and the
-    NVN2 driver's proc table found in its sdk (tools/gpu/nvn2_procs.py locate(); zeros, logged, when not found)."""
+    """RtGame.port (gamelib.h RtPort): its program id from main.npdm's ACI0, and the NVN2 driver's proc table found in
+    its sdk (tools/gpu/nvn2_procs.py locate(); zeros, logged, when not found)."""
     program_id, title = 0, f"build {detect_version(exefs).main_build_id}"
     npdm = (exefs / "main.npdm").read_bytes() if (exefs / "main.npdm").is_file() else b""
     if npdm[:4] == b"META":
@@ -185,13 +185,14 @@ def module_glue(gen: Path, exefs: Path, library: bool) -> str:
             "#define X(m, off, b, n) {m, off, (const uint8_t *)b, n},", "    RT_IMAGE_PATCHES(X)", "#undef X", "};",
             "#else", "#undef RT_IMAGE_PATCH_COUNT", "#define RT_IMAGE_PATCH_COUNT 0",
             "static const RtImagePatch *const image_patches = 0;", "#endif", "",
-            # RtGame.version: recomp/versions.py's number for the dump (100: 1.0.0, 180: 1.8.0)
+            # RtGame.version: recomp/versions.py's number for the dump (1: Orbitals, 0: a build not listed). RtGame.port
+            # for every build: its program id and the NVN2 proc table are read from its own exefs
             "volatile int g_fnprof;", "uint8_t rt_patch_on[RT_MAX_PATCH_SETS];", "",
-            *(port_glue(exefs) if not number else []),
+            *port_glue(exefs),
             "static const RtGame game = {RT_GAME_ABI, RT_GAME_ID, modules, sizeof modules / sizeof *modules,",
             "                            exefs_sha256, sizeof exefs_sha256 / sizeof *exefs_sha256, patch_sets,",
             f"                            RT_PATCH_COUNT, RT_PATCH_PAGE, {number}, &g_fnprof, rt_patch_on,",
-            f"                            image_patches, RT_IMAGE_PATCH_COUNT, {'0' if number else '&port'}}};", "",
+            "                            image_patches, RT_IMAGE_PATCH_COUNT, &port};", "",
             "RT_GAME_EXPORT const RtGame *orbitalgame_tables(void) { return &game; }" if library
             else "const RtGame *rt_game_builtin(void) { return &game; }", ""]  # fmt: skip
     return "\n".join(out)

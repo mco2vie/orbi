@@ -169,12 +169,13 @@ static int pool_place(pool_t *o) {
 static int pool_gpu_visible(const pool_t *o) { return !(o->flags & NVN_MEMORY_POOL_FLAGS_GPU_NO_ACCESS); }
 
 // ---------- Device
-// NVN2 values of the driver of each game version (tools/gpu/gen_nvn2_devinfo.py): 1.0.0 requires API 231.16, 1.8.0's
-// sdk answers 231.39 and larger limits (0x7f, 0x82, 0x98). The Tegra X1 table of NVN1 (55.15) stays in git history.
-static const int devinfo_100[] = {
+// NVN2 values of two drivers (tools/gpu/gen_nvn2_devinfo.py): API 231.16's, and 231.39's with larger limits (0x7f,
+// 0x82, 0x98); version.c nvn_api_minor picks one. The Tegra X1 table of NVN1 (55.15) stays in git history.
+// TODO: the table of Orbitals' own sdk (gen_nvn2_devinfo.py on its dump); until then 231.16's, as before.
+static const int devinfo_231_16[] = {
 #include "nvn2_devinfo.inc"
 };
-static const int devinfo_180[] = {
+static const int devinfo_231_39[] = {
 #include "nvn2_devinfo_180.inc"
 };
 
@@ -198,9 +199,9 @@ NVN_API(nvnDeviceFinalize) { ((dev_t_ *)arg_p(c, 0))->magic = 0; }
 NVN_API(nvnDeviceGetInteger) {
     unsigned w = (unsigned)arg_x(c, 1);
     int *out = arg_p(c, 2);
-    int v180 = rt_version()->number >= 180;
-    const int *devinfo = v180 ? devinfo_180 : devinfo_100;
-    unsigned n = v180 ? sizeof devinfo_180 / sizeof *devinfo_180 : sizeof devinfo_100 / sizeof *devinfo_100;
+    int api39 = rt_version()->nvn_api_minor == 39;
+    const int *devinfo = api39 ? devinfo_231_39 : devinfo_231_16;
+    unsigned n = api39 ? sizeof devinfo_231_39 / sizeof *devinfo_231_39 : sizeof devinfo_231_16 / sizeof *devinfo_231_16;
     if (w >= n) rt_fatal("nvn: unsupported NVN device property %#x", w);
     *out = devinfo[w];
     NVN_LOG("DeviceGetInteger %#x -> %d", w, *out);

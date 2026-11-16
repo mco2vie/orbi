@@ -1,5 +1,5 @@
-// The overrides only MKW imports (runtime/sdk: ov_net.c, ov_codec.c, ov_oe2.c, ov_time2.c, ov_touch.c, ov_system.c
-// account, ov_gfx.c nv::InitCheck): OV(case key, decorated name), one row of ov_probe.c's table each; ov_mkw_probe.c
+// The Switch 2 SDK overrides totk-pc-recomp's game does not import (runtime/sdk: ov_net.c, ov_codec.c, ov_oe2.c,
+// ov_time2.c, ov_touch.c, ov_system.c account, ov_gfx.c nv::InitCheck): OV(case key, decorated name), one row of ov_probe.c's table each; ov_sdk2_probe.c
 // calls them. Keys are the demangled names; "(work)" marks the overload that takes a work buffer.
 OV("account::EnsureNetworkServiceAccountAvailable", "_ZN2nn7account36EnsureNetworkServiceAccountAvailableERKNS0_10UserHandleE")
 OV("account::EnsureNetworkServiceAccountIdTokenCacheAsync", "_ZN2nn7account44EnsureNetworkServiceAccountIdTokenCacheAsyncEPNS0_12AsyncContextERKNS0_10UserHandleE")

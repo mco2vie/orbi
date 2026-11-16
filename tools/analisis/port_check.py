@@ -332,11 +332,12 @@ def main() -> None:
     w("## Modules\n")
     w("| Module | Build id | Image | Imports | Exports | Known to this port |")
     w("|---|---|---|---|---|---|")
-    known_builds = {v.main_build_id: f"MKW {v.name}" for v in versions.VERSIONS}  # first 8 bytes of main's build id
+    # first 8 bytes of main's build id
+    known_builds = {v.main_build_id: f"{versions.GAME} {v.name}" for v in versions.VERSIONS}
     sdk_known = set(nvn2_procs.TABLES)
     for name, n in mods.items():
         known = (known_builds.get(n.build_id[:16]) if name == "main" else None) or (
-            "MKW's sdk" if n.build_id in sdk_known else "no"
+            "a listed sdk" if n.build_id in sdk_known else "no"
         )
         w(
             f"| `{name}` | `{n.build_id[:16]}` | {n.size / 2**20:.1f} MiB | {len(n.imports())} | {len(n.exports())} | {known} |"

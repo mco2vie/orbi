@@ -304,7 +304,7 @@ int64_t frame_step_world_us(void);                         // game time since th
 void ctl_init(void);                                       // MKW_CTL=<fifo>: commands to the running game (ctl.c)
 void ctl_run(char *line);                                  // one ctl command now (MKW_SEQ_CTL, seqwatch.c)
 void rt_shot_request(const char *path);                    // the next presented frame to path, full size (boot.c)
-void gfx_aspect_set(float a);  // gfx_present.c, from patches.c: MKW_ASPECT's width / height when wider than 16:9, else 0
+void gfx_aspect_set(float a);  // gfx_present.c: the output's width / height when wider than 16:9, else 0 (no caller yet)
 int ov_movie_playing(void);  // ov_codec.c: a full-screen movie (1280 wide or more) gave a frame in the last half second
 uint64_t frame_step_ticks(void);                           // game time since the first present in 60 Hz ticks (input scripts)
 // In-launch A/B measurement: MKW_AB=<seconds> splits the world clock (frame_step_world_us) into blocks of that much
@@ -319,8 +319,6 @@ int rt_knob(const char *name, const char *def);
 extern volatile uint64_t nvn_timestamp_last; // nvn_ext.c: the counter timestamp the game read last (ticks)
 void frame_step_present(uint64_t display_ns, int interval); // nvnQueuePresentTexture: the frame's display time and
                                                            // present interval (60 Hz ticks)
-void frame_rate_host(uint64_t patch_page);                 // game.c MKW_FPS: register its host function (patches.c)
-void frame_rate_init(uint64_t patch_page);                 // and point the frame object's vtable slot at it
 // ---- boot (boot.c, main.c)
 typedef struct { const char *exefs, *romfs, *profile; int boot; double seconds; const char *shot, *gpu, *profile_base; } RtConfig;
                                                            // profile: the player's folder (core/base/players.h);

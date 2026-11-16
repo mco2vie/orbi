@@ -67,7 +67,6 @@ ROOT = Path(__file__).resolve().parents[2]  # the repository, or the package's s
 sys.path.insert(0, str(ROOT / "tools/build"))
 sys.path.insert(0, str(ROOT / "tools/i18n"))
 import build  # (GEN_FLAGS, module_glue, game_id: the same game code as build.py --dist)
-import game_texts  # (build_all: the game's texts in ca, gl, eu)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gamecode import compile_game
@@ -198,7 +197,7 @@ def regenerate_if_cleaned(state: dict, keys: dict[str, str], work: Path) -> None
 
 GENERATOR = [
     *sorted((ROOT / "recomp").glob("*.py")),
-    *sorted((ROOT / "recomp").glob("patches-mkw*.txt")),
+    *sorted((ROOT / "recomp").glob("patches-*.txt")),
     ROOT / "tools/cpu/spin_waits.py",  # a game without a table: the search that makes it
 ]  # each version's table
 COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name("gamecode.py")]
@@ -326,8 +325,8 @@ def main() -> None:
         with_mods = f" mods {mods_key}" if mods_key else ""
         keys = {
             "exefs": str(exefs_src),
-            # another game: " overlay" since its .nup RomFS is the base's with the update's files over it (port-step1c)
-            "romfs": (f"copy {version.name}" + ("" if version.number else " overlay"))
+            # " overlay": the .nup RomFS is the base's with the update's files over it (port-step1c)
+            "romfs": f"copy {version.name} overlay"
             if args.romfs == "copy"
             else f"link {romfs_src}",
             "generate": f"{build.game_id()} {version.name} {code_key(GENERATOR)}{with_mods}",
@@ -352,9 +351,10 @@ def main() -> None:
                 state["port"] = args.port
                 save_state(game, state)
             key = keys.get(step, "")
-            if not version.number and step in ("shaders", "warm"):
-                # another game: its shaders are not in agl / BNSH archives, and its first runs are the port's work
-                print(f"setup: {step} skipped for {version.name} (not Mario Kart World)", file=sys.stderr)
+            if step in version.skip_steps:
+                # recomp/versions.py skip_steps: its shaders are not in agl / BNSH archives, and its first runs are the
+                # port's work
+                print(f"setup: {step} skipped for {version.name} (does not apply to this build)", file=sys.stderr)
                 emit("skip", step)
                 continue
             # a library built before the rename (mkwgame.*) is not the one the runtime loads: compile again
@@ -406,10 +406,6 @@ def main() -> None:
                 for p in work.glob("*"):
                     if p.is_dir() and p.name != "obj":
                         shutil.rmtree(p, ignore_errors=True)
-                # the languages the game does not ship (ca, gl, eu), from this version's translations (the step runs
-                # at every setup, so an update brings its new texts); about a second
-                if version.number:  # MKW's message archives only
-                    game_texts.build_all(game, loose_romfs(runtime, romfs, work, "Mals"))
                 shutil.rmtree(work / "pack", ignore_errors=True)
             state["done"][step] = key
             save_state(game, state)

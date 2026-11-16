@@ -1,4 +1,4 @@
-// nn::oe functions MKW imports that totk-pc-recomp does not replace (ov_system.c has the rest).
+// nn::oe functions the game imports that totk-pc-recomp does not replace (ov_system.c has the rest).
 #include <string.h>
 
 #include "host.h"

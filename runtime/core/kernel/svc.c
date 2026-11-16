@@ -19,7 +19,7 @@
 #define ST_FREE 0u
 #define ST_STACK 0xBu
 #define PERM_RW 3u
-#define PROGRAM_ID 0x0400c3f00006e000ull   // Mario Kart World (main.npdm ACI0)
+#define PROGRAM_ID 0x040032b023ca4000ull   // Orbitals, base (main.npdm ACI0); RtGame.port's when it has one
 
 static uint64_t g_svcs;
 // The first SVC (the guest's boot), for the run time an abort reports. Not a constructor: rt_ticks' scale is set by

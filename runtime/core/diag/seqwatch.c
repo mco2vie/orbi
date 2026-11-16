@@ -124,12 +124,11 @@ void seqwatch_init(void) {
     const char *on = cfg_get("MKW_SEQ_WATCH"), *quick = cfg_value("MKW_QUICK_RACE");
     int quick_on = strcmp(quick, "off") != 0;
     if ((!on || !*on || *on == '0') && !quick_on) return;
-    // Each version's own table: another's offsets would watch unrelated code (1.8.0 had none, so MKW_SEQ_EXIT
-    // never ended its runs; 13/11/2026)
+    // Each version's own table: another's offsets would watch unrelated code
     char own[48];
     snprintf(own, sizeof own, "build/seq_nodes-%d.tsv", rt_version()->number);
     const char *path = cfg_get("MKW_SEQ_NODES");
-    if (!path || !*path) path = rt_version()->number == 100 ? "build/seq_nodes.tsv" : own;
+    if (!path || !*path) path = own;
     FILE *f = fopen(path, "r");
     if (!f) { rt_log("seq: no %s (uv run tools/analisis/seq_nodes.py): watch off", path); return; }
     char line[256];
@@ -197,11 +196,6 @@ void seqwatch_init(void) {
         if (k == -1) rt_log("seq: MKW_PROBE: %.*s is not <node>+<n>[:<frames>]", (int)n, p);
         else probes[nprobes].node = k, probes[nprobes].n = at, probes[nprobes++].frames = frames;
         p += n + (p[n] == ',');
-    }
-    const char *focus = cfg_get("MKW_UI_FOCUS");
-    if (focus && *focus && *focus != '0') {   // version.c: 1.0.0 main+0xce8564; not found yet for 1.8.0
-        if (rt_version()->ui_focus_fn) watch(MAIN_BASE + rt_version()->ui_focus_fn, SLOT_FOCUS);
-        else rt_log("seq: MKW_UI_FOCUS: no button focus function for game version %s", rt_version()->display);
     }
     rt_log("seq: watching %d sequence nodes and %d functions (MKW_SEQ_WATCH, MKW_FN_WATCH)", nnodes, nfnw);
     seq_on = 1;

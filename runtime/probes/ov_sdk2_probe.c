@@ -1,6 +1,6 @@
-// --probe-services, the overrides only MKW imports (ov_mkw_list.h): the offline network services answer as a console
-// with no network, the account's network service account stays unavailable, oe and time give MKW's version, scale and
-// clock answers, the touch screen reads no touches, and the VP9 decoder (ov_codec.c) decodes frames this probe encodes
+// --probe-services, the Switch 2 SDK overrides totk-pc-recomp's game does not import (ov_sdk2_list.h): the offline
+// network services answer as a console with no network, the account's network service account stays unavailable, oe
+// and time give the version row's display version, the scale and clock answers, the touch screen reads no touches, and the VP9 decoder (ov_codec.c) decodes frames this probe encodes
 // with libvpx, through the player's call sequence: image pools, slots, Submit, Acquire, a sync point event, the frame's
 // properties and its NV12 picture. H.264, AV1 and VP8 stop with a named fatal (child processes, ov_probe.c). Sockets
 // (ov_socket.c) send and receive datagrams over the host's loopback.
@@ -15,6 +15,7 @@
 #include "ov.h"
 #include "ov_probe.h"
 #include "platform/platform.h"
+#include "version.h"
 
 #define CHECK(ok, ...) ovp_check(ok, __VA_ARGS__)
 #define CALL OVP_CALL
@@ -104,7 +105,7 @@ static void probe_offline(void) {
 }
 
 // ---- account: the one local user, its network service account unavailable
-static void probe_account_mkw(void) {
+static void probe_account_sdk2(void) {
     int32_t *count = ovp_alloc(16);
     uint64_t *uid = ovp_alloc(16), *handle = ovp_alloc(32);
     uint8_t *flag = ovp_alloc(16);
@@ -129,11 +130,11 @@ static void probe_account_mkw(void) {
 }
 
 // ---- oe, time, touch, nv
-static void probe_system_mkw(void) {
+static void probe_system_sdk2(void) {
     char *version = ovp_alloc(32);
     memset(version, 0x55, 32);
     CALL("oe::GetDisplayVersion", U(version));
-    CHECK(!strcmp(version, "1.0.0") && !version[15], "GetDisplayVersion: %.16s", version);
+    CHECK(!strcmp(version, rt_version()->display) && !version[15], "GetDisplayVersion: %.16s", version);
     CHECK(CALL("oe::GetCurrentGraphicsScale", 0) == 10, "GetCurrentGraphicsScale");
     CALL("oe::EnterExitRequestHandlingSection", 0);
     CALL("oe::LeaveExitRequestHandlingSection", 0);
@@ -419,10 +420,10 @@ static void probe_socket(void) {
     printf("socket: UDP on loopback port %d through the console's sockaddr, poll, EAGAIN and eventfd\n", port);
 }
 
-void probe_mkw_services(void) {
+void probe_sdk2_services(void) {
     probe_offline();
-    probe_account_mkw();
-    probe_system_mkw();
+    probe_account_sdk2();
+    probe_system_sdk2();
     probe_codec();
     probe_socket();
 }

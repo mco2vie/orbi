@@ -21,7 +21,7 @@ void skip_input(uint64_t *buttons);        // input.c: the buttons the game gets
 // ---- fixed seed (seed.c): MKW_SEED=<number> for the system's random entropy
 int seed_random(uint64_t sub, uint64_t *out);   // svc.c GetInfo 11: 1 and *out when MKW_SEED is set
 int seed_time(int64_t *out);                    // ov_system.c: the clock with MKW_SEED; 0 without it
-uint64_t seed_tick(uint64_t lr);                // patches.c set seed: the clock value the game seeds with at lr
+uint64_t seed_tick(uint64_t lr);                // a seed patch set: the clock value the game seeds with at lr
 
 // ---- freeze (freeze.c): F3 / F4 with MKW_FREEZE_KEYS=1, or ctl pause | step [N] | resume
 void freeze_set(int on, int64_t steps);  // on: stop after `steps` more frames

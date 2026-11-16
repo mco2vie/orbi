@@ -5,8 +5,8 @@
 // graphics records, the system events behind nfp and vi, the software keyboard with arguments built by the guest SDK
 // (answers from MKW_SWKBD_ANSWER, then the window pressed by MKW_SWKBD_TEST) and the shared fonts when
 // tools/extract_fonts.py has written them. The named fatal stubs, and the account UID of a second run, are checked in
-// child processes (this executable again, MKW_PROBE_SERVICES_CHILD=<case>). The overrides only MKW imports
-// (ov_mkw_list.h) are rows of the same table, called by ov_mkw_probe.c through the helpers of ov_probe.h.
+// child processes (this executable again, MKW_PROBE_SERVICES_CHILD=<case>). The Switch 2 SDK overrides
+// totk-pc-recomp's game does not import (ov_sdk2_list.h) are rows of the same table, called by ov_sdk2_probe.c through the helpers of ov_probe.h.
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -170,7 +170,7 @@ static Ov ovs[] = {
     {"nimg.Finalize", "_Z22nvnNativeImageFinalizeP14NVNnativeImage"},
     {"nimg.TextureInitialize", "_Z35nvnTextureInitializeFromNativeImageP10NVNtextureP14NVNnativeImage"},
 #define OV(key, name) {key, name},
-#include "ov_mkw_list.h"
+#include "ov_sdk2_list.h"
 #undef OV
 };
 #define NOV ((int)(sizeof ovs / sizeof *ovs))
@@ -226,7 +226,7 @@ static uint64_t call8(const char *key, const uint64_t a[8]) {
 }
 #define CALL(key, ...) call8(key, (const uint64_t[8]){__VA_ARGS__})
 
-// ---- ov_probe.h, for ov_mkw_probe.c
+// ---- ov_probe.h, for ov_sdk2_probe.c
 uint64_t ovp_call(const char *key, const uint64_t a[8]) { return call8(key, a); }
 
 uint64_t ovp_call_full(const char *key, const uint64_t a[8], uint64_t x8, const uint64_t *stack, int nstack) {
@@ -960,7 +960,7 @@ static void probe_main(Cpu *c) {
     probe_menu_text();
     probe_menu_gate();
     probe_fonts();
-    probe_mkw_services();
+    probe_sdk2_services();
 }
 
 // ---- child processes
