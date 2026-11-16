@@ -35,6 +35,7 @@ import catalog  # noqa: E402  (tools/i18n: the text catalogs from i18n/*.po)
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
+ORBITALS_ICO = ROOT / "assets/icon/orbitals.ico"   # made by tools/build/make_ico.py
 GAME = Path(os.environ.get("MKW_GAME", ROOT / "game"))
 WIN = ROOT / "build/win"  # tools/build/windeps.py
 # The CPU the game and runtime are built for. x86-64: AVX2 (x86-64-v3). AArch64: ARMv8.2 with the extensions of every
@@ -275,6 +276,8 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         ),
         f"rule rc\n  command = {target.windres} -O coff -I {out / 'rt/platform'} $in -o $out\n  description = rc $in",
         f"rule icon\n  command = {sys.executable} $in $out\n  description = icon $out",
+        f"rule copyico\n  command = {sys.executable} -c \"import shutil,sys;shutil.copyfile(sys.argv[1],sys.argv[2])\" $in $out"
+        "\n  description = icon $out",
     ]
     libs = []
     for mod in () if runtime_only else gen_modules(gen):
@@ -298,9 +301,12 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         lines.append(f"build {obj}: {'rtcxx' if src.suffix == '.cpp' else 'rtcc'} {src}")
     if target.windres:  # windres writes no depfile: the manifest and the icon it embeds are listed by hand
         rc = RUNTIME / "platform/mkw.rc"
-        ico = out / "rt/platform/mkw.ico"  # drawn by tools/build/icon.py, never committed
+        ico = out / "rt/platform/mkw.ico"  # the name the .rc includes; the file is never committed
         rt_objs.append(str(out / "rt/platform/mkw_rc.o"))
-        lines.append(f"build {ico}: icon {ROOT / 'tools/build/icon.py'}")
+        if ORBITALS_ICO.is_file():  # tools/build/make_ico.py's icon (docs/branding.md); else the one icon.py draws
+            lines.append(f"build {ico}: copyico {ORBITALS_ICO}")
+        else:
+            lines.append(f"build {ico}: icon {ROOT / 'tools/build/icon.py'}")
         lines.append(f"build {rt_objs[-1]}: rc {rc} | {rc.with_suffix('.manifest')} {ico}")
     if not dist:
         lines.append(f"build {target.exe}: link {' '.join(rt_objs)} {' '.join(libs)}")
