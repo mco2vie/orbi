@@ -1,4 +1,4 @@
-"""The text catalogs of the menu, the start screen, the setup page and the overlay (i18n/mkw.pot and i18n/<lang>.po,
+"""The text catalogs of the menu, the start screen, the setup page and the overlay (i18n/orbitals.pot and i18n/<lang>.po,
 compiled by tools/i18n/catalog.py): the English template has exactly the ids of ui_text.h, every .po has the same
 entries as the template with the same English, and each translation has the same printf conversions in the same
 order. A translation that turned "%s ... %d" into "%d ... %s" would make printf read its arguments wrong.

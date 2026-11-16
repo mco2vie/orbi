@@ -247,8 +247,8 @@ def main() -> None:
     pk = sub.add_parser("pack")
     pk.add_argument("src", type=Path)
     pk.add_argument("out", type=Path)
-    pk.add_argument("--title", required=True, help="title id, hex (Mario Kart World: 0400C3F00006E000)")
-    pk.add_argument("--version", type=int, default=0, help="title version (1.0.0: 0; 1.8.0: 917504)")
+    pk.add_argument("--title", required=True, help="title id, hex (Orbitals: 040032B023CA4000)")
+    pk.add_argument("--version", type=int, default=0, help="title version (Orbitals' update: 327680)")
     a = ap.parse_args()
     if a.cmd == "pack":
         pack(a.src, a.out, int(a.title, 16), a.version, lambda d, t: print(f"  {d}/{t}", end="\r", file=sys.stderr))

@@ -169,16 +169,6 @@ msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
 msgid "Quarter"
 msgstr ""
 
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr ""
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-
 msgctxt "UI_MENU_DETAIL_LOW"
 msgid "Low"
 msgstr ""
@@ -197,16 +187,6 @@ msgstr ""
 
 msgctxt "UI_MENU_DETAIL_ULTRA"
 msgid "Very high"
-msgstr ""
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr ""
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
 msgstr ""
 
 msgctxt "UI_MENU_CONTINUE"
@@ -281,34 +261,6 @@ msgctxt "UI_MENU_QUALITY_CUSTOM"
 msgid "Custom"
 msgstr ""
 
-msgctxt "UI_MENU_RESOLUTION"
-msgid "Internal resolution"
-msgstr ""
-
-msgctxt "UI_MENU_RESOLUTION_DESC"
-msgid ""
-"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
-"integrated graphics. Original is the console's (up to 1440p)."
-msgstr ""
-
-msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
-msgid "Original"
-msgstr ""
-
-msgctxt "UI_MENU_ASPECT"
-msgid "Aspect ratio"
-msgstr ""
-
-msgctxt "UI_MENU_ASPECT_DESC"
-msgid ""
-"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
-"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
-msgstr ""
-
-msgctxt "UI_MENU_ASPECT_WINDOW"
-msgid "Window"
-msgstr ""
-
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
 msgstr ""
@@ -376,16 +328,6 @@ msgstr ""
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_PERF_LINE_FPS_FG"
 msgid "%.0f/%.0f fps"
-msgstr ""
-
-msgctxt "UI_MENU_FPS"
-msgid "Frame rate"
-msgstr ""
-
-msgctxt "UI_MENU_FPS_DESC"
-msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
 msgstr ""
 
 msgctxt "UI_MENU_FPS_AUTO"
@@ -499,9 +441,9 @@ msgstr ""
 
 msgctxt "UI_MENU_LAN_DESC"
 msgid ""
-"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network "
-"(UDP ports 49152 and 35000). It only reaches local network addresses, never the internet. "
-"Applies at the next start."
+"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
+"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
+"the next start."
 msgstr ""
 
 msgctxt "UI_MENU_VOLUME"
@@ -611,7 +553,9 @@ msgid "Switch 2 controllers (Bluetooth)"
 msgstr ""
 
 msgctxt "UI_MENU_SWITCH2_DESC"
-msgid "Joy-Con 2 and Pro Controller 2 over Bluetooth. To pair one, hold its Sync button with the game open. Applies at the next start."
+msgid ""
+"Joy-Con 2 and Pro Controller 2 over Bluetooth. To pair one, hold its Sync button with the game "
+"open. Applies at the next start."
 msgstr ""
 
 msgctxt "UI_MENU_STICK_DEADZONE"
@@ -619,7 +563,8 @@ msgid "Stick dead zone"
 msgstr ""
 
 msgctxt "UI_MENU_STICK_DEADZONE_DESC"
-msgid "How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
+msgid ""
+"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
 msgstr ""
 
 msgctxt "UI_MENU_BUTTON_ICONS"
@@ -1568,10 +1513,6 @@ msgctxt "UI_MENU_OV_OUTPUT"
 msgid "Game image"
 msgstr ""
 
-msgctxt "UI_MENU_OV_INTERNAL"
-msgid "Internal resolution"
-msgstr ""
-
 msgctxt "UI_MENU_OV_SCALING"
 msgid "Scaling"
 msgstr ""
@@ -1639,24 +1580,30 @@ msgid "Choose game folder"
 msgstr ""
 
 msgctxt "UI_LAUNCH_GAME_DIR_HELP"
-msgid "Choose where to install the game, or select an existing installation. The launcher reopens with that folder. Existing files are kept where they are."
+msgid ""
+"Choose where to install the game, or select an existing installation. The launcher reopens with "
+"that folder. Existing files are kept where they are."
 msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_GAME_DIR_INVALID"
-msgid "This game folder could not be selected. Choose a folder whose full path is at most %d UTF-8 bytes and contains no line breaks."
+msgid ""
+"This game folder could not be selected. Choose a folder whose full path is at most %d UTF-8 bytes "
+"and contains no line breaks."
 msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_GAME_DIR_INVALID_WIN32"
-msgid "This game folder could not be selected. On Windows, choose a folder without line breaks whose full path is at most %d UTF-16 units to leave room for the game's files."
+msgid ""
+"This game folder could not be selected. On Windows, choose a folder without line breaks whose "
+"full path is at most %d UTF-16 units to leave room for the game's files."
 msgstr ""
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, dumped "
-"from your console (the exefs and romfs folders). The setup checks its version, builds the game "
-"code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Orbitals with its update, dumped "
+"from your console (a .nup package, or the exefs and romfs folders). The setup checks its build "
+"and builds the game code on this computer."
 msgstr ""
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
@@ -1708,7 +1655,6 @@ msgctxt "UI_LAUNCH_SETUP_FAILED"
 msgid "Set up failed: %s"
 msgstr ""
 
-
 #. No %s: the detail is not shown.
 msgctxt "UI_SETUP_ERR_SOURCE"
 msgid "there is no earlier setup in this folder: choose the folder of your copy"
@@ -1726,7 +1672,7 @@ msgstr ""
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid "the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
+msgid "the game is not a supported build of Orbitals (build id %s)"
 msgstr ""
 
 #. %s: how many files the player's RomFS has.
@@ -1763,7 +1709,9 @@ msgstr ""
 
 #. %s: the two versions, e.g. "RomFS 1.8.0, exefs/main 1.0.0".
 msgctxt "UI_SETUP_ERR_MISMATCH"
-msgid "the game files and the program are from different versions (%s): take exefs and romfs from the same dump, with the update applied to both"
+msgid ""
+"the game files and the program are from different versions (%s): take exefs and romfs from the "
+"same dump, with the update applied to both"
 msgstr ""
 
 msgctxt "UI_LAUNCH_STEP_CHECK"
@@ -1943,7 +1891,10 @@ msgstr ""
 
 #. Shown above the GameBanana list: the project hosts no mods.
 msgctxt "UI_GB_NOTE"
-msgid "Mods are made by their authors and downloaded from GameBanana when you install them. This project is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse mods. Each mod has its own license."
+msgid ""
+"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
+"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
+"mods. Each mod has its own license."
 msgstr ""
 
 msgctxt "UI_GB_SEARCH"
@@ -2010,12 +1961,17 @@ msgstr ""
 
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
-msgid "Changes the game's graphics settings: the port's own settings (resolution, quality) go on top, so this mod may do less than on a console, look worse or misbehave"
+msgid ""
+"Changes the game's graphics settings: the port's own settings (resolution, quality) go on top, so "
+"this mod may do less than on a console, look worse or misbehave"
 msgstr ""
 
 #. Above every mod install and import.
 msgctxt "UI_MOD_RISK"
-msgid "Mods are made by other people and are not tested by this project. A mod can crash the game or damage your save: read its page first, keep a copy of your save, and report a mod's problems to its author."
+msgid ""
+"Mods are made by other people and are not tested by this project. A mod can crash the game or "
+"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
+"its author."
 msgstr ""
 
 msgctxt "UI_MOD_RISK_ACK"
@@ -2029,7 +1985,9 @@ msgstr ""
 
 #. Under an installed mod that ships shaders (Shader/ files).
 msgctxt "UI_MOD_WARN_SHADERS"
-msgid "Replaces shaders: the port translates the game's shaders during the setup, so this mod may not show, or may break the picture"
+msgid ""
+"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
+"show, or may break the picture"
 msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
@@ -2058,7 +2016,8 @@ msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_KNOWN"
-msgid "The last game stopped with a known problem, followed in issue #%d. No need to report it again."
+msgid ""
+"The last game stopped with a known problem, followed in issue #%d. No need to report it again."
 msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
@@ -2067,7 +2026,8 @@ msgid "The last game stopped with a problem that %s fixes. Update to get the fix
 msgstr ""
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
-msgid "The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
+msgid ""
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
 msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
@@ -2248,9 +2208,10 @@ msgstr ""
 
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
-"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options start mkw "
-"(\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you own with Remote Play Together works. Another number: "
-"steam_appid in orbitals.ini. Takes effect at the next start."
+"The Steam game orbitals-recomp runs as for Remote Play Together. Automatic: the game whose launch "
+"options start orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you "
+"own with Remote Play Together works. Another number: steam_appid in orbitals.ini. Takes effect at "
+"the next start."
 msgstr ""
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
@@ -2272,10 +2233,10 @@ msgstr ""
 
 msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
-"Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number keys (it is the "
-"number in the game's store address, store.steampowered.com/app/<number>/), then press Enter or A. mkw runs as that "
-"game from the next start, and the Steam App ID row above keeps it in its list (steam_appids in orbitals.ini). Backspace "
-"deletes a digit."
+"Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
+"keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
+"press Enter or A. orbitals-recomp runs as that game from the next start, and the Steam App ID row "
+"above keeps it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"

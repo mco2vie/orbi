@@ -481,7 +481,7 @@ def main() -> None:
         "- Not known to recomp/versions.py: a patch table (spin loops: tools/cpu/spin_waits.py) and a version row are "
         "the first work of a port."
         if "main" not in mods or mods["main"].build_id[:16] not in known_builds
-        else "- recomp/versions.py knows this build (a Mario Kart World dump)."
+        else "- recomp/versions.py knows this build (a listed Orbitals dump)."
     )
     w(f"\n_{time.time() - t0:.0f} s._")
 
