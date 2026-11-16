@@ -2,8 +2,8 @@
 
 What of the first game (Mario Kart World) and of the project this one is forked from (mkw-recomp) was removed from
 the product, what was kept and why, and the proof from the built executable. Filled commit by commit on the branch
-`cleanup/mkw-removal`; the plan is [mkw-removal-plan.md](mkw-removal-plan.md) and the starting inventory
-[mkw-inventory.tsv](mkw-inventory.tsv). Completed and checked at the end of the removal (the plan's last commit).
+`cleanup/mkw-removal` (pull request #2 into `orbitals-port`); the plan is [mkw-removal-plan.md](mkw-removal-plan.md)
+and the starting inventory [mkw-inventory.tsv](mkw-inventory.tsv).
 
 ## Removed from the product
 
@@ -29,6 +29,7 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | The first game in the user documentation (README, AGENTS.md, roadmap, research, release notes template, issue forms, Remote Play guide) | `c1787e5` | The roadmap lists what blocks Orbitals; the research page holds Orbitals' measurements, the first game's are in git history |
 | The program's name in runtime strings (`--replay`/`--unpack` usage, flight dump header, Steam log lines, the virtual gamepad "Orbitals virtual gamepad") | `0c96088` | They said `mkw` |
 | `CHANGELOG.md` 0.1.0-0.1.12 | `eb22f15` | The earlier project's releases; in git history. 0.2.0 is the first Orbitals release |
+| Comments naming MKW in the sources every package ships in `setup/src` (`recomp/`, `sm86/`, the tools of `tools/build/dist.py` SOURCES) | `2753db9` | They now say "the first game"; the scanner finds nothing there |
 
 ## Kept, with the reason
 
@@ -40,6 +41,9 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | `tools/migrate_config.py`, `tools/migrate/mkw-to-orbitals.tsv`, `docs/environment-variables.md`'s former names | One-shot migration and its reference; never loaded by the runtime |
 | `docs/performance.md`'s table of the first game's reports | Historical measurements, under their own heading, with links to the reports where they were filed |
 | `docs/research.md`'s sources | Third-party projects keep their names and links (MKW-THWOMP, Eglantine-MKW, mkw-neo, a news article's address) |
+| `CHANGELOG.md` 0.2.0 | It contains "MKW-specific" and "MKW_*" as migration instructions for existing users. It is a user-facing document, not part of the executable |
+| `tools/i18n/game_texts.py` (shipped in the package) | It rebuilds the first game's message archives for languages it lacks; with `i18n/game/` gone it does nothing. To remove or rewrite once Orbitals' text format is known |
+| About 290 comments in the repository's other sources (`runtime/` 175, `tools/` 62, `tests/` 16, `.github/` 21, removal documents) | Notes of how a part was measured or found in the first game. They are not in the executable nor in the package; rewording them is left for when each part is next changed |
 | The names of the removal documents (`mkw-removal.md`, `mkw-removal-plan.md`, `mkw-inventory.tsv`) | Deliverable names; linked from the README, the docs index and the roadmap |
 
 ## unlock.c audit
@@ -53,5 +57,36 @@ would need its own save format, found from its saves.
 
 ## Proof in the executable
 
-To be written at the end: the counts the Windows build prints (`.github/workflows/build-windows.yml`, step "Old names
-in the executable"), UTF-8 and UTF-16.
+From the Windows build of pull request #2 (commit `2146a66`, run 43959504391, `.github/workflows/build-windows.yml`,
+step "Old names in the executable"). `tools/build/check_names.py --strict` runs on `orbitals-recomp.exe` in that step
+and fails the build on any match.
+
+| Name looked for (case-insensitive) | UTF-8 | UTF-16LE |
+|---|---|---|
+| `MKW_` | 0 | 0 |
+| `Mario Kart` | 0 | 0 |
+| `MarioKart` | 0 | 0 |
+| `mkw-recomp` | 0 | 0 |
+| `adriadam10` | 0 | 0 |
+| `mkw` as a word | 2, both not text (below) | 0 |
+| `ORBITALS_` (for comparison) | 662 | 0 |
+
+The two bare `mkw`, located by section:
+
+| Where | Bytes | Why it is not text |
+|---|---|---|
+| `.rsrc+0x13168` | `...x\xe6mkw\x10\xd1K...` | Inside an IDAT chunk of the icon's 256 px PNG: compressed pixels of the Orbitals picture |
+| `.text+0x24d117` | `...\x10\x15mkW\x00\xe9...` | Inside the machine code section: three bytes of x86-64 instructions |
+
+The scanner lists such matches apart ("not text, not counted") and counts the longer names in every section. The
+version resource reads `FileDescription` Orbitals Recomp, `ProductName` Orbitals Recomp, `OriginalFilename`
+orbitals-recomp.exe, `ProductVersion` 0.2.0.
+
+The package folder (`build/dist/windows`, what the zip holds) has 351 matches, all in third-party files: zig's
+`lib/` (`__builtin_ve_vl_vfmkw...` intrinsics, a Linux header's `__mkw` macro) and the bundled Python (hashes and
+certificates). Its `setup/src` (this repository's sources) has none.
+
+## After the merge
+
+- The workflows run on pushes and pull requests to `orbitals-port`; the first run after the merge should be checked.
+- A run of `orbitals-recomp.exe` on the Orbitals `.nup` is the only regression test this branch did not have.
