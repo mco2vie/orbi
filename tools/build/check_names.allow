@@ -1,0 +1,14 @@
+# Paths (globs relative to the scanned root, or bare file names) that may keep the old names (tools/build/check_names.py).
+# Only two reasons are valid: a legal notice, or a document about the removal itself. Nothing the runtime loads.
+LICENSE
+LICENSE.*
+THIRD_PARTY_NOTICES*
+docs/mkw-removal.md
+docs/mkw-removal-plan.md
+docs/mkw-inventory.tsv
+docs/audit-current-state.md
+tools/migrate/*
+tools/migrate_config.py
+# The scanner itself names what it looks for.
+tools/build/check_names.py
+tools/build/check_names.allow
