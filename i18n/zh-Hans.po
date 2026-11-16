@@ -76,14 +76,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "加快的倍数。配置较低的电脑可能达不到。"
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "跳过影片"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "杯赛和赛道的开场影片一开始就跳过。"
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "每次相同的随机"

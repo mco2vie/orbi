@@ -13,10 +13,6 @@ uint64_t turbo_clock(uint64_t real_ticks); // the guest clock for a host tick co
 uint64_t rt_ticks_real(void);              // main.c: the host's clock in guest ticks; rt_ticks is turbo_clock of it
 int turbo_drop_present(uint64_t now_ns);   // 1: leave this frame out of the window (gfx_present.c)
 
-// ---- skip movies (skip.c): ORBITALS_SKIP_MOVIES=1 presses A while a cup opening plays
-void skip_file_opened(const char *path);   // fs_host.c: a romfs file opened
-void skip_movie_closed(void);              // ov_codec.c: a VP9 decoder finalized
-void skip_input(uint64_t *buttons);        // input.c: the buttons the game gets this tick
 
 // ---- fixed seed (seed.c): ORBITALS_SEED=<number> for the system's random entropy
 int seed_random(uint64_t sub, uint64_t *out);   // svc.c GetInfo 11: 1 and *out when ORBITALS_SEED is set

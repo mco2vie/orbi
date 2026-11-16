@@ -17,8 +17,8 @@ export ORBITALS_SEQ_WATCH=${ORBITALS_SEQ_WATCH:-1} ORBITALS_SEQ_UNTIL=${ORBITALS
 # The world clock starts with the race: --seconds must not end the run before ORBITALS_SEQ_EXIT (01/11/2026: RACE_SECS=48
 # runs ended at 18-28 s on run_perf.sh's default 30).
 # The way to the race at turbo speed with the cup movie skipped (core/hacks): the turbo goes off at ORBITALS_SEQ_UNTIL's
-# event, so the race itself runs at normal speed. ORBITALS_TURBO=off ORBITALS_SKIP_MOVIES=0 for the menus as the player sees them.
-export ORBITALS_TURBO=${ORBITALS_TURBO:-until} ORBITALS_SKIP_MOVIES=${ORBITALS_SKIP_MOVIES:-1}
+# event, so the race itself runs at normal speed. ORBITALS_TURBO=off for the menus as the player sees them.
+export ORBITALS_TURBO=${ORBITALS_TURBO:-until}
 export WORLD_SECS=${WORLD_SECS:-$(( ${RACE_SECS:-20} + 30 ))}
 export ORBITALS_FLIGHT=${ORBITALS_FLIGHT:-1} ORBITALS_FLIGHT_SPIKE_MS=${ORBITALS_FLIGHT_SPIKE_MS:-0} ORBITALS_FLIGHT_AT=${ORBITALS_FLIGHT_AT:-2000,2700,2900,3000}
 exec tools/run/run_perf.sh "$1" "${2:-240}"

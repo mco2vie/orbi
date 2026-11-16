@@ -884,7 +884,6 @@ static int64_t host_read_at(PlatFile *f, void *buf, uint32_t n, uint64_t off) {
 
 static uint32_t open_file(uint64_t *out, const char *path, int mode) {
     if (romfs_owns(path)) {
-        skip_file_opened(path);   // core/hacks/skip.c: ORBITALS_SKIP_MOVIES
         return romfs_open(out, path, mode);
     }
     fs_trace(mode & FS_OPEN_WRITE ? "write" : "read", path);

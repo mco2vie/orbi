@@ -404,7 +404,6 @@ static void ov_vp9_fini(Cpu *c) {
     memset(o + 8, 0, 8);
     rt_log("codec: VP9 decoder %u finalized", d->id);
     free(d);
-    skip_movie_closed();   // core/hacks/skip.c: ORBITALS_SKIP_MOVIES stops pressing
     ret_x(c, 0);
 }
 

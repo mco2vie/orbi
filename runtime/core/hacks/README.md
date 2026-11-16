@@ -7,6 +7,5 @@ its `ORBITALS_*` and its row in the "Hacks" tab (`ui/menu/settings_tabs.cpp`).
 |---|---|
 | `hacks.h` | The hacks' interface |
 | `turbo.c` | Turbo (`ORBITALS_TURBO` off/hold/toggle/on/until, `ORBITALS_TURBO_SPEED`, F2 key): the pacer, the vsync thread and the guest clock (`rt_ticks`) run N times faster; the window shows at most 60 frames per second |
-| `skip.c` | Skip movies (`ORBITALS_SKIP_MOVIES`): presses A while a cup intro plays (`*Op.webm`), until the game closes its decoder |
 | `seed.c` | Same randomness (`ORBITALS_SEED=<number>`): the system entropy (svc `GetInfo 11`) and the 21 clock seedings of sead's generator (patch set `seed`) come from that seed: the title screen always shows the same course |
 | `freeze.c` | Freeze (`ORBITALS_FREEZE_KEYS`, F3/F4; `ctl.sh NAME pause`, `step [N]`, `resume`): the game thread waits in its present |

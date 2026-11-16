@@ -80,14 +80,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "Kaç kat daha hızlı. Yavaş bir bilgisayar buna ulaşamayabilir."
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "Videoları atla"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "Kupa ve pist tanıtımlarını başlar başlamaz atlar."
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "Hep aynı rastgelelik"

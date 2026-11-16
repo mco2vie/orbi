@@ -462,7 +462,6 @@ static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx
         else if (pad_moved && !kb) plat_xchg32(&last_device, INPUT_DEVICE_PAD);
     }
     script_apply(&b, sl, sr, 0);
-    skip_input(&b);
     rec_apply(b, sl, sr);
     // Minus and Plus held together (gamepad or keys) open or close the menu and never reach the game
     static int combo_held;

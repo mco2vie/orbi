@@ -177,7 +177,7 @@ once (`--apply`; a dry run by default). Its rule is `MKW_X` to `ORBITALS_X`; the
 | `ORBITALS_MODS` | `MKW_MODS` | `runtime/sdk/fs/romfs.c:371` | the Mods page's merge of the enabled mods' shared archives (tools/mod/merge.py); missing when nothing is shared, and then this is a no-op log line like a missing legacy dir. Gated on MODS so a stale .merged from an earli |
 | `ORBITALS_MODS_ACK` | `MKW_MODS_ACK` | `runtime/ui/launcher/mods.cpp:71` |  |
 | `ORBITALS_MODS_PLAYED` | `MKW_MODS_PLAYED` | `runtime/ui/launcher/mods.cpp:122` |  |
-| `ORBITALS_MOTION` | `MKW_MOTION` | `runtime/input/input.c:736` | ORBITALS_MOTION=0, live), nothing is fed and the six-axis sensor reads at rest. |
+| `ORBITALS_MOTION` | `MKW_MOTION` | `runtime/input/input.c:735` | ORBITALS_MOTION=0, live), nothing is fed and the six-axis sensor reads at rest. |
 | `ORBITALS_MOUSE_SENS` | `MKW_MOUSE_SENS` | `runtime/input/input.c:64` |  |
 | `ORBITALS_NO_LAUNCHER` | `MKW_NO_LAUNCHER` | `runtime/core/boot/main.c:535` | ORBITALS_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with ORBITALS_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are gone). Steam laun |
 | `ORBITALS_NO_SUCH_SETTING` | `MKW_NO_SUCH_SETTING` | `runtime/probes/cfg_probe.c:52` |  |
@@ -258,7 +258,7 @@ once (`--apply`; a dry run by default). Its rule is `MKW_X` to `ORBITALS_X`; the
 | `ORBITALS_RUMBLE` | `MKW_RUMBLE` | `runtime/sdk/ov/ov_input.c:309` | strength 0 keeps the devices (silent), so the menu can turn rumble up again |
 | `ORBITALS_RUMBLE_CURVE` | `MKW_RUMBLE_CURVE` | `runtime/sdk/ov/ov_input.c:273` | ORBITALS_RUMBLE_CURVE (exponent on the amplitude, 0.2..1.5, default 0.6). HD rumble is strong at low amplitude, an ERM motor hardly turns there, so weak values are lifted by the curve (0.1 -> 0.25) and the strength scale |
 | `ORBITALS_RUMBLE_STRENGTH` | `MKW_RUMBLE_STRENGTH` | `runtime/sdk/ov/ov_input.c:272` | ORBITALS_RUMBLE_STRENGTH (percent, 0..300, default 130; 0 = off) and ORBITALS_RUMBLE_CURVE (exponent on the amplitude, 0.2..1.5, default 0.6). HD rumble is strong at low amplitude, an ERM motor hardly turns there, so wea |
-| `ORBITALS_RUMBLE_TRIGGERS` | `MKW_RUMBLE_TRIGGERS` | `runtime/input/input.c:677` |  |
+| `ORBITALS_RUMBLE_TRIGGERS` | `MKW_RUMBLE_TRIGGERS` | `runtime/input/input.c:676` |  |
 | `ORBITALS_SAVE` | `MKW_SAVE` | `runtime/ui/menu/menu.cpp:291` |  |
 | `ORBITALS_SEED` | `MKW_SEED` | `runtime/core/hacks/seed.c:34` | ORBITALS_SEED=<number> seeds the game's random generator (seed_tick, for a patch set that replaces the clock read the game seeds with; none for Orbitals yet) and the system's entropy (svc GetInfo 11, which seeds nn::os:: |
 | `ORBITALS_SEQ_CTL` | `MKW_SEQ_CTL` | `runtime/core/diag/seqwatch.c:169` | in order of n |
@@ -285,7 +285,6 @@ once (`--apply`; a dry run by default). Its rule is `MKW_X` to `ORBITALS_X`; the
 | `ORBITALS_SHOTS` | `MKW_SHOTS` | `runtime/core/boot/boot.c:276` | ORBITALS_SHOTS=lo-hi:step [ORBITALS_SHOTS_DIR=dir]: every step-th present in [lo, hi] saved as <dir>/f<n>.png (n the present), box-filtered to 480x270; ORBITALS_SHOTS=w<lo>-<hi>:<step> takes them by world-clock seconds i |
 | `ORBITALS_SHOTS_DIR` | `MKW_SHOTS_DIR` | `runtime/core/boot/boot.c:282` | ORBITALS_SHOTS_DIR=dir]: every step-th present in [lo, hi] saved as <dir>/f<n>.png (n the present), box-filtered to 480x270; ORBITALS_SHOTS=w<lo>-<hi>:<step> takes them by world-clock seconds instead, the first present a |
 | `ORBITALS_SHOTS_FULL` | `MKW_SHOTS_FULL` | `runtime/core/boot/boot.c:275` | ORBITALS_SHOTS_FULL=1), for finding short glitches. Pipeline builds stay asynchronous, so the pictures show what a player sees. |
-| `ORBITALS_SKIP_MOVIES` | `MKW_SKIP_MOVIES` | `runtime/core/hacks/skip.c:28` | the path first: every guest file open comes here |
 | `ORBITALS_SKIP_PROGRAMS` | `MKW_SKIP_PROGRAMS` | `runtime/gfx/vk/exec/vk_exec_draw.c:403` | ORBITALS_SKIP_PROGRAMS=<hex>[,<hex>...] (diagnosis): draws whose vertex or fragment program key (the 64 hex digits of the breadcrumb and "last programs" lines) starts with one of these are left out, each one logged the f |
 | `ORBITALS_SPARSE_IMAGES` | `MKW_SPARSE_IMAGES` | `runtime/gfx/vk/tex/vk_sparse.c:152` | default on |
 | `ORBITALS_SPARSE_MERGE` | `MKW_SPARSE_MERGE` | `runtime/gfx/vk/tex/vk_sparse.c:391` | ORBITALS_SPARSE_MERGE) to what bound[] names now. The blocks of one bind are laid out in its memory x first (Vulkan 1.3 §33.4.4), so a run of slots contiguous in one block binds as one. RADV makes one VA update (a GEM_VA |

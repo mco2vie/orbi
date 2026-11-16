@@ -76,14 +76,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "何倍速にするか。PCの性能が低いと届かないことがあります。"
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "ムービーをスキップ"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "カップやコースのオープニングを始まった時点で飛ばします。"
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "毎回同じランダム"

@@ -78,14 +78,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "เร็วขึ้นกี่เท่า พีซีที่ช้าอาจไปไม่ถึง"
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "ข้ามภาพยนตร์"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "ข้ามฉากเปิดของคัพและสนามทันทีที่เริ่ม"
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "สุ่มเหมือนเดิมทุกครั้ง"

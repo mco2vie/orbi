@@ -544,7 +544,6 @@ static void tab_hacks(float scale) {
     static const UiTextId turbo[] = {UI_MENU_OFF, UI_MENU_TURBO_HOLD, UI_MENU_TURBO_TOGGLE, UI_MENU_ON};
     opt_choice("ORBITALS_TURBO", UI_MENU_TURBO, turbo, 4, UI_MENU_TURBO_DESC);
     opt_slider("ORBITALS_TURBO_SPEED", UI_MENU_TURBO_SPEED, 2, 8, UI_MENU_TURBO_SPEED_DESC, 1, "x%.0f");
-    opt_toggle("ORBITALS_SKIP_MOVIES", UI_MENU_SKIP_MOVIES, UI_MENU_SKIP_MOVIES_DESC);
     row_set_or_not("ORBITALS_SEED", UI_MENU_SEED, UI_MENU_SEED_DESC, "1");
     opt_toggle("ORBITALS_FREEZE_KEYS", UI_MENU_FREEZE_KEYS, UI_MENU_FREEZE_KEYS_DESC);
     opt_end();
