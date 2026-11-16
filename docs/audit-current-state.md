@@ -3,7 +3,7 @@
 Étape 0, 16/11/2026, branch `orbitals-port` at `cc455f0`. Read-only audit: no source file was changed.
 
 The full line-by-line inventory (file, line, file type, kind, snippet) is in
-[`audit-mkw-inventory.tsv`](audit-mkw-inventory.tsv), generated from `git ls-files` with the case-insensitive pattern
+[`mkw-inventory.tsv`](mkw-inventory.tsv), generated from `git ls-files` with the case-insensitive pattern
 `mkw|mario ?kart|mkworld`. This page summarises it and states the current state of the project.
 
 ## 1. Main finding
