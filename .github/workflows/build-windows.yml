@@ -80,6 +80,10 @@ jobs:
               n8 = len(re.findall(re.escape(name.encode()), d, re.I))
               n16 = len(re.findall(re.escape(name.encode("utf-16le")), d, re.I))
               print(f"count {name!r}: {n8} UTF-8, {n16} UTF-16")
+              if name != "ORBITALS_":
+                  for m in list(re.finditer(re.escape(name.encode()), d, re.I))[:8]:
+                      ctx = d[max(0, m.start() - 40) : m.end() + 40]
+                      print(f"    at {m.start():#x}: {ctx.decode('latin-1')!r}")
           n = len(re.findall(rb"(?<![A-Za-z])mkw(?![A-Za-z])", d, re.I))
           print(f"count 'mkw' as a word: {n}")
           for key in ("FileDescription", "ProductName", "OriginalFilename", "ProductVersion"):
