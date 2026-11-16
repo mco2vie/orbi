@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Look up the last lines of `logs/orbitals.log` in the wiki's [Troubleshooting](https://github.com/sinedgiveaways/pmocer-latibro/blob/HEAD/docs/README.md) page and search open and closed issues for the error text first; comment there if it is already reported.
-        Only Mario Kart World 1.0.0 or 1.8.0 dumped from your own console is supported; issues about obtaining the game are closed.
+        Look at the last lines of `logs/orbitals.log`, read the [documentation](https://github.com/sinedgiveaways/pmocer-latibro/blob/HEAD/docs/README.md) and search open and closed issues for the error text first; comment there if it is already reported.
+        Only Orbitals with its update, dumped from your own console, is supported; issues about obtaining the game are closed.
         A slow scene goes into the [Performance report](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml) form.
   - type: input
     id: summary
@@ -50,7 +50,7 @@ body:
         - Start screen or setup
         - Boot or title screen
         - Menus
-        - Race
+        - In game
         - Movie
         - Building from source
     validations:

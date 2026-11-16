@@ -53,18 +53,16 @@ body:
     attributes:
       label: Scene
       options:
-        - Race (Grand Prix or VS)
-        - Time trial
-        - Free roam
+        - In game
         - Menus
-        - Cup intro movie
+        - Movie
     validations:
       required: true
   - type: input
-    id: course
+    id: place
     attributes:
-      label: Course or screen
-      placeholder: Mario Bros. Circuit, 12 racers
+      label: Level or screen
+      placeholder: the first level, two players
   - type: input
     id: frametime
     attributes:

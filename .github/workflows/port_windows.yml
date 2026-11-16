@@ -1,6 +1,5 @@
-# The Windows package of this port branch (the start screen, orbitals-recomp.exe, and the setup tools that build a game from the
-# player's own dump), as MKW's release workflow built it (removed on this branch), for trying another game: a tag
-# port-* builds it and puts the zip in a pre-release of that tag. Nothing of any game goes in.
+# The Windows package (the start screen, orbitals-recomp.exe, and the setup tools that build the game from the player's
+# own dump): a tag port-* builds it and puts the zip in a pre-release of that tag. Nothing of any game goes in.
 name: Port Windows package
 
 on:

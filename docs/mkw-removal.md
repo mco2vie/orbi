@@ -24,7 +24,8 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | Quick Race (`ORBITALS_QUICK_RACE`, its menu row, 4 texts, the press scripts in `input_script.c`) | `ddad8e5` | Quick Race removed: it navigated MKW's menus (time trial, Mario, standard kart). Orbitals has no equivalent menu structure |
 | Skip Movies (`runtime/core/hacks/skip.c`, `ORBITALS_SKIP_MOVIES`, its menu row and 2 texts) | `f108942` | Skip Movies removed: it targeted MKW's cutscene and circuit intro videos. Orbitals has its own video files (.bk2) but no equivalent skip mechanism was implemented |
 | `runtime/core/diag/seqwatch.c` and the race run scripts (`race.sh`, `live.sh`, `at.sh`, `press-*.txt`, `rqwait.py`, `tools/analisis/seq_nodes.py`; the `ORBITALS_SEQ_*`, `ORBITALS_PROBE`, `ORBITALS_FN_WATCH`, `ORBITALS_UI_FOCUS` settings, Turbo's `until` mode, script lines by game phase) | `b6203e3` | seqwatch.c and race.sh/live.sh removed: MKW-specific race measurement tools. Orbitals benchmarking will use the generic tools/run/ab.py (A/B) and the CI build timing. The A/B world clock now counts from the first present; `fnprof_hit` moved to `impcensus.c`, the hook's other user |
-| The LAN setting's description | this commit | LAN description rewritten: no longer references MKW's Wireless Play. The setting stays: it still makes `nifm`'s local network mode and the sockets work at the SDK level; whether Orbitals uses them is not known yet. Translations cleared except French |
+| The LAN setting's description | `8033680` | LAN description rewritten: no longer references MKW's Wireless Play. The setting stays: it still makes `nifm`'s local network mode and the sockets work at the SDK level; whether Orbitals uses them is not known yet. Translations cleared except French |
+| The README's translations (`docs/i18n/`, `tools/docs/i18n_readme.py`) and the first game in the user documentation (README, AGENTS.md, roadmap, research, release notes template, issue forms, Remote Play guide) | this commit | The six translations described the first game (its versions, cups, menus); new ones can be made from the current README. The roadmap lists what blocks Orbitals; the research page holds Orbitals' measurements, the first game's are in git history |
 
 ## Kept, with the reason
 
@@ -34,7 +35,9 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | `recomp/LICENSE.totk-pc-recomp`, `runtime/LICENSE.totk-pc-recomp` | Same, for totk-pc-recomp |
 | Third-party sources named in comments: `seedds/mkw-neo`, MacNativeGames' `mkw_vpool.c`, `mkw_xlate` and `mkw_nvn_ext.c`, MKW-THWOMP | Attribution of where code or ideas came from; comments, not in the executable |
 | `tools/migrate_config.py`, `tools/migrate/mkw-to-orbitals.tsv`, `docs/environment-variables.md`'s former names | One-shot migration and its reference; never loaded by the runtime |
-| `docs/performance.md`'s table of MKW reports | Historical measurements with links to the reports in the original repository; to be replaced |
+| `docs/performance.md`'s table of the first game's reports | Historical measurements, under their own heading, with links to the reports where they were filed |
+| `docs/research.md`'s sources | Third-party projects keep their names and links (MKW-THWOMP, Eglantine-MKW, mkw-neo, a news article's address) |
+| The names of the removal documents (`mkw-removal.md`, `mkw-removal-plan.md`, `mkw-inventory.tsv`) | Deliverable names; linked from the README, the docs index and the roadmap |
 
 ## unlock.c audit
 
