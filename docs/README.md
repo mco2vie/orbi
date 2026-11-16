@@ -16,3 +16,4 @@
 | `mkw-inventory.tsv` | Every line with an MKW trace at the audit (file, line, kind); a documentation artifact the runtime never reads |
 | [romfs-res-audit.md](romfs-res-audit.md) | What `runtime/sdk/fs/romfs_res.c` (internal resolution, detail distance) does, what happens without its MKW file, and the decision |
 | [mkw-removal.md](mkw-removal.md) | What of the first game and the original project was removed, what was kept and why, and the proof in the executable |
+| [steam-remote-play-status.md](steam-remote-play-status.md) | What exists of Steam Remote Play Together, what was verified, what is missing for Orbitals, and the plan |
