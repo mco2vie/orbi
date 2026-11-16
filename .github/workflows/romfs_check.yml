@@ -6,7 +6,7 @@ name: romfs_check.exe
 on:
   workflow_dispatch:
   push:
-    branches: [cleanup/mkw-removal]
+    branches: [orbitals-port]
     paths: [tools/analisis/romfs_check.py, tools/prepare/nup.py, .github/workflows/romfs_check.yml]
 
 permissions:

@@ -4,7 +4,10 @@ name: Migration script (Windows)
 
 on:
   push:
-    branches: [cleanup/mkw-removal]
+    branches: [orbitals-port]
+    paths: [tools/migrate_config.py, tools/migrate/**, .github/workflows/migrate-windows.yml]
+  pull_request:
+    branches: [orbitals-port]
     paths: [tools/migrate_config.py, tools/migrate/**, .github/workflows/migrate-windows.yml]
   workflow_dispatch:
 
