@@ -200,7 +200,8 @@ static void ov_disconnect(Cpu *c) {
 // Result ShowControllerSupport(ControllerSupportResultInfo *out, const ControllerSupportArg &arg): the controllers are
 // already connected, so the applet returns at once with as many players as have one, up to the arg's maximum. Fewer
 // than its minimum is what a player who closes the applet gets: no players (the game goes back). ControllerSupportArg
-// (libnx HidLaControllerSupportArg; MKW fills it at main+0x25da6c8): s8 minimum and maximum players at 0 and 1.
+// (libnx HidLaControllerSupportArg): s8 minimum and maximum players at 0 and 1. Orbitals is a 2-player game: a maximum
+// above INPUT_MAX_PLAYERS is answered with 2.
 static void ov_controller_support(Cpu *c) {
     ControllerSupportResult *out = arg_p(c, 0);
     const int8_t *arg = arg_p(c, 1);

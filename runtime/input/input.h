@@ -10,18 +10,18 @@ void input_poll(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_
 // reports nothing; input_block(0) when it closes: nothing until all buttons and stick directions are released.
 void input_poll_ui(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
 void input_block(int on);
-// Local multiplayer, players 1-8 (player index 0-7). Player 1 is input_poll: the keyboard, the first gamepad and the
+// Local multiplayer, players 1-2 (player index 0-1): Orbitals is a 2-player game. Player 1 is input_poll: the keyboard, the first gamepad and the
 // script. Each other player is one more gamepad, in connection order, plus the script's "p<N>" lines; ORBITALS_VIRTUAL_PADS=N
 // attaches N virtual gamepads at start to try it without controllers. Any thread.
-enum { INPUT_MAX_PLAYERS = 8 };
+enum { INPUT_MAX_PLAYERS = 2 };
 uint32_t input_player_mask(void);   // bit k: player k + 1 has a controller; bit 0 always (the keyboard)
 void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
-// Remote keyboards (steam/steam_rpt.c: a Steam Remote Play Together guest's keys): a player 2-8 fed by keys instead of
+// Remote keyboards (steam/steam_rpt.c: a Steam Remote Play Together guest's keys): player 2 fed by keys instead of
 // a gamepad, through the keyboard table of input_map.c. input_remote_attach takes the first player with neither a
 // gamepad nor a remote keyboard, -1 when none is free; input_remote_key holds or releases a key (input_map.h KEY_*);
 // input_remote_detach frees the player. Any thread.
 int input_remote_attach(void);
-// Players 2-8 on a Remote Play guest's gamepad: a Steam virtual gamepad, or one opened while a guest was connected
+// Player 2 on a Remote Play guest's gamepad: a Steam virtual gamepad, or one opened while a guest was connected
 // (steam_rpt.c gives a guest's keyboard a player only while there are more guests than these). Any thread.
 int input_guest_pads(void);
 void input_remote_detach(int player);

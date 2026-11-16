@@ -40,7 +40,7 @@ static int pad_layout = -1;          // PAD_LAYOUT_* in effect for the open game
 static unsigned pad_layout_seen;
 static volatile int32_t pad_layout_shown = -1;   // pad_layout for the menu (any thread), -1 without a gamepad
 static volatile int32_t last_device;           // INPUT_DEVICE_* the player used last, 0 none yet (input_last_device)
-static SDL_JoystickID sensor_pad[8]; // by player: the gamepad whose sensors the motion thread set up, 0 none
+static SDL_JoystickID sensor_pad[INPUT_MAX_PLAYERS]; // by player: the gamepad whose sensors the motion thread set up, 0 none
 static int sensor_ok[8];             // ... and it has both sensors, enabled
 static int motion_thread;            // 0 not started, 1 running, -1 off (ORBITALS_MOTION=0, no SDL)
 
@@ -122,14 +122,14 @@ static void stick(int16_t x, int16_t y, int32_t out[2]) {
     out[1] = -(int32_t)lrintf(fy * s * STICK_MAX);
 }
 
-// Players 2-8 (input_poll_player): one gamepad each, given in connection order to the first player without one; player
+// Player 2 (input_poll_player): one gamepad, given in connection order to the first player without one; player
 // 1's is `pad`. A player keeps the slot while the gamepad stays connected. Under lock.
 static SDL_Gamepad *extra[INPUT_MAX_PLAYERS];   // [0] unused
 static int extra_rumble[INPUT_MAX_PLAYERS], extra_east_a[INPUT_MAX_PLAYERS];
 // A guest's gamepad (input_guest_pads): a Steam virtual gamepad, or any gamepad opened while a Remote Play guest is
 // connected. Under lock.
 static uint8_t extra_guest[INPUT_MAX_PLAYERS];
-// Players 2-8 fed by a remote keyboard (input_remote_*: a Remote Play Together guest's keys) instead of a gamepad, and
+// Player 2 fed by a remote keyboard (input_remote_*: a Remote Play Together guest's keys) instead of a gamepad, and
 // the keys each one holds. Under lock.
 static uint8_t remote_on[INPUT_MAX_PLAYERS];
 static uint8_t remote_keys[INPUT_MAX_PLAYERS][KEY_COUNT];
@@ -331,7 +331,7 @@ static void binds_refresh(void) {
     input_map_configure();
 }
 
-// ORBITALS_VIRTUAL_PADS=N (1-8): N virtual SDL gamepads, opened like real ones after them, to try local multiplayer without
+// ORBITALS_VIRTUAL_PADS=N (1-2): N virtual SDL gamepads, opened like real ones after them, to try local multiplayer without
 // controllers. They have no input of their own: the script's "p<N>" lines press for their players.
 static void attach_virtual_pads(void) {
     const char *e = cfg_get("ORBITALS_VIRTUAL_PADS");
@@ -531,7 +531,7 @@ uint32_t input_player_mask(void) {
     return m;
 }
 
-// Players 2-8: their gamepad or remote keyboard and the script's lines for them. The text entry and the menu block them
+// Player 2: its gamepad or remote keyboard and the script's lines for them. The text entry and the menu block them
 // as they block player 1, and only player 1's release ends that block.
 void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry) {
     if (player <= 0) { input_poll(buttons, lx, ly, rx, ry); return; }
@@ -738,7 +738,7 @@ int input_motion_enabled(void) {
 }
 
 // 250 Hz: the gamepads update (reports read, rumble expiry) and each player's newest gyro and accelerometer sample goes
-// into that player's fusion. Players 2-8 have their own (#302: player 2's gyro did nothing). Without a gamepad with
+// into that player's fusion. Player 2 has its own (#302: player 2's gyro did nothing). Without a gamepad with
 // sensors, or with motion off (ORBITALS_MOTION=0, live), nothing is fed and the six-axis sensor reads at rest.
 static void motion_main(void *arg) {
     (void)arg;

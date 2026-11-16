@@ -13,7 +13,7 @@ How the guests become players, in `runtime/input/input.c`:
 
 - **Controllers**: a guest's controller reaches the host as a Steam virtual gamepad (USB 28DE:11FF). SDL hides those
   unless `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` is set, which `steam_rpt_start` does once Steam is ready. They
-  then join like any controller: the next free player, 2 to 8. Steam does not say whose a virtual gamepad is; the ones
+  then join like any controller: the next free player (player 2: Orbitals is a 2-player game). Steam does not say whose a virtual gamepad is; the ones
   already there while no guest is connected are the host's own controllers through Steam Input, and they never become
   another player.
 - **Keyboards**: with direct input (Steamworks SDK 1.62+) a guest's keys come to `steam_rpt.c` instead of the host's

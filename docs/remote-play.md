@@ -1,7 +1,7 @@
 # Steam Remote Play Together
 
-Play local multiplayer (split screen, up to 8 players) with friends who are not in the room. Steam streams the game's
-window and sound to them, and their controllers or keyboards become players 2, 3 and so on. They need only Steam, or
+Play local multiplayer (Orbitals is a 2-player game) with a friend who is not in the room. Steam streams the game's
+window and sound to them, and their controller or keyboard becomes player 2. They need only Steam, or
 the Steam Link app, or a browser with a guest link: not the game.
 
 It is off by default and changes nothing until you set it up.
@@ -131,6 +131,6 @@ per player.
 
 Against Valve's SDK 1.65 library and a mock of Steam built from Valve's headers, with SDL virtual gamepads standing in
 for the guests' controllers (13/11/2026): start-up, every symbol bound (Linux and Windows libraries), guests joining and
-leaving, a guest's controller as player 2 with the host's Steam Input twin left out, a guest keyboard as player 3, the
+leaving, a guest's controller as player 2 with the host's Steam Input twin left out, a guest keyboard as another player (the tests then allowed 8 players; Orbitals allows 2), the
 guest link, a missing overlay, and each failure (no library, no Steam, wrong App ID). Picking local multiplayer with too few controllers opens the invite list (13/11/2026, against the mock).
 A real session with friends over Steam has not been run yet.

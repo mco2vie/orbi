@@ -23,7 +23,7 @@
 // applied once. In a script with timed lines (a recording) the untimed ones belong before the world clock: they stop
 // when it starts, as the load ends at another tick in each run.
 // at, hold: ticks, or microseconds of the world clock when timed.
-// A line that starts with "p<N> " (N 1-8) presses for player N (input_poll_player); without it, for player 1.
+// A line that starts with "p<N> " (N 1-2) presses for player N (input_poll_player); without it, for player 1.
 typedef struct {
     uint64_t at, hold;
     int bit, stick, timed, player;
