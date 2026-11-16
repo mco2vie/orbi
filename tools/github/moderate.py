@@ -48,10 +48,10 @@ NEW_LABELS = {
 TEXT = {
     "wiki": " What you can do about it is in the wiki: [Troubleshooting]({repo_url}/wiki/Troubleshooting#{wiki}).",
     "empty": "This issue has no details to act on, so it is closed. Please open a new one with the "
-    "[bug report form]({repo_url}/issues/new?template=bug_report.yml) and attach `logs/mkw.log`.",
+    "[bug report form]({repo_url}/issues/new?template=bug_report.yml) and attach `logs/orbitals.log`.",
     "game": "Only Orbitals with its update, dumped from your own console, is supported; issues about obtaining the game, "
     "its files or keys are closed.",
-    "logs": "Thanks for the report. To find the cause we need the log: please attach `logs/mkw.log` from the game "
+    "logs": "Thanks for the report. To find the cause we need the log: please attach `logs/orbitals.log` from the game "
     "folder (or `logs/setup.log` if the setup failed) by dragging it into a comment; the wiki says "
     "[where it is]({repo_url}/wiki/Installation#where-things-live). Without it this issue is closed "
     f"in {LOG_DAYS} days.",
@@ -59,22 +59,22 @@ TEXT = {
     "one is closed as its duplicate. If yours is a different problem, reply here and it is reopened.",
     "dup_old": "Thanks for the report. This looks like #{issue}: {what}, fixed in {fixed}. You are on {ver}: please "
     "update to the [latest release]({repo_url}/releases/latest). This one is closed as its duplicate; if it still "
-    "happens there, reply here with its `logs/mkw.log` and it is reopened.",
+    "happens there, reply here with its `logs/orbitals.log` and it is reopened.",
     "retry": "This was reported on {ver}, and {latest} is out with many fixes since. Please try the "
-    "[latest release]({repo_url}/releases/latest) and reply here: whether it still happens, with its `logs/mkw.log` "
+    "[latest release]({repo_url}/releases/latest) and reply here: whether it still happens, with its `logs/orbitals.log` "
     f"attached. Without a reply this issue is closed in {RETRY_DAYS} days.",
     "retry_closed": f"Closed: no reply in {RETRY_DAYS} days. If it still happens on the latest release, reply here with "
-    "`logs/mkw.log` attached and it is reopened, or open a new issue.",
+    "`logs/orbitals.log` attached and it is reopened, or open a new issue.",
     "logs_closed": f"Closed: no log in {LOG_DAYS} days. If it still happens on the latest release, open a new issue "
-    "with `logs/mkw.log` attached.",
+    "with `logs/orbitals.log` attached.",
     "dup_closed": "Closed as a duplicate of #{issue}.",
     "modified": "Note: this log is from a build with local changes (`Orbitals Recomp {ver}`). Please check whether it "
     "happens with a [release package]({repo_url}/releases/latest) or a clean build of `main`: a change outside the "
     "repository can cause it, and we cannot see it.",
     "mods": "Note: this run had mods on ({mods}). Mods are made by other people and can cause crashes and glitches "
-    "the game does not have: please try again with them off (Mods page, Installed) and attach that `logs/mkw.log`. "
+    "the game does not have: please try again with them off (Mods page, Installed) and attach that `logs/orbitals.log`. "
     "If it only happens with a mod, please report it to the mod's author.",
-    "release": "Fixed in [{tag}]({url}). If it still happens there, open a new issue with `logs/mkw.log` attached.",
+    "release": "Fixed in [{tag}]({url}). If it still happens there, open a new issue with `logs/orbitals.log` attached.",
 }
 
 

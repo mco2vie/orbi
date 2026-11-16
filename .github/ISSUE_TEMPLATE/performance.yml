@@ -77,7 +77,7 @@ body:
     id: log
     attributes:
       label: Log
-      description: Attach `logs/mkw.log` from the game folder (drag it into this field). It holds the GPU, driver and settings the game saw.
+      description: Attach `logs/orbitals.log` from the game folder (drag it into this field). It holds the GPU, driver and settings the game saw.
   - type: textarea
     id: notes
     attributes:

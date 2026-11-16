@@ -19,7 +19,7 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | Links to `adriadam10/mkw-recomp`, the `mkw-recomp:` link scheme | `09ea19e` | The project's repository is `sinedgiveaways/pmocer-latibro` |
 | Known-issues signatures list (`tools/github/signatures.toml`) | `d4ee6d3` | Known-issues signatures list emptied: the MKW entries referenced issues from the original repo. Orbitals-specific signatures will be added as errors are discovered |
 | Texts naming the first game, and the texts of removed settings, in `i18n/` | `1b5e55e` | The missing-game help and wrong-build error name Orbitals; 13 ids of removed settings dropped from the 21 catalogs |
-| Unlock everything (`runtime/core/hacks/unlock.c`, `unlock_ids.c`, `ORBITALS_UNLOCK_ALL`) | this commit | See "unlock.c audit" below |
+| Unlock everything (`runtime/core/hacks/unlock.c`, `unlock_ids.c`, `ORBITALS_UNLOCK_ALL`) | `5dde6e8` | See "unlock.c audit" below |
 
 ## Kept, with the reason
 
