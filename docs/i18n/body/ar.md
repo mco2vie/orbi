@@ -136,7 +136,7 @@ Frame rate على Automatic (كما في الجهاز) ينخفض إلى 30 إط
 
 على Linux، مع `uv` و`clang` و`lld` و`ninja` وSDL3 وOpus وlibvpx وzstd وxxHash وترويسات Vulkan وVMA 3.4.0 (التفاصيل في
 [tools/build/README.md](tools/build/README.md)). ضع نسختك المستخرجة في `game/` (‏`game/exefs` و`game/romfs`) أو اضبط
-`MKW_GAME=<dir>`، ثم من جذر المستودع:
+`ORBITALS_GAME=<dir>`، ثم من جذر المستودع:
 
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt

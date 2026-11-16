@@ -17,7 +17,7 @@
 // Every graphics pipeline built in a game run appends a KeyRec: the VkPipeState it was built from with the shader
 // pointers zeroed and the shaders named by their program keys instead (gfx_shader_input_id), so the record rebuilds the
 // pipeline without guest memory. At the next boot vk_pipeline_prewarm (rt_boot, before the guest runs;
-// MKW_PIPE_PREBUILD=0 skips it) loads each record's shaders (gfx_shader_prewarm; a record whose shader is missing is
+// ORBITALS_PIPE_PREBUILD=0 skips it) loads each record's shaders (gfx_shader_prewarm; a record whose shader is missing is
 // dropped; an integer-input vertex shader is made again from the record's attribute formats), enters each Pipe as building under the key a draw would compute, queues it to the low queue and builds the queue on
 // every core. Records are deduplicated by a hash of their bytes; they are collected under P.lock by the worker that
 // built the pipeline and appended by the present thread (vk_pipeline_autosave) or at exit (vk_pipeline_save). A file
@@ -120,7 +120,7 @@ void keys_open(void) {
     fseek(f, 0, SEEK_END);
     long len = ftell(f);
     fseek(f, 0, SEEK_SET);
-    if (len >= (long)sizeof h && fread(&h, sizeof h, 1, f) == 1 && !memcmp(h.magic, "MKW_PKEY", 8) &&
+    if (len >= (long)sizeof h && fread(&h, sizeof h, 1, f) == 1 && !memcmp(h.magic, "ORBITALS_PKEY", 8) &&
         h.version == KEYS_VERSION && h.rec_size == sizeof(KeyRec)) {
         K.header_ok = 1;
         size_t n = ((size_t)len - sizeof h) / sizeof(KeyRec);
@@ -152,7 +152,7 @@ static void pipe_worker(void *arg) {
     plat_mutex_lock(&P.lock);
     for (;;) {
         // With 3 or more workers one never takes low-queue work, so a waiting draw's library starts at once
-        // (not with MKW_PIPE_WAIT=draw).
+        // (not with ORBITALS_PIPE_WAIT=draw).
         while (!U.head && !A.head && !(A.low && (A.threads < 3 || !U.on || A.low_running < A.threads - 1))) {
             U.idle++;
             plat_cond_wait(&work_cv, &P.lock);
@@ -238,7 +238,7 @@ static void pipe_worker(void *arg) {
 // RADV compiling one of MKW's large pipelines holds gigabytes (heaptrack, run68: 5.2 GB of the process's peak inside
 // vkCreateGraphicsPipelines on three workers, and systemd-oomd ended runs 54-67 on a machine with 13.4 GiB usable).
 // The cut is below 16: a 16 GB machine reports 15.3-15.6 GiB after firmware and iGPU reservations (issue #132).
-// MKW_PIPE_WORKERS=<n> sets it. Caller holds P.lock.
+// ORBITALS_PIPE_WORKERS=<n> sets it. Caller holds P.lock.
 static int workers_start(void) {
     if (A.threads) return 1;
     uint32_t cpus = plat_cpu_count();
@@ -246,7 +246,7 @@ static int workers_start(void) {
     float used, total = 0, proc;
     plat_mem_info(&used, &total, &proc);
     if (total > 0 && total < 14 * 1024) n = 1;
-    const char *w = cfg_get("MKW_PIPE_WORKERS");
+    const char *w = cfg_get("ORBITALS_PIPE_WORKERS");
     if (w && atoi(w) > 0) n = atoi(w) > MAX_WORKERS ? MAX_WORKERS : atoi(w);
     for (int i = 0; i < n; i++) {
         PlatThread *t = plat_thread_new(pipe_worker, (void *)(intptr_t)A.threads, "pipe worker");
@@ -286,8 +286,8 @@ void vk_pipeline_async_busy(unsigned *inflight, int *building) {
 }
 
 void vk_pipeline_async_enable(void) {
-    U.on = strcmp(cfg_value("MKW_PIPE_WAIT"), "draw") != 0;
-    const char *e = cfg_get("MKW_PIPE_SYNC");
+    U.on = strcmp(cfg_value("ORBITALS_PIPE_WAIT"), "draw") != 0;
+    const char *e = cfg_get("ORBITALS_PIPE_SYNC");
     if (e && *e && strcmp(e, "0")) return;
     A.on = 1;
 }
@@ -328,7 +328,7 @@ static Pipe *pipe_miss(const VkPipeState *s, const GKey *k, uint64_t h, int mode
         uint32_t mo, fo;
         mesh_offsets(s, &mo, &fo);
         if (!vk_ctx()->has_mesh) why = "no VK_EXT_mesh_shader";
-        else if (vk_mesh_cs_on()) why = "task/mesh drawn as compute (MKW_MESH_COMPUTE)";
+        else if (vk_mesh_cs_on()) why = "task/mesh drawn as compute (ORBITALS_MESH_COMPUTE)";
         else if (!add_stage(&B, s->vs, 0) || (s->mesh && !add_stage(&B, s->mesh, mo)) || (s->fs && !add_stage(&B, s->fs, fo)))
             why = "too many bindings";
         else if (!(l = layout_get(&B))) why = "descriptor layout creation failed";
@@ -528,15 +528,15 @@ VkPipeline pipe_graphics(const VkPipeState *s, const VkPipeInfo **info, int asyn
     // parallel on idle workers (lib_wait; about 0.12 ms per library from the driver's disk cache, 5-180 ms cold), and
     // links them here: its own job may queue behind optimised builds of earlier pipelines. The job then only does the
     // optimised build, from the low queue. Other draws leave the libraries to the job and are skipped meanwhile.
-    // MKW_PIPE_WAIT=draw builds them on this thread one after the other instead, as before; MKW_GPL_DRAW_BUILD=0
+    // ORBITALS_PIPE_WAIT=draw builds them on this thread one after the other instead, as before; ORBITALS_GPL_DRAW_BUILD=0
     // leaves them to the job.
     static int draw_build = -1;
     if (draw_build < 0) {
-        const char *e = cfg_get("MKW_GPL_DRAW_BUILD");
+        const char *e = cfg_get("ORBITALS_GPL_DRAW_BUILD");
         draw_build = !(e && !strcmp(e, "0"));
         rt_log("vk_pipeline: a draw that waits for its pipeline %s", !draw_build ? "leaves its libraries to its job"
                : U.on ? "has its libraries built in parallel on the workers, ahead of other jobs"
-                      : "builds its libraries itself (MKW_PIPE_WAIT=draw)");
+                      : "builds its libraries itself (ORBITALS_PIPE_WAIT=draw)");
     }
     if (p && p->gave_up && p->building && !p->info.pipeline) wait_ms = 0;   // one full wait per pipeline, not one per frame
     double end = wait_ms ? now_ms() + wait_ms : 0;
@@ -597,7 +597,7 @@ VkPipeline vk_pipeline_graphics_async(const VkPipeState *s, const VkPipeInfo **i
 }
 
 // As vk_pipeline_graphics_async without waiting, a miss built from the low queue: pipelines no draw needs to be drawn
-// (MKW_SPEC's variants, vk_spec.c) do not hold back the ones that skip draws until they exist.
+// (ORBITALS_SPEC's variants, vk_spec.c) do not hold back the ones that skip draws until they exist.
 VkPipeline vk_pipeline_graphics_async_low(const VkPipeState *s, const VkPipeInfo **info, int *pending) {
     return pipe_graphics(s, info, A.on, pending, 0, 1);
 }
@@ -666,7 +666,7 @@ static int prewarm_mark(char *path, size_t cap) {
 void vk_pipeline_prewarm(void) {
     const char *gpu = rt_config()->gpu;
     if (!A.on || (gpu && !strcmp(gpu, "null"))) return;
-    if (!cfg_bool("MKW_PIPE_PREBUILD")) {   // prebuild_start logs the off case
+    if (!cfg_bool("ORBITALS_PIPE_PREBUILD")) {   // prebuild_start logs the off case
         ensure_init();
         return;
     }
@@ -787,13 +787,13 @@ void vk_pipeline_prewarm(void) {
     plat_file_delete(mark);   // the boot got through: a stall above left the rest to the background, not a crash
 }
 
-// ensure_init's hook: without a prewarm (MKW_PIPE_PREBUILD=0, or the device came up first elsewhere) the records
+// ensure_init's hook: without a prewarm (ORBITALS_PIPE_PREBUILD=0, or the device came up first elsewhere) the records
 // are not built. Caller holds no lock.
 void prebuild_start(void) {
     plat_mutex_lock(&P.lock);
     if (K.file && !K.warm) {
         rt_log("vk_pipeline: prebuild off%s; %zu records not built",
-               !cfg_bool("MKW_PIPE_PREBUILD") ? " (MKW_PIPE_PREBUILD=0)" : " (no boot prewarm)", K.file_n);
+               !cfg_bool("ORBITALS_PIPE_PREBUILD") ? " (ORBITALS_PIPE_PREBUILD=0)" : " (no boot prewarm)", K.file_n);
         free(K.file);
         K.file = NULL;
     }
@@ -819,7 +819,7 @@ static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
         ci.stage.pNext = &rqc;
     }
     if (vk_ctx()->has_exec_stats) ci.flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
-    if (vk_ctx()->has_exec_stats && cfg_get("MKW_SPEC_ISA")) ci.flags |= VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR;
+    if (vk_ctx()->has_exec_stats && cfg_get("ORBITALS_SPEC_ISA")) ci.flags |= VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR;
     VkPipeline pipe = VK_NULL_HANDLE;
     if (vkCreateComputePipelines(P.device, P.cache, 1, &ci, NULL, &pipe) != VK_SUCCESS) pipe = VK_NULL_HANDLE;
     else if (vk_ctx()->has_exec_stats) log_stats(pipe, &(VkPipeState){.vs = cs});

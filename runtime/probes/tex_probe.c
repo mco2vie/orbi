@@ -641,7 +641,7 @@ static int test_gpu(void) {
     if (vk_mem_shadow_on() && test_merge(&pool)) return 1;
     GCHECK(vk_pool_init(&tpool), "vk_pool_init of the texture pool");
     if (test_textures(&tpool, &phys)) return 1;
-    const char *cap = cfg_get("MKW_SHADOW_SUBMIT");   // a measurement, off by default
+    const char *cap = cfg_get("ORBITALS_SHADOW_SUBMIT");   // a measurement, off by default
     if (vk_mem_shadow_on() && cap && !strcmp(cap, "1") && test_capture(&pool)) return 1;
     VkMemStats st;
     vk_mem_stats(&st);

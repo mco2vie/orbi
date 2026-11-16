@@ -2,12 +2,12 @@
 // only). A transport finds and connects them (linux_switch2.c: BlueZ over D-Bus; switch2_win.c: WinRT) and hands each
 // one to switch2.c, which speaks the protocol (switch2_proto.h, from mkw-neo) and shows the controller to the rest of
 // the input as a virtual SDL gamepad: players, button layout, gyro and rumble then work as for any other gamepad.
-// MKW_SWITCH2=1 (Settings > Controls) turns it on; it runs on the transport's own thread, never the game's.
+// ORBITALS_SWITCH2=1 (Settings > Controls) turns it on; it runs on the transport's own thread, never the game's.
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
 
-void switch2_start(void);   // input.c's start: the transport's thread, when MKW_SWITCH2=1
+void switch2_start(void);   // input.c's start: the transport's thread, when ORBITALS_SWITCH2=1
 
 // ---- between a transport and switch2.c
 

@@ -1,4 +1,4 @@
-# Two players to a split-screen race (MKW_VIRTUAL_PADS=2, MKW_SEQ_WATCH=1): the presses of mp1 (10/11/2026), by phase,
+# Two players to a split-screen race (ORBITALS_VIRTUAL_PADS=2, ORBITALS_SEQ_WATCH=1): the presses of mp1 (10/11/2026), by phase,
 # with mp1's gaps. Title menu: Multiplayer, 2 players (the controller applet answers 2); Grand Prix; both pick
 # character and kart; player 1 picks the cup; both hold A (accelerate) from there into the race.
 TitleWait+40 A 6

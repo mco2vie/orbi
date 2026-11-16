@@ -47,7 +47,7 @@ static uint64_t cur_fence;    // the value of the submission being recorded
 // 5 250 objects waiting for a value no wait could reach.
 static VkSemaphore part_sem;
 static uint64_t part_val;     // newest part value submitted
-// MKW_WB_ORDER (vk_mem_wback.c): a part writing bytes of an earlier submission whose write-back is still to come is
+// ORBITALS_WB_ORDER (vk_mem_wback.c): a part writing bytes of an earlier submission whose write-back is still to come is
 // handed to the queue once that value is done (done advances after its write-backs ran). The replay thread waits, not
 // the GPU: a GPU wait on a value the CPU signals later made RADV defer the queue's work and a sparse unmap after it
 // failed ("Failed to replace a PRT VA region (-22)", device lost at the title, tdiff1).
@@ -65,7 +65,7 @@ static void wb_wait(uint64_t fence) {   // sub_lock held, before the queue lock
     // Submitted already (values reach the queue in order); the cap is against a lock the completion thread's write-backs
     // would need being held here.
     if (!vk_sync_fence_wait(need, 500000000ull))
-        rt_log("vk: MKW_WB_ORDER: the write-back of %llu did not come in 500 ms; part of %llu sent without it",
+        rt_log("vk: ORBITALS_WB_ORDER: the write-back of %llu did not come in 500 ms; part of %llu sent without it",
                (unsigned long long)need, (unsigned long long)fence);
     wb_ns += kern_now_ns() - t0;
     wb_waits++;
@@ -76,14 +76,14 @@ static PlatMutex st_lock = PLAT_MUTEX_INIT;
 static PlatCond cv_work = PLAT_COND_INIT;   // a submission, a callback or stop
 static PlatCond cv_done = PLAT_COND_INIT;   // done advanced
 static uint64_t issued, done;     // newest submitted value; newest value whose side effects ran
-static uint64_t issued_part;      // the part value of issued's last part (MKW_GPU_GUARD)
-static uint64_t queued;           // newest value with a part on the GPU queue (MKW_EARLY_READ: what may be running)
+static uint64_t issued_part;      // the part value of issued's last part (ORBITALS_GPU_GUARD)
+static uint64_t queued;           // newest value with a part on the GPU queue (ORBITALS_EARLY_READ: what may be running)
 static uint64_t reserved;         // asynchronous replay: newest value handed out before its submission (>= issued)
 static int stop;
 static Pending *queue;            // side effects in the order they were added
 static int qhead, qn, qcap;
 
-// MKW_SUBMIT_THREAD (default 1; "ab" in the B blocks only): a part's vkQueueSubmit2 (vk_sync_split_with) is not made
+// ORBITALS_SUBMIT_THREAD (default 1; "ab" in the B blocks only): a part's vkQueueSubmit2 (vk_sync_split_with) is not made
 // on the replay thread, the race frame's critical path, but by the thread "vk submit": in the race ~1,700 parts every
 // 1,200 submissions spent ~40 ms a second there, a quarter of the replay thread's time in the kernel (kfp1, kfp2). The
 // part takes its place in queue order on the replay thread (sparse order, under the queue lock) and waits in parts[];
@@ -188,7 +188,7 @@ WEAK int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint
     return 0;
 }
 
-// MKW_TRACE_TL: the completion thread's side effects by callback, run between a value being reached and its waiters
+// ORBITALS_TRACE_TL: the completion thread's side effects by callback, run between a value being reached and its waiters
 // being released (tl-se1: 1.5 ms a frame on the race frame's critical path). Every 3000 values, the costliest.
 static struct { void (*fn)(void *); uint64_t ns, n; } cb_cost[32];
 static uint64_t cb_values;
@@ -209,7 +209,7 @@ static void cb_log(uint64_t values) {
         k += snprintf(buf + k, sizeof buf - (size_t)k, "; build/mkw+%#llx %.3f ms (%llu)",
                       (unsigned long long)((uintptr_t)cb_cost[i].fn - plat_exe_base()),
                       cb_cost[i].ns / 1e6 / (double)cb_values, (unsigned long long)cb_cost[i].n);
-    rt_log("vk: completion side effects per value over %llu values (MKW_TRACE_TL, tools/run/sym.py)%s",
+    rt_log("vk: completion side effects per value over %llu values (ORBITALS_TRACE_TL, tools/run/sym.py)%s",
            (unsigned long long)cb_values, buf);
     memset(cb_cost, 0, sizeof cb_cost), cb_values = 0;
 }
@@ -288,7 +288,7 @@ void vk_sync_start(void) {
     if (__atomic_load_n(&started, __ATOMIC_ACQUIRE)) return;
     plat_mutex_lock(&start_lock);
     if (!started) {
-        if (!vk_init()) rt_fatal("vk: no usable Vulkan device (see the vk: lines above; MKW_GPU=null runs without a GPU)");
+        if (!vk_init()) rt_fatal("vk: no usable Vulkan device (see the vk: lines above; ORBITALS_GPU=null runs without a GPU)");
         VkCtx *c = vk_ctx();
         VkCommandPoolCreateInfo pi = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                                       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -318,7 +318,7 @@ void vk_sync_start(void) {
         completion_thread = plat_thread_new(completion_main, c, "vk completion");
         if (!completion_thread) rt_fatal("vk: cannot start the completion thread");
         __atomic_store_n(&started, 1, __ATOMIC_RELEASE);
-        vk_astc_mode();   // decides MKW_ASTC and builds the ASTC decoder now, not at the first ASTC upload
+        vk_astc_mode();   // decides ORBITALS_ASTC and builds the ASTC decoder now, not at the first ASTC upload
     }
     plat_mutex_unlock(&start_lock);
 }
@@ -353,17 +353,17 @@ static CmdSlot *take_slot(VkCtx *c, uint64_t fence) {
 // submitted right before the part that needs them and timed like a part; VK_NULL_HANDLE when there are none. After the
 // part was recorded, sub_lock held; may move slots[].
 // First brings the shadow storage up to date with the CPU's writes, which needs no command buffer.
-static uint64_t fe_waits, fe_ns;   // sub_lock: MKW_FENCE_EARLY's waits before a shadow copy, since the last log
+static uint64_t fe_waits, fe_ns;   // sub_lock: ORBITALS_FENCE_EARLY's waits before a shadow copy, since the last log
 
 static VkCommandBuffer prologue(VkCtx *c, uint64_t fence) {
-    // MKW_FENCE_EARLY: the game was told a fence was done once recorded and may now rewrite what that GPU work still
+    // ORBITALS_FENCE_EARLY: the game was told a fence was done once recorded and may now rewrite what that GPU work still
     // reads; the copy into shadow storage that would carry those writes waits for it. As wb_wait, under sub_lock: the
     // completion thread does not take it.
-    // MKW_FENCE_EARLY_GUARD: 1 this wait before every part (fe1: 7.7 ms each, ~0.6 a frame); 0 none (a measurement:
+    // ORBITALS_FENCE_EARLY_GUARD: 1 this wait before every part (fe1: 7.7 ms each, ~0.6 a frame); 0 none (a measurement:
     // fe3 found 20 copies over bytes a running submission read); unset or 2 the precise one, only the copies that change
     // such bytes wait (vk_mem_race.c race_wait), which also covers the shadow thread's copies.
     static int guard = -1;
-    if (guard < 0) guard = cfg_get("MKW_FENCE_EARLY_GUARD") ? atoi(cfg_get("MKW_FENCE_EARLY_GUARD")) : 2;
+    if (guard < 0) guard = cfg_get("ORBITALS_FENCE_EARLY_GUARD") ? atoi(cfg_get("ORBITALS_FENCE_EARLY_GUARD")) : 2;
     uint64_t rel = __atomic_load_n(&mem_early_rel, __ATOMIC_ACQUIRE);
     if (mem_fence_early && guard == 1 && rel > vk_sync_fence_done()) {
         uint64_t t0 = kern_now_ns();
@@ -385,7 +385,7 @@ static VkCommandBuffer prologue(VkCtx *c, uint64_t fence) {
     return cb;
 }
 
-// MKW_TRACE=perf: where a submission's time goes, summed per log line (every 1200 submissions): waiting for sub_lock
+// ORBITALS_TRACE=perf: where a submission's time goes, summed per log line (every 1200 submissions): waiting for sub_lock
 // (another thread's submission), the walk and recording, the uploads, the shadow sync and the queue submit.
 // The split's last stretch is told apart: vkQueueSubmit2 itself, claiming the next buffer and beginning it.
 enum { SS_LOCK, SS_RECORD, SS_RECORD_CPU, SS_WALK, SS_UPLOAD, SS_PROLOGUE, SS_QUEUE, SS_SPLIT_END, SS_SPLIT_PRO, SS_SPLIT_Q,
@@ -415,13 +415,13 @@ static void ss_log(void) {
         vk_queue_lock();
         if (pend_by_thread || pend_by_other)
             rt_log("perf: parts sent by the submit thread %llu, by others taking the queue lock %llu, vkQueueSubmit2 "
-                   "%.1f ms per s (MKW_SUBMIT_THREAD)", (unsigned long long)pend_by_thread,
+                   "%.1f ms per s (ORBITALS_SUBMIT_THREAD)", (unsigned long long)pend_by_thread,
                    (unsigned long long)pend_by_other, pend_ns * 1e3 / (double)span);
         pend_by_thread = pend_by_other = pend_ns = 0;
         vk_queue_unlock();
-        if (plat_lock_report(0, buf, sizeof buf)) rt_log("perf: lock waits since the last line (MKW_LOCK_PROF):%s", buf);
+        if (plat_lock_report(0, buf, sizeof buf)) rt_log("perf: lock waits since the last line (ORBITALS_LOCK_PROF):%s", buf);
         if (plat_lock_report(1, buf, sizeof buf))
-            rt_log("perf: lock holds a thread slept on since the last line (MKW_LOCK_PROF):%s", buf);
+            rt_log("perf: lock holds a thread slept on since the last line (ORBITALS_LOCK_PROF):%s", buf);
     }
     for (int i = 0; i < SS_N; i++) __atomic_store_n(&ss_ns[i], 0, __ATOMIC_RELAXED);
     ss_subs = ss_splits = 0;
@@ -435,7 +435,7 @@ VkCommandBuffer vk_sync_split_with(const VkCommandBuffer *extra, int nextra) {
     int ss = (rt_trace & RT_TRACE_PERF) != 0;
     uint64_t q0 = ss ? kern_now_ns() : 0, q1;
     rec_end();   // every command of the part is in cb
-    // The extra command buffers (MKW_REPLAY_PAR's chunks) come from the pools of the threads that recorded them, and
+    // The extra command buffers (ORBITALS_REPLAY_PAR's chunks) come from the pools of the threads that recorded them, and
     // those threads ended them: this thread must not record into them or end them, because their thread may already be
     // recording its next chunk from the same pool, and a VkCommandPool is used by one thread at a time (Vulkan's
     // external synchronization). Doing it here made the validation layer report "THREADING ERROR: VkCommandPool is
@@ -529,7 +529,7 @@ uint64_t vk_sync_submit(const uint64_t *handles, int n) {
     plat_mutex_lock(&sub_lock);
     uint64_t c0 = 0;
     if (ss) q1 = kern_now_ns(), __atomic_fetch_add(&ss_ns[SS_LOCK], q1 - q0, __ATOMIC_RELAXED), q0 = q1, c0 = thread_cpu_ns();
-    vk_mem_dirty_submit();   // MKW_TRACE=perf: what a mirror would upload before this submit
+    vk_mem_dirty_submit();   // ORBITALS_TRACE=perf: what a mirror would upload before this submit
     uint64_t fence = __atomic_load_n(&issued, __ATOMIC_ACQUIRE) + 1;
     cur_fence = fence;
     vk_mem_recording(fence);
@@ -597,12 +597,12 @@ uint64_t vk_sync_submit(const uint64_t *handles, int n) {
     if (++subs % 4096 == 0) {
         rec_stats_log();
         if (wb_waits || wb_skips)
-            rt_log("vk: %llu parts waited %.1f ms in all for an earlier write-back, %llu found it done (MKW_WB_ORDER)",
+            rt_log("vk: %llu parts waited %.1f ms in all for an earlier write-back, %llu found it done (ORBITALS_WB_ORDER)",
                    (unsigned long long)wb_waits, (double)wb_ns / 1e6, (unsigned long long)wb_skips);
         wb_waits = wb_skips = wb_ns = 0;
         if (mem_fence_early)
             rt_log("vk: %llu parts waited %.1f ms in all for the GPU of a fence released early before their shadow copy "
-                   "(MKW_FENCE_EARLY)", (unsigned long long)fe_waits, (double)fe_ns / 1e6);
+                   "(ORBITALS_FENCE_EARLY)", (unsigned long long)fe_waits, (double)fe_ns / 1e6);
         fe_waits = fe_ns = 0;
     }
     if (ss) {
@@ -721,7 +721,7 @@ uint64_t vk_sync_fence_queued(void) { return __atomic_load_n(&queued, __ATOMIC_A
 
 uint64_t vk_sync_issued(void) { return __atomic_load_n(&issued, __ATOMIC_ACQUIRE); }
 
-// MKW_FENCE_EARLY: value is recorded and its last part handed to the queue (issued moves under st_lock and broadcasts
+// ORBITALS_FENCE_EARLY: value is recorded and its last part handed to the queue (issued moves under st_lock and broadcasts
 // cv_work). A value the replay will never record (beyond what was handed out) is never reached.
 int vk_sync_issued_wait(uint64_t value, uint64_t timeout_ns) {
     vk_sync_start();

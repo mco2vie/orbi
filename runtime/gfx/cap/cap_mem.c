@@ -209,10 +209,10 @@ void cap_mem_commit(uint64_t addr, uint64_t len) {
     }
 }
 
-// A page under a read trap (memory.c: a GPU write-back still to fill it) or an MKW_EARLY_READ watch is released first,
+// A page under a read trap (memory.c: a GPU write-back still to fill it) or an ORBITALS_EARLY_READ watch is released first,
 // as a game write would: cap_mem_commit made it read-write behind the trap's back and the page kept its trapped mark,
 // so the shadow sync and merge skipped the bytes restored into it (the black bushes of build/cap/race in about a third of
-// the replays, depending on when the GPU finished: 0 of 6 with MKW_SHADOW_MERGE=0 or MKW_READ_TRAPS=0).
+// the replays, depending on when the GPU finished: 0 of 6 with ORBITALS_SHADOW_MERGE=0 or ORBITALS_READ_TRAPS=0).
 void cap_mem_restore(const void *data, uint64_t addr, uint64_t len) {
     mem_untrap(addr, len);
     cap_mem_commit(addr, len);

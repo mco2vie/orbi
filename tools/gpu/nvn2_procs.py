@@ -173,7 +173,7 @@ def procs(nso: Nso, search: bool = False) -> dict[str, int]:
 
 def main() -> None:
     search = "--locate" in sys.argv[1:]
-    sdk = Nso(str(Path(os.environ.get("MKW_GAME", "game")) / "exefs/sdk"))
+    sdk = Nso(str(Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs/sdk"))
     table = procs(sdk, search)
     for name, off in sorted(table.items(), key=lambda t: t[1]):
         print(f"sdk+{off:#x} {name}")

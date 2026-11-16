@@ -10,23 +10,23 @@
 // and the page set follow SavageWindRecomp's runtime/ui/launcher.mm (https://github.com/Revivedx/SavageWindRecomp @
 // 5173d27, MIT, Copyright (c) 2026 Revivedx and the Savage Wind Recomp contributors).
 //
-// Test hooks: MKW_LAUNCHER_SHOT=<frame>[:<page>[:<tab>[:<scroll 0..1>]]] saves that frame as MKW_LAUNCHER_SHOT_OUT (default
+// Test hooks: ORBITALS_LAUNCHER_SHOT=<frame>[:<page>[:<tab>[:<scroll 0..1>]]] saves that frame as ORBITALS_LAUNCHER_SHOT_OUT (default
 // launcher.png) and quits; page main, settings (tab 0..5), files, mods or players. The user's input is ignored while it
 // runs.
-// MKW_LAUNCHER_SETUP=<folder>[:link] starts the setup from that folder at once, on the game files page.
-// MKW_LAUNCHER_MODS_PICK=<zip|folder> picks it on the Mods page, as its dialogs do; MKW_LAUNCHER_MODS_TOGGLE=<mod>
-// toggles that mod once, as its checkbox does; MKW_LAUNCHER_MODS_PICKWINNER=<archive> cycles the first conflict of
-// that archive once, as its winner button does; MKW_LAUNCHER_MODS_DELETE=<mod> deletes it once, as its confirmed
-// modal does; MKW_LAUNCHER_MODS_CONFLICT_OK=1 presses the picker's OK, MKW_LAUNCHER_MODS_MODAL=1 opens it;
-// MKW_LAUNCHER_MODS_IMPORT=1 runs the import of the picked zip or folder; MKW_LAUNCHER_NO_MERGE=1
+// ORBITALS_LAUNCHER_SETUP=<folder>[:link] starts the setup from that folder at once, on the game files page.
+// ORBITALS_LAUNCHER_MODS_PICK=<zip|folder> picks it on the Mods page, as its dialogs do; ORBITALS_LAUNCHER_MODS_TOGGLE=<mod>
+// toggles that mod once, as its checkbox does; ORBITALS_LAUNCHER_MODS_PICKWINNER=<archive> cycles the first conflict of
+// that archive once, as its winner button does; ORBITALS_LAUNCHER_MODS_DELETE=<mod> deletes it once, as its confirmed
+// modal does; ORBITALS_LAUNCHER_MODS_CONFLICT_OK=1 presses the picker's OK, ORBITALS_LAUNCHER_MODS_MODAL=1 opens it;
+// ORBITALS_LAUNCHER_MODS_IMPORT=1 runs the import of the picked zip or folder; ORBITALS_LAUNCHER_NO_MERGE=1
 // skips the page-entry merge (pre-merged shots).
-// MKW_LAUNCHER_SHORTCUT=1 makes the desktop shortcut at start, as its button does. MKW_LAUNCHER_PLAY=1 presses Play once
-// the game files are there (with MKW_GPU=x the game's process then stops at once: the save copy before mods, alone).
-// MKW_LAUNCHER_EXIT_AFTER_SETUP=1 quits when that setup ends, after saving the page as <shot out>-end.png (its result
-// is in the log); MKW_LAUNCHER_SHOT then takes its shot without quitting. During a shot the update check runs only
-// with MKW_UPDATE_AS (tools/prepare/update.py: compare as that version). MKW_LAUNCHER_UPDATE=1 takes the update offered
+// ORBITALS_LAUNCHER_SHORTCUT=1 makes the desktop shortcut at start, as its button does. ORBITALS_LAUNCHER_PLAY=1 presses Play once
+// the game files are there (with ORBITALS_GPU=x the game's process then stops at once: the save copy before mods, alone).
+// ORBITALS_LAUNCHER_EXIT_AFTER_SETUP=1 quits when that setup ends, after saving the page as <shot out>-end.png (its result
+// is in the log); ORBITALS_LAUNCHER_SHOT then takes its shot without quitting. During a shot the update check runs only
+// with ORBITALS_UPDATE_AS (tools/prepare/update.py: compare as that version). ORBITALS_LAUNCHER_UPDATE=1 takes the update offered
 // at once, as its button does. The last run's notice (launcher_lastrun.h) is read during a shot only with
-// MKW_LAUNCHER_LASTRUN=1.
+// ORBITALS_LAUNCHER_LASTRUN=1.
 #include <SDL3/SDL.h>
 #include <math.h>
 #include <stdio.h>
@@ -130,7 +130,7 @@ static void list_gpus(void) {
 }
 
 static void parse_test(void) {
-    const char *e = getenv("MKW_LAUNCHER_SHOT");
+    const char *e = getenv("ORBITALS_LAUNCHER_SHOT");
     if (!e || !*e) return;
     L.shot_at = atol(e);
     const char *p = strchr(e, ':');
@@ -255,7 +255,7 @@ static void update_row(float bw) {
     char text[700];
     if (u.phase == UPDATE_OFFER) {
         snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE), u.tag, (int)((u.bytes + (1 << 19)) >> 20));
-        if (ImGui::Button(text, ImVec2(bw, 0)) || getenv("MKW_LAUNCHER_UPDATE")) update_fetch_start(L.exe_dir);
+        if (ImGui::Button(text, ImVec2(bw, 0)) || getenv("ORBITALS_LAUNCHER_UPDATE")) update_fetch_start(L.exe_dir);
     } else if (u.phase == UPDATE_FETCHING) {
         snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE_FETCHING), u.tag);
         ImGui::ProgressBar(u.total > 0 ? (float)u.done / (float)u.total : 0, ImVec2(bw, 0), text);
@@ -277,7 +277,7 @@ static void update_row(float bw) {
 static void lastrun_row(float bw) {
     LastRun r = lastrun_state();
     if (r.kind == LASTRUN_NONE) return;
-    const char *repo = getenv("MKW_UPDATE_REPO");
+    const char *repo = getenv("ORBITALS_UPDATE_REPO");
     if (!repo || !*repo) repo = "adriadam10/mkw-recomp";
     char text[700], button[160], url[300];
     url[0] = 0;
@@ -345,7 +345,7 @@ static void page_main(float w, float h) {
         L.focus_main = 0;
     }
     v0 = dl->VtxBuffer.Size;
-    static bool play_test = getenv("MKW_LAUNCHER_PLAY") != nullptr;   // (test) once, as the button does
+    static bool play_test = getenv("ORBITALS_LAUNCHER_PLAY") != nullptr;   // (test) once, as the button does
     bool play = play_button(menu_text(UI_LAUNCH_PLAY), ImVec2(cw, play_h), ready);
     if (play || (play_test && ready)) {
         play_test = false;
@@ -586,15 +586,15 @@ static void page_files(float w, float h) {
     ImGui::TextDisabled("%s", menu_text(UI_LAUNCH_FILES_FOLDER));
     ImGui::SameLine();
     ImGui::TextWrapped("%s", cfg_game_dir());
-    ImGui::BeginDisabled(st.running || update_state().phase == UPDATE_FETCHING || cfg_from_env("MKW_GAME_DIR"));
+    ImGui::BeginDisabled(st.running || update_state().phase == UPDATE_FETCHING || cfg_from_env("ORBITALS_GAME_DIR"));
     if (ImGui::Button(menu_text(UI_LAUNCH_PICK_GAME_DIR), ImVec2(0, act_h))) {
         L.picking = 1;
         SDL_ShowOpenFolderDialog(picked, &L.directory_restart, L.win, cfg_game_dir(), false);
     }
     ImGui::EndDisabled();
     ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GAME_DIR_HELP));
-    if (cfg_from_env("MKW_GAME_DIR"))
-        ImGui::TextDisabled("%s MKW_GAME_DIR", menu_text(UI_MENU_SET_BY_ENV));
+    if (cfg_from_env("ORBITALS_GAME_DIR"))
+        ImGui::TextDisabled("%s ORBITALS_GAME_DIR", menu_text(UI_MENU_SET_BY_ENV));
     if (cfg_game_dir_invalid()) {
         ImGui::PushTextWrapPos(0);
 #ifdef _WIN32
@@ -753,10 +753,10 @@ static void page_mods(float w, float h) {
     if (strcmp(shown, L.exe_dir)) {   // entered (buttons and the shot hook both land here)
         mods_refresh(L.exe_dir);
         snprintf(shown, sizeof shown, "%s", L.exe_dir);
-        if (!getenv("MKW_LAUNCHER_NO_MERGE")) mods_merge_start(L.exe_dir);   // (test) skip: pre-merged shots
+        if (!getenv("ORBITALS_LAUNCHER_NO_MERGE")) mods_merge_start(L.exe_dir);   // (test) skip: pre-merged shots
     }
-    // two tabs: the player's mods, and GameBanana's (MKW_LAUNCHER_MODS_FIND=1 opens the second, for shots)
-    static int find_tab = getenv("MKW_LAUNCHER_MODS_FIND") ? 1 : 0;
+    // two tabs: the player's mods, and GameBanana's (ORBITALS_LAUNCHER_MODS_FIND=1 opens the second, for shots)
+    static int find_tab = getenv("ORBITALS_LAUNCHER_MODS_FIND") ? 1 : 0;
     if (L.gb_open) find_tab = 1, L.gb_open = 0;
     if (ImGui::RadioButton(menu_text(UI_MOD_TAB_INSTALLED), find_tab == 0)) find_tab = 0;
     ImGui::SameLine();
@@ -774,7 +774,7 @@ static void page_mods(float w, float h) {
         go_main();
         return;
     }
-    if (const char *t = getenv("MKW_LAUNCHER_MODS_PICK")) {   // (test) the picked zip or folder, as its dialog does
+    if (const char *t = getenv("ORBITALS_LAUNCHER_MODS_PICK")) {   // (test) the picked zip or folder, as its dialog does
         if (!mods_has_pick()) {
             size_t n = strlen(t);
             mods_pick(t, n > 4 && t[n - 4] == '.' && (t[n - 3] == 'z' || t[n - 3] == 'Z'));
@@ -782,14 +782,14 @@ static void page_mods(float w, float h) {
     }
     static int toggled = 0;   // (test) toggle one mod once, as its checkbox does
     if (!toggled) {
-        if (const char *t = getenv("MKW_LAUNCHER_MODS_TOGGLE")) {
+        if (const char *t = getenv("ORBITALS_LAUNCHER_MODS_TOGGLE")) {
             toggled = 1;
             mods_toggle(t, !mods_is_enabled(t));
         }
     }
     static int picked_winner = 0;   // (test) cycle the first conflict of an archive once, as its button does
     if (!picked_winner) {
-        if (const char *t = getenv("MKW_LAUNCHER_MODS_PICKWINNER")) {
+        if (const char *t = getenv("ORBITALS_LAUNCHER_MODS_PICKWINNER")) {
             for (int i = 0; i < mods_conflict_count(); i++) {
                 const ModConflict *c = mods_conflict_at(i);
             if (c->resolved) continue;   // picked: it leaves the list until the mods around it change
@@ -802,13 +802,13 @@ static void page_mods(float w, float h) {
         }
     }
     static int imported_one = 0;   // (test) run the import once, as its Import button does
-    if (!imported_one && getenv("MKW_LAUNCHER_MODS_IMPORT") && mods_has_pick()) {
+    if (!imported_one && getenv("ORBITALS_LAUNCHER_MODS_IMPORT") && mods_has_pick()) {
         imported_one = 1;
         mods_import_start(L.exe_dir);
     }
     static int deleted_one = 0;   // (test) delete one mod once, as its confirmed modal does
     if (!deleted_one) {
-        if (const char *t = getenv("MKW_LAUNCHER_MODS_DELETE")) {
+        if (const char *t = getenv("ORBITALS_LAUNCHER_MODS_DELETE")) {
             deleted_one = 1;
             mods_delete(t);
         }
@@ -927,12 +927,12 @@ static void page_mods(float w, float h) {
     // heading per archive, then its inner files: the archive is the file the mods ship, the inner file
     // is what actually clashes.
     static int ok_forced = 0;   // (test) press the modal's OK once conflicts exist
-    if (!ok_forced && getenv("MKW_LAUNCHER_MODS_CONFLICT_OK") && mods_conflict_unresolved() > 0) {
+    if (!ok_forced && getenv("ORBITALS_LAUNCHER_MODS_CONFLICT_OK") && mods_conflict_unresolved() > 0) {
         ok_forced = 1;
         mods_conflict_commit();
     }
     static int modal_forced = 0;   // (test) open the picker once conflicts exist, as its button does
-    if (!modal_forced && getenv("MKW_LAUNCHER_MODS_MODAL") && mods_conflict_unresolved() > 0) {
+    if (!modal_forced && getenv("ORBITALS_LAUNCHER_MODS_MODAL") && mods_conflict_unresolved() > 0) {
         modal_forced = 1;
         ImGui::OpenPopup("##conflicts");
     }
@@ -1004,9 +1004,9 @@ static void page_mods(float w, float h) {
 
 // ---- the window
 static bool open_window(void) {
-    // MKW_BACKGROUND_WINDOW=1 (agents' shots, never the player's default): the runs' app id, which the KWin rule opens
+    // ORBITALS_BACKGROUND_WINDOW=1 (agents' shots, never the player's default): the runs' app id, which the KWin rule opens
     // minimized and without focus (tools/run/kwin-rule.sh), as gfx_window_sdl.c does for the game's window.
-    const char *bg = getenv("MKW_BACKGROUND_WINDOW");
+    const char *bg = getenv("ORBITALS_BACKGROUND_WINDOW");
     bool background = bg && *bg && strcmp(bg, "0");
     SDL_SetHint(SDL_HINT_APP_ID, background ? "orbitals-recomp-run" : "orbitals-recomp");
     if (background) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
@@ -1016,7 +1016,7 @@ static bool open_window(void) {
     }
     float ds = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     if (!(ds > 0)) ds = 1;
-    // Always a window: the game's MKW_FULLSCREEN is the game's; the start screen goes fullscreen only by its own F11.
+    // Always a window: the game's ORBITALS_FULLSCREEN is the game's; the start screen goes fullscreen only by its own F11.
     // Hidden until its first frame is drawn (launcher_run): shown at once, it is black while the first frame is made.
     SDL_WindowFlags f = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN |
                         (background ? SDL_WINDOW_NOT_FOCUSABLE : 0);
@@ -1035,7 +1035,7 @@ static bool open_window(void) {
 
 static void save_shot(const char *suffix) {
     SDL_Surface *s = SDL_RenderReadPixels(L.ren, nullptr);
-    const char *base = getenv("MKW_LAUNCHER_SHOT_OUT");
+    const char *base = getenv("ORBITALS_LAUNCHER_SHOT_OUT");
     char out[1100];
     snprintf(out, sizeof out, "%s%s", base && *base ? base : "launcher.png", suffix);
     bool ok = s && SDL_SavePNG(s, out);
@@ -1105,12 +1105,12 @@ extern "C" int launcher_run(void) {
         if (other) rt_log("launcher: the game files were set up by another version: setting up again what changed");
         L.page = PAGE_FILES;   // set up again what the new version changed, from the last setup's copy
         setup_start(L.exe_dir, cfg_game_dir(), nullptr, 0);
-    } else if (!L.shot_at || getenv("MKW_UPDATE_AS")) {
+    } else if (!L.shot_at || getenv("ORBITALS_UPDATE_AS")) {
         update_check_start(L.exe_dir);
     }
-    if (!L.shot_at || getenv("MKW_LAUNCHER_LASTRUN")) lastrun_start(L.exe_dir, cfg_game_dir());
-    if (getenv("MKW_LAUNCHER_SHORTCUT")) make_shortcut();   // (test) as the button does
-    if (const char *t = getenv("MKW_LAUNCHER_SETUP")) {   // (test) the setup started from that folder, as Set up does
+    if (!L.shot_at || getenv("ORBITALS_LAUNCHER_LASTRUN")) lastrun_start(L.exe_dir, cfg_game_dir());
+    if (getenv("ORBITALS_LAUNCHER_SHORTCUT")) make_shortcut();   // (test) as the button does
+    if (const char *t = getenv("ORBITALS_LAUNCHER_SETUP")) {   // (test) the setup started from that folder, as Set up does
         snprintf(L.source, sizeof L.source, "%s", t);
         char *link = strstr(L.source, ":link");
         if (link) *link = 0, L.link_romfs = 1;
@@ -1190,7 +1190,7 @@ extern "C" int launcher_run(void) {
         SDL_SetRenderDrawColor(L.ren, 0, 0, 0, 255);
         SDL_RenderClear(L.ren);
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), L.ren);
-        bool setup_test = getenv("MKW_LAUNCHER_EXIT_AFTER_SETUP") && L.source[0];
+        bool setup_test = getenv("ORBITALS_LAUNCHER_EXIT_AFTER_SETUP") && L.source[0];
         if (setup_test && setup_state().finished) {   // the page as the setup left it, then out
             save_shot("-end.png");
             L.result = LAUNCHER_QUIT;

@@ -249,7 +249,7 @@ static void job_done(void *arg) {
 
 // Records the copy of one subresource into a host buffer and queues its PNGs. Returns NULL, or why it was skipped.
 // The buffer is w x h x d texels of vf; the image region is `ext` image texels from off (differs for the blocks of a
-// BC image read as an uncompressed format of the block size, a 3D slice, and a draw snapshot's MKW_DUMP_DRAWS_RECT).
+// BC image read as an uncompressed format of the block size, a 3D slice, and a draw snapshot's ORBITALS_DUMP_DRAWS_RECT).
 const char *copy_region(VkExec *ex, VkImage image, VkFormat vf, VkImageAspectFlags aspect, uint32_t level,
                                uint32_t layer, VkOffset3D off, VkExtent3D ext, uint32_t w, uint32_t h, uint32_t d,
                                const char *name) {

@@ -1,4 +1,4 @@
-// MKW_REUSE: the recorder ring's side of reusing a draw's packets in a
+// ORBITALS_REUSE: the recorder ring's side of reusing a draw's packets in a
 // later frame. vk_exec_reuse.c decides; here:
 // - the bound state of the part being recorded, one hash per slot (pipeline, each vertex buffer, index buffer, each
 //   dynamic state, blend state per target, the pass), updated by every packet the producer publishes. A draw's cached

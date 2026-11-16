@@ -85,23 +85,23 @@ static void probe_offline(void) {
     printf("net: nifm, friends, ldn and nsd answer as a console with no network: %d of %d results as expected\n",
            (int)(sizeof cases / sizeof *cases) - bad, (int)(sizeof cases / sizeof *cases));
 
-    // MKW_LAN=1: a local network request is connected and reports an address; an internet one stays unavailable
-    plat_setenv("MKW_LAN", "1");
+    // ORBITALS_LAN=1: a local network request is connected and reports an address; an internet one stays unavailable
+    plat_setenv("ORBITALS_LAN", "1");
     CALL("nifm::SetLocalNetworkMode", 0);
-    CHECK(CALL("nifm::IsNetworkAvailable") == 0, "MKW_LAN: an internet request stays unavailable");
+    CHECK(CALL("nifm::IsNetworkAvailable") == 0, "ORBITALS_LAN: an internet request stays unavailable");
     CALL("nifm::SetLocalNetworkMode", 1);
     uint8_t *ip = b;
     memset(b, 0, 0x20);
     int have = !ov_lan_address(b + 0x18, b + 0x1c);   // a machine with no IPv4 address (CI) answers no network
     uint64_t r = CALL("nifm::GetCurrentIpConfigInfo", U(ip), U(ip + 4), U(ip + 8), U(ip + 12), U(ip + 16));
     CHECK(CALL("nifm::IsNetworkAvailable") == 1 && CALL("nifm::HandleNetworkRequestErrorResult") == 0,
-          "MKW_LAN: local network available");
+          "ORBITALS_LAN: local network available");
     CHECK(have ? r == 0 && ip[0] && ip[4] == 255 : (uint32_t)r == NIFM_R_NO_NETWORK,
-          "MKW_LAN: address %u.%u.%u.%u mask %u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7]);
-    printf("net: MKW_LAN, local network mode connected at %u.%u.%u.%u/%u.%u.%u.%u\n", ip[0], ip[1], ip[2], ip[3],
+          "ORBITALS_LAN: address %u.%u.%u.%u mask %u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7]);
+    printf("net: ORBITALS_LAN, local network mode connected at %u.%u.%u.%u/%u.%u.%u.%u\n", ip[0], ip[1], ip[2], ip[3],
            ip[4], ip[5], ip[6], ip[7]);
     CALL("nifm::SetLocalNetworkMode", 0);
-    plat_setenv("MKW_LAN", "");
+    plat_setenv("ORBITALS_LAN", "");
 }
 
 // ---- account: the one local user, its network service account unavailable
@@ -339,7 +339,7 @@ static void probe_socket(void) {
     uint64_t *val = (uint64_t *)(b + 0x88);
     int32_t *pfd = (int32_t *)(b + 0x90);
     void **res = (void **)(b + 0xb0);
-    plat_setenv("MKW_LAN", "1");   // off, probe_offline's table checks main's stub
+    plat_setenv("ORBITALS_LAN", "1");   // off, probe_offline's table checks main's stub
     CALL("socket::SetAllocator", 0);
     CHECK(CALL("socket::internal::Initialize", 4) == 0, "Initialize");
     CHECK(CALL("socket::IsInitialized") == 1, "IsInitialized");
@@ -414,9 +414,9 @@ static void probe_socket(void) {
     CALL("socket::FreeAddrInfo(addrinfo)", 0);
     CALL("socket::FreeAddrInfo", 0);
     CHECK(CALL("socket::Finalize") == 0, "Finalize");
-    plat_setenv("MKW_LAN", "");
+    plat_setenv("ORBITALS_LAN", "");
     CHECK((int)CALL("socket::Socket(int)", AF, DGRAM, UDP) == -1 && CALL("socket::GetLastErrno") == 50,
-          "MKW_LAN off again: Socket -1, ENETDOWN");
+          "ORBITALS_LAN off again: Socket -1, ENETDOWN");
     printf("socket: UDP on loopback port %d through the console's sockaddr, poll, EAGAIN and eventfd\n", port);
 }
 

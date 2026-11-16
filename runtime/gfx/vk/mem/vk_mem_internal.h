@@ -37,8 +37,8 @@ typedef struct PoolRec {
     VPage *pt;                         // POOL_VIRT: size / 64 KiB entries
     uint64_t npages;
     volatile int32_t used;                // resolved at least once: the GPU may still read it at finalize
-    uint64_t use;                      // MKW_GPU_GUARD: newest submission part that resolved it (vk_guard_note)
-    // MKW_TRACE=perf dirty census (vk_mem_dirty_submit), replay thread under the submit lock only:
+    uint64_t use;                      // ORBITALS_GPU_GUARD: newest submission part that resolved it (vk_guard_note)
+    // ORBITALS_TRACE=perf dirty census (vk_mem_dirty_submit), replay thread under the submit lock only:
     uint32_t bound_sub;                // last submit that bound it as a buffer (dirty_sub), 0 never
     uint32_t synced_gen;               // page generation its lazy-mirror count covers; DIRTY_UNSYNCED until scanned
     uint8_t bufbound;                  // ever bound as a vertex, index, uniform, storage or indirect buffer
@@ -55,13 +55,13 @@ typedef struct PoolRec {
     // Shadow storage (POOL_IMPORT in shadow mode, "shadow storage" below): buf is a host-visible copy of the guest pages.
     VmaAllocation salloc;
     uint8_t *smap;                     // its mapping; offsets as in buf (from import_lo)
-    uint8_t snc;                       // salloc is not coherent (or MKW_SHADOW_CACHED=1): shadow_flush, shadow_inval
+    uint8_t snc;                       // salloc is not coherent (or ORBITALS_SHADOW_CACHED=1): shadow_flush, shadow_inval
     uint32_t sgen;                     // gen_lock: every page write stamped up to this generation is in the shadow
     volatile uint8_t stouched;         // on the touched list: the GPU may use it in the submission being recorded
     uint64_t ssub;                     // shadow_lock: the submission whose shadow sync last covered it
     uint64_t sfence;                   // touch_lock: the submission recording when it went on the early list
     uint8_t shist;                     // gen_lock: one bit per shadow sync of the last 8, set when the CPU had written it
-    uint8_t shot;                      // gen_lock: syncs left that query it without protecting again (MKW_SHADOW_HOT)
+    uint8_t shot;                      // gen_lock: syncs left that query it without protecting again (ORBITALS_SHADOW_HOT)
     uint64_t touch_sub;                // shadow_lock: the submit number of the last sync that had it touched
     uint64_t cap_from;                 // gen_lock: the first submit captured for it (UINT64_MAX: none yet)
     uint32_t cgen;                     // gen_lock: every page stamped up to this generation is captured
@@ -117,7 +117,7 @@ void freeze_pass(void);
 void ww_log(uint64_t frame);
 void gen_reset(void);
 
-// vk_mem_dirty.c: dirty census (MKW_TRACE=perf)
+// vk_mem_dirty.c: dirty census (ORBITALS_TRACE=perf)
 void dirty_frame(uint64_t frame);
 
 // vk_mem_shadow.c: shadow storage
@@ -134,23 +134,23 @@ void shadow_inval(const PoolRec *r, uint64_t lo, uint64_t hi);   // before the C
 void shadow_log(uint64_t frame);
 void shadow_reset(void);
 
-// vk_mem_merge.c: the shadow merged by bytes (MKW_SHADOW_MERGE), with a base copy of each written range up to MERGE_MAX
+// vk_mem_merge.c: the shadow merged by bytes (ORBITALS_SHADOW_MERGE), with a base copy of each written range up to MERGE_MAX
 #define MERGE_MAX (4ull << 20)
 uint8_t *merge_base(const PoolRec *r, uint64_t lo, uint64_t hi);
-extern uint64_t merge_over;   // shadow_lock: bytes merge_in gave to the CPU over the GPU's (MKW_SHADOW_CPU_WINS)
+extern uint64_t merge_over;   // shadow_lock: bytes merge_in gave to the CPU over the GPU's (ORBITALS_SHADOW_CPU_WINS)
 uint64_t merge_in(PoolRec *r, uint64_t a, uint64_t b, uint8_t *const *bases, const uint64_t *blo, int n,
                   const uint8_t *src);
 typedef struct LazyBase LazyBase;   // vk_mem_lazy.c: a base standing on read-only guest pages
 uint64_t merge_back(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy);
-int lazy_base_on(void);                                                 // MKW_LAZY_BASE for a base taken now
+int lazy_base_on(void);                                                 // ORBITALS_LAZY_BASE for a base taken now
 LazyBase *lazy_take(PoolRec *r, uint64_t lo, uint64_t hi);         // shadow_lock; NULL: copy it as before
 void lazy_materialize(LazyBase *b, uint64_t a, uint64_t e);        // [a, e) into its buffer before writing the base
-uint8_t *lazy_check(LazyBase *b);                                  // MKW_LAZY_BASE_CHECK's copy, or NULL
+uint8_t *lazy_check(LazyBase *b);                                  // ORBITALS_LAZY_BASE_CHECK's copy, or NULL
 uint8_t *lazy_buf(LazyBase *b);                                    // the base, [lo, hi) of the range
 int lazy_page_base(LazyBase *b, uint64_t x, const uint8_t *s, uint64_t n, uint8_t *tmp);
 void lazy_free(LazyBase *b);
 void lazy_log(void);
-void merge_census_log(void);   // MKW_WB_CENSUS
+void merge_census_log(void);   // ORBITALS_WB_CENSUS
 
 // vk_mem_wback.c: the GPU's writes into shadow pools, pending from record time until written back at their fence.
 // part: the sync that submits it (s_part when recorded); pool and mbase: the merge's; base: vk_mem_lost.c's.
@@ -184,14 +184,14 @@ extern int hot_mode;
 void shadow_query_pools(PoolRec **rs, uint8_t *tracked, int n, int hot_on);   // gen_lock held
 void shadow_apply_run(PoolRec *r, uint64_t a, uint64_t b, const uint8_t *src);   // shadow_lock held
 
-// vk_mem_capture.c: the CPU's writes captured at each submit (MKW_SHADOW_SUBMIT)
+// vk_mem_capture.c: the CPU's writes captured at each submit (ORBITALS_SHADOW_SUBMIT)
 void cap_apply(uint64_t sub);                    // shadow_lock held: captures of submits up to sub into the shadows
 int cap_split(PoolRec **rs, int n);              // shadow_lock and gen_lock held: captured pools last; how many not
 void cap_activate(PoolRec **rs, int n);          // shadow_lock and gen_lock held: those pools onto the capture list
 void cap_forget(PoolRec *r);                     // shadow_lock held: r leaves the list and the pending captures
 void cap_log(void);                              // shadow_lock held
 
-// vk_mem_lost.c: MKW_SHADOW_LOST, what the shadow loses of the CPU's writes (diagnosis)
+// vk_mem_lost.c: ORBITALS_SHADOW_LOST, what the shadow loses of the CPU's writes (diagnosis)
 extern int lost_on;   // -1 until lost_level reads the switch
 int lost_level(void);
 void lost_skip(const PoolRec *r, uint64_t lo, uint64_t hi, int old);
@@ -199,15 +199,15 @@ uint8_t *lost_base(uint64_t addr, uint64_t size);
 void lost_writeback(uint64_t addr, uint64_t size, const uint8_t *s, uint8_t *base);
 void lost_check(void);
 
-// vk_mem_race.c: MKW_SHADOW_RACE, shadow copies over bytes a running submission reads (diagnosis)
+// vk_mem_race.c: ORBITALS_SHADOW_RACE, shadow copies over bytes a running submission reads (diagnosis)
 extern int race_on;   // -1 until race_level reads the switch
 int race_level(void);
 void race_note(const PoolRec *r, uint64_t lo, uint64_t hi);              // recording thread, at a resolve
 // shadow_lock held: the newest unfinished fence reading bytes of [a, b) that the copy changes, 0 none
 uint64_t race_check(const PoolRec *r, uint64_t a, uint64_t b, uint64_t sync, const uint8_t *old);
-void race_wait(uint64_t fence);   // shadow_lock held: MKW_FENCE_EARLY, before a copy race_check flagged
+void race_wait(uint64_t fence);   // shadow_lock held: ORBITALS_FENCE_EARLY, before a copy race_check flagged
 void race_log(uint64_t frame);
-extern uint64_t watch_hi;   // MKW_SHADOW_WATCH: nonzero when some range's shadow changes are logged
+extern uint64_t watch_hi;   // ORBITALS_SHADOW_WATCH: nonzero when some range's shadow changes are logged
 void watch_init(void);
 void watch_copy(const PoolRec *r, uint64_t a, uint64_t b, uint64_t sync);   // shadow_lock held, before a copy-in
 void watch_event(const char *what, uint64_t lo, uint64_t hi, uint64_t fence, uint64_t bytes);
@@ -230,7 +230,7 @@ void vram_log(uint64_t frame);
 void vk_mem_grow(void **arr, int *cap, size_t elem);
 int dead_pending(void);
 uint64_t upload_batches(void);
-// vk_mem_uptime.c: MKW_UPLOAD_TIME, the GPU time of each upload batch
+// vk_mem_uptime.c: ORBITALS_UPLOAD_TIME, the GPU time of each upload batch
 int vk_uptime_begin(VkCommandBuffer cb);
 void vk_uptime_call(int slot, void *at);
 void vk_uptime_end(VkCommandBuffer cb, int slot);

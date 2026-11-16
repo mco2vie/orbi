@@ -9,7 +9,7 @@ import numpy as np
 sys.path[:0] = ["recomp", "tools/gpu"]
 from module import Module
 
-m = Module("main", Path(os.environ.get("MKW_GAME", "game")) / "exefs/main", 0, simd="c")
+m = Module("main", Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs/main", 0, simd="c")
 img = bytes(m.image)
 
 a = np.frombuffer(img[: len(img) // 4 * 4], dtype="<f4")

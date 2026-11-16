@@ -1,8 +1,8 @@
 // mkw --replay DIR [--out DIR] [--tag NAME]: a capture (cap.h) through the Vulkan back end, without the game. The guest
 // memory goes back to its addresses, the back end gets its pools, mappings and slots again, then every recorded call in
 // order; each present is read back and written as <out>/<tag>-f<present>.png. Synchronous replay and pipelines built
-// at the draw (MKW_REPLAY_ASYNC=0, MKW_PIPE_SYNC=1 unless set) so two replays of one capture differ only in what they
-// were asked to change: MKW_REPLAY_PAR=1 against 0 compares the chunked recording with the serial one.
+// at the draw (ORBITALS_REPLAY_ASYNC=0, ORBITALS_PIPE_SYNC=1 unless set) so two replays of one capture differ only in what they
+// were asked to change: ORBITALS_REPLAY_PAR=1 against 0 compares the chunked recording with the serial one.
 // The summary line: submits, their replay time (recording and submit on this thread), validation errors.
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,12 +89,12 @@ int cap_replay_main(int argc, char **argv) {
         else if (i + 1 < argc && !strcmp(argv[i], "--tag")) tag = argv[++i];
         else return usage();
     }
-    env_default("MKW_REPLAY_ASYNC", "0");
-    env_default("MKW_PIPE_SYNC", "1");
-    env_default("MKW_REPLAY_PAR_WARM", "0");   // chunks from the first submission (vk_exec_par.c)
-    env_default("MKW_BACKGROUND_WINDOW", "hidden");   // a replay shows no window: its images are read back
-    vk_pipeline_async_enable();   // MKW_PIPE_SYNC=0: background builds and the draws' waits, as in the game
-    const char *par = getenv("MKW_REPLAY_PAR");
+    env_default("ORBITALS_REPLAY_ASYNC", "0");
+    env_default("ORBITALS_PIPE_SYNC", "1");
+    env_default("ORBITALS_REPLAY_PAR_WARM", "0");   // chunks from the first submission (vk_exec_par.c)
+    env_default("ORBITALS_BACKGROUND_WINDOW", "hidden");   // a replay shows no window: its images are read back
+    vk_pipeline_async_enable();   // ORBITALS_PIPE_SYNC=0: background builds and the draws' waits, as in the game
+    const char *par = getenv("ORBITALS_REPLAY_PAR");
     if (!tag) tag = par && strcmp(par, "0") ? "par" : "serial";
     char path[1024], out_default[1024];
     snprintf(path, sizeof path, "%s/capture.zst", dir);
@@ -204,10 +204,10 @@ int cap_replay_main(int argc, char **argv) {
             cap_in_read(in, &n, sizeof n);
             uint64_t *hs = calloc((size_t)n + 1, sizeof *hs);
             if (!hs) rt_fatal("cap: out of memory");
-            // MKW_CAP_SUBLIST=1 (a measurement): each submission's recordings with their size and a hash of their bytes
+            // ORBITALS_CAP_SUBLIST=1 (a measurement): each submission's recordings with their size and a hash of their bytes
             // before the texture pointers are patched in, so the same recording handed again in a later frame shows.
             static int sublist = -1;
-            if (sublist < 0) sublist = cfg_get("MKW_CAP_SUBLIST") && atoi(cfg_get("MKW_CAP_SUBLIST"));
+            if (sublist < 0) sublist = cfg_get("ORBITALS_CAP_SUBLIST") && atoi(cfg_get("ORBITALS_CAP_SUBLIST"));
             char line[2048];
             int lo = sublist ? snprintf(line, sizeof line, "cap: submit %llu frame %llu: %lld recordings:",
                                         (unsigned long long)submits, (unsigned long long)frame, (long long)n) : 0;
@@ -219,9 +219,9 @@ int cap_replay_main(int argc, char **argv) {
                 if (!rec || !offs) rt_fatal("cap: out of memory for a recording");
                 cap_in_read(in, rec, hd[0]);
                 cap_in_read(in, offs, 4 * hd[1]);
-                // MKW_CAP_RECS=<dir> (a measurement): recordings over 64 KiB saved there as they are in the capture, to
+                // ORBITALS_CAP_RECS=<dir> (a measurement): recordings over 64 KiB saved there as they are in the capture, to
                 // compare one frame's ops with the next (tools/analisis/recdiff.py).
-                const char *rd = cfg_get("MKW_CAP_RECS");
+                const char *rd = cfg_get("ORBITALS_CAP_RECS");
                 if (rd && hd[0] > (64u << 10)) {
                     char rp[1024];
                     snprintf(rp, sizeof rp, "%s/rec-%llu-%lld.bin", rd, (unsigned long long)submits, (long long)i);
@@ -255,8 +255,8 @@ int cap_replay_main(int argc, char **argv) {
             CapPresent p;
             cap_in_read(in, &p, sizeof p);
             // The frame's submissions replayed, which a recording change shows in frames past the first two (those build
-            // the pipelines the draws need, MKW_PIPE_SYNC).
-            // MKW_TRACE=perf: the GPU's busy time for the frame too (its timestamps), after waiting for it: what a
+            // the pipelines the draws need, ORBITALS_PIPE_SYNC).
+            // ORBITALS_TRACE=perf: the GPU's busy time for the frame too (its timestamps), after waiting for it: what a
             // recording change costs the GPU, measured without the game (tlab2, 07/11/2026: chunk cuts +5 ms a frame).
             char gs[96] = "";
             if ((rt_trace & RT_TRACE_PERF) && perf_gpu_stats) {
@@ -281,7 +281,7 @@ int cap_replay_main(int argc, char **argv) {
                        (unsigned long long)sk, (unsigned long long)bl);
             }
             frame_sub0 = sub_ns;
-            // MKW_TRACE=draw: prepare_draw's stages per draw for the frame (as MKW_TRACE=perf,draw prints them in a run),
+            // ORBITALS_TRACE=draw: prepare_draw's stages per draw for the frame (as ORBITALS_TRACE=perf,draw prints them in a run),
             // the TSC's rate taken from this frame's span: a recording change measured without the game.
             if (rt_trace & RT_TRACE_DRAW) {
                 static uint64_t tsc0, ns0;
@@ -291,11 +291,11 @@ int cap_replay_main(int argc, char **argv) {
                     rt_log("cap: frame %llu: prepare_draw per draw, us:%s", (unsigned long long)(m.first_frame + presents), tb);
                 tsc0 = tsc, ns0 = ns;
             }
-            vk_exec_op_timing_log();    // MKW_TRACE=draw: per frame
-            vk_exec_draw_probe_log();   // MKW_DRAW_CACHE_PROBE: per frame
-            vk_exec_draw_cache_log();   // MKW_DRAW_CACHE: per frame
-            ru_log();                   // MKW_REUSE: per frame
-            rec_stats_log();            // MKW_TRACE=perf: the recorder ring's waits, per frame
+            vk_exec_op_timing_log();    // ORBITALS_TRACE=draw: per frame
+            vk_exec_draw_probe_log();   // ORBITALS_DRAW_CACHE_PROBE: per frame
+            vk_exec_draw_cache_log();   // ORBITALS_DRAW_CACHE: per frame
+            ru_log();                   // ORBITALS_REUSE: per frame
+            rec_stats_log();            // ORBITALS_TRACE=perf: the recorder ring's waits, per frame
             const tex_t *t = pin(&p.t);
             b->present(t, p.has_crop ? p.crop : NULL, 0);
             presents++;
@@ -347,8 +347,8 @@ int cap_replay_main(int argc, char **argv) {
     }
     cap_in_close(in);
     b->finish();
-    vk_pt_flush(frame, presents);   // MKW_PASS_TIMING: the GPU time of the replayed frames
-    vk_mem_replay_log(presents);    // mirror and shadow traffic per presented frame (MKW_MEMORY=mirror)
+    vk_pt_flush(frame, presents);   // ORBITALS_PASS_TIMING: the GPU time of the replayed frames
+    vk_mem_replay_log(presents);    // mirror and shadow traffic per presented frame (ORBITALS_MEMORY=mirror)
     long errors = vk_validation_errors_total();
     vk_exec_par_log();   // how many submissions went in chunks: a replay that never chunks compares serial with serial
     static const char *const names[] = {"", "meta", "mem", "zero", "pool init", "pool fini", "mapv", "texreg", "sampreg",
@@ -361,9 +361,9 @@ int cap_replay_main(int argc, char **argv) {
                           (unsigned long long)type_n[t]);
     printf("replay: %s: time by record:%s\n", tag, times);
     vk_usnap_summary();   // the uniform snapshot's per-submission costs, which a run logs every 3600 submissions
-    {   // MKW_LOCK_PROF=1: the lock waits of the whole replay (a run logs them every 1200 submissions, vk_sync.c)
+    {   // ORBITALS_LOCK_PROF=1: the lock waits of the whole replay (a run logs them every 1200 submissions, vk_sync.c)
         char lb[1024];
-        if (plat_lock_report(0, lb, sizeof lb)) printf("replay: %s: lock waits (MKW_LOCK_PROF):%s\n", tag, lb);
+        if (plat_lock_report(0, lb, sizeof lb)) printf("replay: %s: lock waits (ORBITALS_LOCK_PROF):%s\n", tag, lb);
     }
     printf("replay: %s: state %.1f s (%.0f MiB of memory), %llu submits replayed in %.1f ms, %llu presents, "
            "%ld validation errors, total %.1f s\n",

@@ -1,4 +1,4 @@
-// Frame capture and offline replay: MKW_CAPTURE records what the Vulkan back end
+// Frame capture and offline replay: ORBITALS_CAPTURE records what the Vulkan back end
 // receives over some presented frames (guest memory, the back end's object state, every submission and present) into
 // one zstd stream; `mkw --replay DIR` feeds it to the back end again without the game, in seconds instead of a run to
 // the race. Guest memory sits at the same host addresses in every process (memory.c mem_init), so the pointers inside
@@ -70,7 +70,7 @@ void cap_mem_restore(const void *data, uint64_t addr, uint64_t len);   // commit
 void cap_mem_zero(uint64_t addr, uint64_t len);
 void cap_mem_commit(uint64_t addr, uint64_t len);                  // pages not committed yet read zero
 
-// cap_record.c: the back end MKW_CAPTURE wraps (gfx_backend); b otherwise.
+// cap_record.c: the back end ORBITALS_CAPTURE wraps (gfx_backend); b otherwise.
 const GfxBackend *cap_wrap(const GfxBackend *b);
 int cap_request(const char *dir, int frames);   // ctl capture: from the next present; 0 when the back end is not wrapped
 int cap_busy(void);                             // a capture is being written or waits to start

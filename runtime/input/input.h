@@ -4,14 +4,14 @@
 
 // Bits of libnx HidNpadButton (A=0 B=1 X=2 Y=3 StickL=4 StickR=5 L=6 R=7 ZL=8 ZR=9 Plus=10 Minus=11 Left=12 Up=13 Right=14
 // Down=15) and the stick directions (StickLLeft..Down 16-19, StickRLeft..Down 20-23, derived from the sticks).
-// Sticks are -32767..32767, up is +y. MKW_INPUT=none reports no input. Callable from any thread.
+// Sticks are -32767..32767, up is +y. ORBITALS_INPUT=none reports no input. Callable from any thread.
 void input_poll(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
 // The same for host UI (the text entry): never blocked. input_block(1) while a text entry is open: input_poll then
 // reports nothing; input_block(0) when it closes: nothing until all buttons and stick directions are released.
 void input_poll_ui(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
 void input_block(int on);
 // Local multiplayer, players 1-8 (player index 0-7). Player 1 is input_poll: the keyboard, the first gamepad and the
-// script. Each other player is one more gamepad, in connection order, plus the script's "p<N>" lines; MKW_VIRTUAL_PADS=N
+// script. Each other player is one more gamepad, in connection order, plus the script's "p<N>" lines; ORBITALS_VIRTUAL_PADS=N
 // attaches N virtual gamepads at start to try it without controllers. Any thread.
 enum { INPUT_MAX_PLAYERS = 8 };
 uint32_t input_player_mask(void);   // bit k: player k + 1 has a controller; bit 0 always (the keyboard)
@@ -37,21 +37,21 @@ void input_menu(int open);
 // of the combo, sticks are lx, ly, rx, ry. Returns 1 in the poll where the combo goes down (toggle the menu once).
 int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4]);
 int input_overlay_gate(int *held, uint64_t *buttons);   // L3+R3: 1 in the poll both go down
-int input_script_inject(const char *line);   // MKW_CTL: "<ticks from now> <button> [hold]", 1 when queued
+int input_script_inject(const char *line);   // ORBITALS_CTL: "<ticks from now> <button> [hold]", 1 when queued
 void input_script_phase(const char *node);   // seqwatch.c: a phase started (script lines "<node>+<ticks> ...")
 int input_pad_read(uint64_t *buttons, int32_t *lx, int32_t *ly);
 // The device the player used last (a press, or a stick moved): the button icons follow it (ui/glyphs/glyphs.c). Before any
 // input, the gamepad when one is connected. Any thread.
 enum { INPUT_DEVICE_KEYBOARD = 1, INPUT_DEVICE_PAD = 2 };
 int input_last_device(void);
-// The gamepad layout in effect (PAD_LAYOUT_*, input_map.h; MKW_PAD_LAYOUT, live); -1 without a gamepad. Any thread.
+// The gamepad layout in effect (PAD_LAYOUT_*, input_map.h; ORBITALS_PAD_LAYOUT, live); -1 without a gamepad. Any thread.
 int input_pad_layout(void);
 // The label on a face button of the open gamepad (input_map.h PAD_SOUTH..PAD_NORTH, as SDL reports it); PAD_LABEL_NONE for another
 // button, an unknown label or no gamepad. Any thread.
 enum { PAD_LABEL_NONE, PAD_LABEL_A, PAD_LABEL_B, PAD_LABEL_X, PAD_LABEL_Y, PAD_LABEL_CROSS, PAD_LABEL_CIRCLE,
        PAD_LABEL_SQUARE, PAD_LABEL_TRIANGLE };
 int input_pad_label(int pad);
-// The menu's remapping rows (Controls tab). input_map_snapshot copies the tables in effect (after any changed MKW_BIND_* line).
+// The menu's remapping rows (Controls tab). input_map_snapshot copies the tables in effect (after any changed ORBITALS_BIND_* line).
 // input_capture polls the keys, the mouse buttons and the gamepad for a press: reset 1 takes what is held now as the
 // start (a held key counts once released and pressed again) and returns NONE; then it returns KEY or PAD with *id the
 // key or pad id (input_map.h) pressed since the last call, or CANCEL for Esc. Keys count only while the game window is in front.
@@ -77,13 +77,13 @@ int input_cursor_released(void);   // Esc or a non-client activation released th
 int input_rumble(int player, uint16_t low, uint16_t high, uint32_t ms);
 // Motor value for a normalised amplitude: pow(a, curve) * strength, saturated to 0..65535. Pure.
 uint16_t rumble_motor(float a, float curve, float strength);
-// MKW_RUMBLE_TRIGGERS=1: input_rumble also drives the impulse triggers (Xbox) with the high motor's value.
+// ORBITALS_RUMBLE_TRIGGERS=1: input_rumble also drives the impulse triggers (Xbox) with the high motor's value.
 int input_rumble_triggers_enabled(void);
 
-// Motion (MKW_MOTION=0 turns it off, live). input_motion_start starts the sensor thread once: every 4 ms it reads the
+// Motion (ORBITALS_MOTION=0 turns it off, live). input_motion_start starts the sensor thread once: every 4 ms it reads the
 // gamepad's gyro and accelerometer (when it has them) and feeds motion_global(). Callable from any thread.
 void input_motion_start(void);
-// MKW_MOTION is not "0" (a live setting: read again when cfg_version changes). Off: the sensor reads at rest.
+// ORBITALS_MOTION is not "0" (a live setting: read again when cfg_version changes). Off: the sensor reads at rest.
 int input_motion_enabled(void);
 // SDL sensor values (accelerometer m/s^2, gyro rad/s, SDL gamepad axes) to the Switch controller frame motion_feed
 // takes (acceleration in G as gravity reads, rotation rad/s).

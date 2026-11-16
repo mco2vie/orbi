@@ -1,7 +1,7 @@
 """MKW's global sequence nodes (AIGlobalSeq*, the game's phases: TitleMenuMain, StartIntroMovie, WaitRaceStart...):
 for each, the 12-byte virtual that returns its name and the vtable holding it (from main's R_AARCH64_RELATIVE
 relocations), and the methods every node vtable shares (inherited from the base class). The runtime's sequence watch
-(MKW_SEQ_WATCH, runtime/core/diag/seqwatch.c) reads build/seq_nodes.tsv (1.0.0) or build/seq_nodes-<version>.tsv
+(ORBITALS_SEQ_WATCH, runtime/core/diag/seqwatch.c) reads build/seq_nodes.tsv (1.0.0) or build/seq_nodes-<version>.tsv
 (build/seq_nodes-180.tsv for 1.8.0) to name the node a game thread is in. The name getter is adrp/add/ret: 12 bytes
 in 1.0.0, 16 in 1.8.0 (padded with an udf), so both sizes count.
 
@@ -28,7 +28,7 @@ BASE = 0x7000000000
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--shared", action="store_true", help="print the vtable slots every node shares")
-    ap.add_argument("--game", type=Path, default=Path(os.environ.get("MKW_GAME", "game")), help="the version's dir")
+    ap.add_argument("--game", type=Path, default=Path(os.environ.get("ORBITALS_GAME", "game")), help="the version's dir")
     ap.add_argument("--db", default="build/bindb.sqlite", help="that version's bindb.py database")
     ap.add_argument("--out", type=Path, default=Path("build/seq_nodes.tsv"))
     args = ap.parse_args()

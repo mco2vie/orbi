@@ -173,8 +173,8 @@ def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypat
     prepare.warm(game, game / "setup-work", runtime)
     argv, kwargs = calls[0]
     assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
-    assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
+    assert kwargs["env"]["ORBITALS_GAME_DIR"] == str(game)
+    assert kwargs["env"]["ORBITALS_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
@@ -215,8 +215,8 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
             sys.stderr.close()
     argv, kwargs = calls[0]
     assert argv == [str(runtime / "mkw")]
-    assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
+    assert kwargs["env"]["ORBITALS_GAME_DIR"] == str(alias)
+    assert kwargs["env"]["ORBITALS_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
 
 
 @pytest.mark.parametrize("driver", ["clang", "lld-link", "zig"])

@@ -1,4 +1,4 @@
-// The internal render resolution (MKW_RESOLUTION, Screen tab): a RomFS overlay written at start, in place of
+// The internal render resolution (ORBITALS_RESOLUTION, Screen tab): a RomFS overlay written at start, in place of
 // tools/romfs/resolution.py, so the player picks it in the settings instead of in the setup (Adrià 06/11/2026).
 //
 // Default "original": the console's own. 720 is the development machine's (a Radeon 660M; the run scripts set it with
@@ -9,10 +9,10 @@
 // Gyml/GamePerformanceGraphicsConfigGParam/30_Extendted...bgyml (BYML v7: Resolution{Low,Middle}{For3D,Screen}
 // [ForDiv,ForDiv4], 1080/900/1440; it renders at 2560x1440). The integers are patched where they are: every *For3D*
 // field to LINES / 0.65 when docked (the scene renders at 65 % of For3D lines whatever the GPU load: 720 -> 1108,
-// measured in races 31/10/2026) and to LINES in handheld mode (MKW_OPERATION_MODE=handheld: the scene renders at all of
-// For3D's lines, 540 -> 831 drew 1476x828; measured with MKW_PASS_TIMING on 1.8.0 13/11/2026), and every *Screen*
+// measured in races 31/10/2026) and to LINES in handheld mode (ORBITALS_OPERATION_MODE=handheld: the scene renders at all of
+// For3D's lines, 540 -> 831 drew 1476x828; measured with ORBITALS_PASS_TIMING on 1.8.0 13/11/2026), and every *Screen*
 // field to LINES. The archive is compressed again and written with its manifest.tsv to
-// <game dir>/cache/resolution-<LINES>/, which romfs.c loads as an overlay (MKW_ROMFS_PATCHES, when that is unset). A
+// <game dir>/cache/resolution-<LINES>/, which romfs.c loads as an overlay (ORBITALS_ROMFS_PATCHES, when that is unset). A
 // directory already written for the same original is reused.
 #include <math.h>
 #include <stdio.h>
@@ -106,7 +106,7 @@ static const char *find_archive(void) {
     }
 }
 
-// The overlay directory for MKW_RESOLUTION (lines, 0: the game's) and the detail distance (lod, 0: the game's), written
+// The overlay directory for ORBITALS_RESOLUTION (lines, 0: the game's) and the detail distance (lod, 0: the game's), written
 // when missing; NULL when it cannot be made.
 static const char *write_overlay(int lines, float lod) {
     static char dir[PLAT_PATH_MAX * 2];
@@ -177,12 +177,12 @@ static const char *write_overlay(int lines, float lod) {
 static int g_lines;   // romfs_resolution_lines
 
 const char *romfs_resolution_overlay(void) {
-    const char *v = cfg_value("MKW_RESOLUTION");
+    const char *v = cfg_value("ORBITALS_RESOLUTION");
     int lines = strcmp(v, "original") ? atoi(v) : 0;
     if (lines < 0) lines = 0;
-    // MKW_DETAIL_DISTANCE (Graphics tab): the game's LODDistanceRatio, 2 in 1.0.0; the
+    // ORBITALS_DETAIL_DISTANCE (Graphics tab): the game's LODDistanceRatio, 2 in 1.0.0; the
     // console's value writes nothing
-    float lod = (float)cfg_double("MKW_DETAIL_DISTANCE");
+    float lod = (float)cfg_double("ORBITALS_DETAIL_DISTANCE");
     if (lod == 2.0f) lod = 0;
     if (!lines && lod <= 0) return NULL;
     const char *dir = write_overlay(lines, lod);

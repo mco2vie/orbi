@@ -14,13 +14,13 @@
 // ~5 GB/s on an Iris Xe with Mesa 26.2.6, which has a cached coherent type. Where none exists, the shadow takes the
 // cached non-coherent type, and the CPU flushes what it writes before the GPU reads it and invalidates what the GPU
 // wrote before reading it (shadow_flush, shadow_inval at the copy-ins, merges and write-backs).
-// MKW_SHADOW_CACHED: auto (default: non-coherent only without a cached coherent type), 0 (coherent, as before), 1
+// ORBITALS_SHADOW_CACHED: auto (default: non-coherent only without a cached coherent type), 0 (coherent, as before), 1
 // (cached, coherent or not; the flush and invalidate calls run on every shadow, a no-op in VMA on coherent memory).
 
 static int nc_mode = -1;   // 0 coherent required, 1 cached required
 
 static int pick_mode(const VkCtx *c) {
-    const char *e = cfg_get("MKW_SHADOW_CACHED");
+    const char *e = cfg_get("ORBITALS_SHADOW_CACHED");
     if (e && *e && strcmp(e, "auto") != 0) return atoi(e) != 0 ? 1 : 0;
     const VkPhysicalDeviceMemoryProperties *mp;
     vmaGetMemoryProperties(c->vma, &mp);
@@ -39,7 +39,7 @@ static int pick_mode(const VkCtx *c) {
 void shadow_alloc_flags(VkCtx *c, VmaAllocationCreateInfo *ai) {
     if (nc_mode < 0) {
         nc_mode = pick_mode(c);
-        rt_log("mem: shadow storage in %s memory (MKW_SHADOW_CACHED)",
+        rt_log("mem: shadow storage in %s memory (ORBITALS_SHADOW_CACHED)",
                nc_mode ? "cached (not necessarily coherent: explicit flush and invalidate)" : "coherent, cached if it has it");
     }
     ai->requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |

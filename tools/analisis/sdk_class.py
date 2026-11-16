@@ -71,7 +71,7 @@ def classify(db: sqlite3.Connection, called: set[str] = frozenset()) -> dict[str
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--db", type=Path, default=ROOT / "build/bindb.sqlite")
-    ap.add_argument("--census", type=Path, help="MKW_IMPORT_CENSUS file of a run (its calls reach no service)")
+    ap.add_argument("--census", type=Path, help="ORBITALS_IMPORT_CENSUS file of a run (its calls reach no service)")
     ap.add_argument("--class", dest="cls", help="list the imports of one class")
     ap.add_argument("--namespace", help="only this namespace")
     args = ap.parse_args()

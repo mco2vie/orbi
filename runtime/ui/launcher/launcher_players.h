@@ -1,5 +1,5 @@
 // The start screen's players (ui/launcher/launcher_players.cpp): the Profiles page and the profile row of the main
-// page. The folders and names are core/base/players.h; the one the next start plays is orbital.ini's MKW_PLAYER.
+// page. The folders and names are core/base/players.h; the one the next start plays is orbital.ini's ORBITALS_PLAYER.
 #pragma once
 #include <stddef.h>
 

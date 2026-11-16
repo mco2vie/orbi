@@ -1,4 +1,4 @@
-// MKW_RTSTATS=<N> (diagnosis, off by default): one frame in N (60 when the value is not a number above 0), every
+// ORBITALS_RTSTATS=<N> (diagnosis, off by default): one frame in N (60 when the value is not a number above 0), every
 // render pass's colour and depth targets and every storage image a dispatch writes are copied into host buffers after
 // the pass, and threads of their own read their values once the submission is done. A target is reported in the log
 // ("rtstats:" lines) when
@@ -265,7 +265,7 @@ void vk_rtstats_every(uint32_t n) {
 }
 
 void vk_rtstats_init(void) {
-    const char *e = cfg_get("MKW_RTSTATS");
+    const char *e = cfg_get("ORBITALS_RTSTATS");
     if (!e || !*e || !strcmp(e, "0")) return;
     long n = strtol(e, NULL, 10);
     vk_rtstats_every(n > 0 ? (uint32_t)n : 60);

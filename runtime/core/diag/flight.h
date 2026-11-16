@@ -1,4 +1,4 @@
-// MKW_FLIGHT=1 flight recorder (flight.c): the last frames' timing and event counts plus a thumbnail each, written to
+// ORBITALS_FLIGHT=1 flight recorder (flight.c): the last frames' timing and event counts plus a thumbnail each, written to
 // disk on F8 or after a slow frame, so a glitch or stutter seen in play can be read after the fact.
 #pragma once
 #include <stdint.h>
@@ -6,10 +6,10 @@
 #define FLIGHT_THUMB_W 320
 #define FLIGHT_THUMB_H 180
 
-extern int flight_on;   // MKW_FLIGHT=1, set once by flight_init before the first present
+extern int flight_on;   // ORBITALS_FLIGHT=1, set once by flight_init before the first present
 
 void flight_init(void);   // prof_start calls it
-void flight_request(void);   // MKW_CTL: a dump triggered at the next present, as F8 does
+void flight_request(void);   // ORBITALS_CTL: a dump triggered at the next present, as F8 does
 // perf_present, once per present on the render thread: the interval since the previous present, the render thread's
 // blocked time per PERF_* kind in this frame, and the running PERF_CNT_* totals.
 void flight_frame(uint64_t frame, uint64_t now_ns, uint64_t interval_ns, const uint64_t blocked_ns[],

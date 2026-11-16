@@ -53,18 +53,18 @@ uint64_t nvn2_sdk_proc(const char *name) {
 // Names whose driver function is a pure accessor on a game-only object (checked by disassembly, 30/10/2026).
 int nvn2_use_sdk_proc(const char *name) { return !strncmp(name, "nvnProgramBuilder", 17); }
 
-// MKW_SPIRV_DUMP set: who creates a program whose control has bytes 0x18-0x2f at zero, the programs the game generates
+// ORBITALS_SPIRV_DUMP set: who creates a program whose control has bytes 0x18-0x2f at zero, the programs the game generates
 // in partida, and the label the game gives it. The first 16 of each.
 static int generated_stage(int n, const NVNshaderData *sd) {
     static const uint8_t zero[0x18];
-    const char *dump = cfg_get("MKW_SPIRV_DUMP");
+    const char *dump = cfg_get("ORBITALS_SPIRV_DUMP");
     if (!dump || !*dump || !sd || n < 0 || n > 6) return -1;
     for (int i = 0; i < n; i++)
         if (sd[i].control && !memcmp((const uint8_t *)sd[i].control + 0x18, zero, sizeof zero)) return i;
     return -1;
 }
 
-// MKW_GEN_WATCH=1: who writes the generated programs. At the first one, a 32 MiB window around its code is made
+// ORBITALS_GEN_WATCH=1: who writes the generated programs. At the first one, a 32 MiB window around its code is made
 // read-only (committed read-write pages only); each later write there logs the host instruction (addr2line on
 // build/mkw names the lifted guest function, f_7000...) and makes that page writable again.
 static uint64_t gw_lo, gw_hi;
@@ -82,7 +82,7 @@ static int gen_watch_fault(uint64_t addr, uint64_t rip) {
 
 static void gen_watch_start(uint64_t code) {
     static volatile int32_t started;
-    const char *e = cfg_get("MKW_GEN_WATCH");
+    const char *e = cfg_get("ORBITALS_GEN_WATCH");
     if (!e || !atoi(e) || plat_inc32(&started) != 1) return;
     gw_lo = (code & ~0xfffffull) - (16ull << 20), gw_hi = gw_lo + (32ull << 20);
     plat_mem_watch_hook(gen_watch_fault);
@@ -96,7 +96,7 @@ static void gen_watch_start(uint64_t code) {
            (unsigned long long)gw_hi, (unsigned long long)pages);
 }
 
-// MKW_WRITE_WATCH=<addr>:<bytes> (diagnosis): who writes that guest range (the race's uniform rows holding NaN, run-race33).
+// ORBITALS_WRITE_WATCH=<addr>:<bytes> (diagnosis): who writes that guest range (the race's uniform rows holding NaN, run-race33).
 // Its pages are made read-only at every present (nvn2_write_watch_arm); the first writes to each page in a frame log the
 // address and host instruction (addr2line on build/mkw names the lifted function) and make the page writable again.
 // A page the runtime also write-tracks loses that tracking while watched: for diagnosis only.
@@ -117,7 +117,7 @@ static int write_watch_fault(uint64_t addr, uint64_t rip) {
 void nvn2_write_watch_arm(void) {
     static int state = -1;   // -1 unread, 0 off, 1 on
     if (state < 0) {
-        const char *e = cfg_get("MKW_WRITE_WATCH");
+        const char *e = cfg_get("ORBITALS_WRITE_WATCH");
         unsigned long long a = 0, n = 0;
         state = e && sscanf(e, "%llx:%llx", &a, &n) == 2 && n;
         if (state) ww_lo = a, ww_hi = a + n, plat_mem_watch_hook(write_watch_fault);

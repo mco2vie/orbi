@@ -5,13 +5,13 @@
 // host. Stub rule: queries and initialisation succeed with neutral values, data paths stop with a named fatal.
 //
 // Environment:
-//   MKW_LANG=<Switch language code>   the game's language as given ("ja", "en-GB", "zh-Hant", ...)
-//   MKW_LOCALE=<BCP 47 tag>           else the language for this locale ("pt-BR"), else the Windows user locale;
+//   ORBITALS_LANG=<Switch language code>   the game's language as given ("ja", "en-GB", "zh-Hant", ...)
+//   ORBITALS_LOCALE=<BCP 47 tag>           else the language for this locale ("pt-BR"), else the Windows user locale;
 //                                      a language the game does not ship becomes en-US
-//   MKW_OPERATION_MODE=docked|handheld   operation and performance mode reported to the game (default docked)
-//   MKW_ASSUME_FOCUS=1                GetCurrentFocusState always reports in focus, whatever the window says; the
+//   ORBITALS_OPERATION_MODE=docked|handheld   operation and performance mode reported to the game (default docked)
+//   ORBITALS_ASSUME_FOCUS=1                GetCurrentFocusState always reports in focus, whatever the window says; the
 //                                      window opens without taking focus (gfx_window_sdl.c), for scripted runs
-//   MKW_SHARED_FONTS=<dir>            nn::pl shared fonts (tools/extract_fonts.py output), default
+//   ORBITALS_SHARED_FONTS=<dir>            nn::pl shared fonts (tools/extract_fonts.py output), default
 //                                      <romfs>/../../firmware/shared-fonts
 #include <ctype.h>
 #include <stdio.h>
@@ -40,15 +40,15 @@ static void need(int ok, const char *what) {
 static const char *caller(Cpu *c, char *buf, int n) { return ldr_describe(c->x[30] - 4, buf, n); }
 
 // ==== nn::oe (services.c)
-// MKW_OPERATION_MODE, read once: 1 handheld (OperationMode 0, PerformanceMode Normal 0), 0 docked (1, Boost 1).
+// ORBITALS_OPERATION_MODE, read once: 1 handheld (OperationMode 0, PerformanceMode Normal 0), 0 docked (1, Boost 1).
 int ov_handheld(void) {
     static volatile int32_t v = -1;
     int32_t h = v;
     if (h < 0) {
-        const char *e = cfg_value("MKW_OPERATION_MODE");
+        const char *e = cfg_value("ORBITALS_OPERATION_MODE");
         if (!strcmp(e, "docked")) h = 0;
         else if (!strcmp(e, "handheld")) h = 1;
-        else rt_fatal("MKW_OPERATION_MODE must be docked or handheld, not '%s'", e);
+        else rt_fatal("ORBITALS_OPERATION_MODE must be docked or handheld, not '%s'", e);
         if (plat_cas32(&v, h, -1) == -1)
             rt_log("oe: operation mode reported to the game: %s", h ? "handheld (performance normal)"
                                                                   : "docked (performance boost)");
@@ -106,23 +106,23 @@ static const char *rebuilt_base(const char *code) {
     return NULL;
 }
 
-// The locale tag MKW_LANG falls back to: a menu language chosen in Settings > Menu > Language that the game ships (or
-// rebuilds), so a player who picks Thai there gets the game in Thai too (discussion #193); else MKW_LOCALE, else the
+// The locale tag ORBITALS_LANG falls back to: a menu language chosen in Settings > Menu > Language that the game ships (or
+// rebuilds), so a player who picks Thai there gets the game in Thai too (discussion #193); else ORBITALS_LOCALE, else the
 // system's user locale. The menu's "en" keeps an English locale's region (en-GB).
 static const char *locale_tag(char *buf, size_t cap) {
-    const char *tag = cfg_get("MKW_LOCALE");
+    const char *tag = cfg_get("ORBITALS_LOCALE");
     if (!tag || !*tag) {
         snprintf(buf, cap, "%s", *plat_user_locale() ? plat_user_locale() : "en-US");
         tag = buf;
     }
-    const char *menu = cfg_get("MKW_MENU_LANG");
+    const char *menu = cfg_get("ORBITALS_MENU_LANG");
     if (!menu || !*menu || (!strcmp(menu, "en") && !strncmp(tag, "en", 2))) return tag;
     if (strcmp(menu, "en") && !strcmp(switch_language(menu), "en-US")) return tag;   // tr, uk; pl, th before 1.5/1.7
     return menu;
 }
 
 const char *ov_text_language(void) {
-    const char *code = cfg_get("MKW_LANG");
+    const char *code = cfg_get("ORBITALS_LANG");
     if (code && *code) return rebuilt_base(code) ? code : NULL;
     char sys[85], lang[3] = "";
     const char *tag = locale_tag(sys, sizeof sys);
@@ -133,16 +133,16 @@ const char *ov_text_language(void) {
     return NULL;
 }
 
-// The game's language as a Switch language code (MKW_LANG, else MKW_LOCALE, else the Windows user locale).
+// The game's language as a Switch language code (ORBITALS_LANG, else ORBITALS_LOCALE, else the Windows user locale).
 const char *ov_language(void) {
     static const char *const codes[] = {"ja", "en-US", "fr", "de", "it", "es", "zh-CN", "ko", "nl", "pt", "ru",
                                         "zh-TW", "en-GB", "fr-CA", "es-419", "zh-Hans", "zh-Hant", "pt-BR", "pl", "th"};
-    const char *code = cfg_get("MKW_LANG");   // no fixed default: MKW_LOCALE or the Windows user locale decides when unset
+    const char *code = cfg_get("ORBITALS_LANG");   // no fixed default: ORBITALS_LOCALE or the Windows user locale decides when unset
     if (code && *code && rebuilt_base(code)) return rebuilt_base(code);
     if (code && *code) {
         for (size_t i = 0; i < sizeof codes / sizeof *codes; i++)
             if (!strcmp(code, codes[i])) return codes[i];
-        rt_fatal("MKW_LANG '%s' is not a Switch language code", code);
+        rt_fatal("ORBITALS_LANG '%s' is not a Switch language code", code);
     }
     char sys[85];
     return switch_language(locale_tag(sys, sizeof sys));
@@ -155,7 +155,7 @@ static void ov_desired_language(Cpu *c) {
     static int logged;
     if (!logged) {
         logged = 1;
-        const char *set = cfg_get("MKW_LANG");
+        const char *set = cfg_get("ORBITALS_LANG");
         char sys[85];
         if (set && *set) rt_log("oe: game language %s (Settings > Game > Language: %s)", code, set);
         else rt_log("oe: game language %s (automatic, from %s)", code, locale_tag(sys, sizeof sys));
@@ -192,7 +192,7 @@ static void ov_focus_mode(Cpu *c) {
 }
 
 // FocusState GetCurrentFocusState(): 1 in focus, 2 out of focus (nn::oe::FocusState). In focus until the window
-// reports otherwise through oe_set_focus, which also pushes OE_MSG_FOCUS_STATE_CHANGED; MKW_ASSUME_FOCUS=1 (unattended
+// reports otherwise through oe_set_focus, which also pushes OE_MSG_FOCUS_STATE_CHANGED; ORBITALS_ASSUME_FOCUS=1 (unattended
 // runs) pins it to 1.
 // The console accepts no HOME press while its startup logo shows, so a game never hears of a focus change before
 // FinishStartupLogo; MKW handles one with a manager it makes later (main+0x26380c4 reads main+0x33e54b0, null
@@ -203,7 +203,7 @@ static int assume_focus(void) {
     static volatile int32_t v = -1;
     int32_t a = v;
     if (a < 0) {
-        const char *e = cfg_get("MKW_ASSUME_FOCUS");
+        const char *e = cfg_get("ORBITALS_ASSUME_FOCUS");
         a = e && atoi(e) ? 1 : 0;
         plat_xchg32(&v, a);
     }
@@ -698,7 +698,7 @@ static void ov_time_ready(Cpu *c) { ret_x(c, (uint64_t)time_ready); }
 static void ov_current_time(Cpu *c) {
     int64_t *out = arg_p(c, 0);
     if (!out) { ret_x(c, TIME_R_INVALID); return; }
-    if (!seed_time(out)) *out = posix_now();   // core/hacks/seed.c: a fixed date with MKW_SEED
+    if (!seed_time(out)) *out = posix_now();   // core/hacks/seed.c: a fixed date with ORBITALS_SEED
     ret_x(c, 0);
 }
 
@@ -782,7 +782,7 @@ static void ov_user_difference(Cpu *c) {
 // them from the user's firmware. Each type is read on first use into guest-visible memory as the BFTTF file the pl
 // shared memory holds; Address is 8 bytes past the file start (after the BFTTF header) and Size the decoded font size,
 // as in MNG. The load state is always Loaded: the game spins until it is, so missing files stop with a named fatal at
-// Address/Size instead of a hang. MKW_SHARED_FONTS=<dir> overrides <romfs>/../../firmware/shared-fonts.
+// Address/Size instead of a hang. ORBITALS_SHARED_FONTS=<dir> overrides <romfs>/../../firmware/shared-fonts.
 #define SHARED_FONT_TYPES 6
 #define BFTTF_MAGIC 0x7f9a0218u
 static const char *const font_files[SHARED_FONT_TYPES] = {
@@ -791,7 +791,7 @@ static const char *const font_files[SHARED_FONT_TYPES] = {
 static struct { PlatMutex lock; const uint8_t *file[SHARED_FONT_TYPES]; uint64_t size[SHARED_FONT_TYPES]; } fonts;
 
 const char *ov_shared_font_dir(char *buf, size_t n) {
-    const char *e = cfg_get("MKW_SHARED_FONTS");
+    const char *e = cfg_get("ORBITALS_SHARED_FONTS");
     if (e && *e) snprintf(buf, n, "%s", e);
     else {
         char exe[PLAT_PATH_MAX], probe[PLAT_PATH_MAX + 40];   // shared-fonts next to mkw (tools/package_build.py), else the repo's
@@ -833,7 +833,7 @@ static const uint8_t *font_data(Cpu *c, const char *fn, int64_t t) {
         FILE *f = fopen(path, "rb");
         if (!f)
             rt_fatal("nn::pl::%s(%lld) from %s: no shared font %s (needed for Chinese and Korean text); run "
-                     "tools/extract_fonts.py --firmware <firmware NCA dir> or set MKW_SHARED_FONTS", fn, (long long)t,
+                     "tools/extract_fonts.py --firmware <firmware NCA dir> or set ORBITALS_SHARED_FONTS", fn, (long long)t,
                      caller(c, lr, sizeof lr), path);
         plat_fseek64(f, 0, SEEK_END);
         int64_t len = plat_ftell64(f);

@@ -65,10 +65,10 @@ static const char *system_menu_lang(const char *tag) {
     return r ? r->lang : NULL;
 }
 
-// The menu language, re-read when cfg_version changes: MKW_MENU_LANG when it names a row, else the system UI language
+// The menu language, re-read when cfg_version changes: ORBITALS_MENU_LANG when it names a row, else the system UI language
 // when we have it, else English.
 static const char *resolve_menu_lang(void) {
-    const char *v = cfg_value("MKW_MENU_LANG");
+    const char *v = cfg_value("ORBITALS_MENU_LANG");
     const Row *r = v && *v ? find_row(v) : NULL;
     if (r) return r->lang;
     const char *sys = system_menu_lang(plat_ui_language());

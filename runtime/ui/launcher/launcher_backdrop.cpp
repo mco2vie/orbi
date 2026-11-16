@@ -40,7 +40,7 @@ bool backdrop_has_picture(void) { return g_splash != nullptr; }
 static void flag(ImDrawList *dl, float w, float h) {
     // The wave's phase goes on only while the window has the focus: in the background the picture holds still (no
     // motion the player is not looking at, and no work for it). A shot: the same picture every run.
-    static const bool still = getenv("MKW_LAUNCHER_SHOT") != nullptr;
+    static const bool still = getenv("ORBITALS_LAUNCHER_SHOT") != nullptr;
     static float phase = 1.2f;
     if (!still && !ImGui::GetIO().AppFocusLost) phase += ImGui::GetIO().DeltaTime * 0.55f;
     float t = phase;

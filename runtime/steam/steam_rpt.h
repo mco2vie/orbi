@@ -1,5 +1,5 @@
 // Steam Remote Play Together (steam_rpt.c): Steam streams the game's window and sound to friends, and each guest's
-// controller or keyboard becomes a player of local multiplayer. Off unless MKW_STEAM_APPID (steam_appid in orbital.ini)
+// controller or keyboard becomes a player of local multiplayer. Off unless ORBITALS_STEAM_APPID (steam_appid in orbital.ini)
 // names the Steam App ID to run as (auto: the one Steam passes to a game it starts); Steam's library is loaded at run time from mkw's folder (steam_flat.h), so nothing
 // changes for a player without it. docs/remote-play.md has the set-up.
 #pragma once
@@ -42,7 +42,7 @@ int steam_rpt_take_link(char *out, size_t cap);
 int steam_rpt_invite_failed(void);
 
 // Local multiplayer (sdk/ov/ov_input.c, the controller applet): the game asks for need players and have of them have a
-// controller. With Steam ready, need >= 2 and too few controllers, MKW_STEAM_INVITE (steam_invite in orbital.ini) = ask
+// controller. With Steam ready, need >= 2 and too few controllers, ORBITALS_STEAM_INVITE (steam_invite in orbital.ini) = ask
 // (default) asks the player (menu_choice) whether the others join as local players or through Remote Play Together;
 // Remote Play opens the overlay's invite list, and each answer shows a notice saying what to do next. auto opens the
 // invite list without asking (at most every 3 s) while no guest has joined or controllers are missing, always on every

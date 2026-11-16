@@ -10,8 +10,8 @@
 //
 // Overlays: files listed in a directory's manifest.tsv are served in place of the originals. Each line names a RomFS
 // path, the overlay's size and SHA-256 and the original's SHA-256 ("-" adds a file the RomFS lacks; it is numbered
-// after the RomFS's own files, file_count + k in path order). The directories, in this order: MKW_ROMFS_PATCHES and
-// MKW_ROMFS_MODS; unset or "0" = none; then <game dir>/lang/<code>/ for a language the game does not ship
+// after the RomFS's own files, file_count + k in path order). The directories, in this order: ORBITALS_ROMFS_PATCHES and
+// ORBITALS_ROMFS_MODS; unset or "0" = none; then <game dir>/lang/<code>/ for a language the game does not ship
 // (ov_text_language: its texts rebuilt by the setup, tools/i18n/game_texts.py). A missing path, a size or hash mismatch
 // or a changed original stops the start.
 // An overlay file is opened when the game opens it; its identity (volume, file id, size, last write) is kept from the
@@ -330,16 +330,16 @@ int romfs_original_sha(const char *rel, char hex[65]) {
 }
 
 static void overlay_init(void) {
-    // MKW_ROMFS_PATCHES (the scripts' build/romfs-res) goes first, as before the mods; else the resolution setting
+    // ORBITALS_ROMFS_PATCHES (the scripts' build/romfs-res) goes first, as before the mods; else the resolution setting
     // writes its own last, over whatever the mods left of its archive (a mod that ships general_format, as Classic
     // GP does, replaced the resolution's copy and the setting did nothing)
-    const char *patches = cfg_get("MKW_ROMFS_PATCHES");
+    const char *patches = cfg_get("ORBITALS_ROMFS_PATCHES");
     if (patches && *patches && strcmp(patches, "0")) {
         romfs_resolution_external();
         load_seq++;
         overlay_load(patches);
     }
-    const char *legacy = cfg_get("MKW_ROMFS_MODS");
+    const char *legacy = cfg_get("ORBITALS_ROMFS_MODS");
     if (legacy && *legacy && strcmp(legacy, "0")) {
         load_seq++;
         overlay_load(legacy);
@@ -348,7 +348,7 @@ static void overlay_init(void) {
     const char *game = cfg_game_dir();
     char mods[4096], seen[64][64];
     size_t nseen = 0;
-    const char *list = cfg_get("MKW_MODS");
+    const char *list = cfg_get("ORBITALS_MODS");
     // a bug report's log says which mods were on (tools/github/classify.py mods_enabled asks for a run without them)
     if (list && *list) rt_log("mods: enabled %s", list);
     if (list && *list) {
@@ -371,7 +371,7 @@ static void overlay_init(void) {
     // the Mods page's merge of the enabled mods' shared archives (tools/mod/merge.py); missing when
     // nothing is shared, and then this is a no-op log line like a missing legacy dir. Gated on MODS so a
     // stale .merged from an earlier enablement never applies after the last mod is toggled off.
-    const char *mods_on = cfg_get("MKW_MODS");
+    const char *mods_on = cfg_get("ORBITALS_MODS");
     if (mods_on && *mods_on) {
         char merged[PLAT_PATH_MAX * 2 + 16];
         snprintf(merged, sizeof merged, "%s/mods/.merged/romfs", game);
@@ -478,7 +478,7 @@ static int loose_order(const void *a, const void *b) {
     return strcmp(((const LooseFile *)a)->name, ((const LooseFile *)b)->name);
 }
 
-// The index (MKW_RFS1 layout: header, sorted entries, names), built from a walk of the loose directory.
+// The index (ORBITALS_RFS1 layout: header, sorted entries, names), built from a walk of the loose directory.
 static void load_loose_index(const char *dir) {
     need(snprintf(loose_root, sizeof loose_root, "%s", dir) < (int)sizeof loose_root, "RomFS path");
 #ifndef _WIN32
@@ -497,7 +497,7 @@ static void load_loose_index(const char *dir) {
     index_size = (size_t)strings_offset + strings;
     index_bytes = malloc(index_size);
     need(index_bytes != NULL, "loose index memory");
-    memcpy(index_bytes, "MKW_RFS1", 8);
+    memcpy(index_bytes, "ORBITALS_RFS1", 8);
     memcpy(index_bytes + 8, &file_count, 8);
     memcpy(index_bytes + 16, &strings_offset, 8);
     uint32_t at = 0;
@@ -526,7 +526,7 @@ static void load_package_index(const char *path) {
     index_size = (size_t)strings_offset + strings;
     index_bytes = malloc(index_size);
     need(index_bytes != NULL, "package index memory");
-    memcpy(index_bytes, "MKW_RFS1", 8);
+    memcpy(index_bytes, "ORBITALS_RFS1", 8);
     memcpy(index_bytes + 8, &file_count, 8);
     memcpy(index_bytes + 16, &strings_offset, 8);
     uint32_t at = 0;

@@ -6,7 +6,7 @@ before races), then the frame rate, then the player's side. Updated 09/11/2026.
 ## 1. 60 fps in races: the serial frame
 
 A race frame takes 31-33 ms\* on the Radeon 660M at 720p, against the 16.7 ms the game asks for. The time does not go
-to one slow piece but to a chain where each step waits for the previous one (measured with `MKW_TRACE_TL`):
+to one slow piece but to a chain where each step waits for the previous one (measured with `ORBITALS_TRACE_TL`):
 
 | Step | Time\* |
 |---|---|
@@ -24,7 +24,7 @@ with the game (−2.4 ms), submits on their own thread (−1.2 to −1.6 ms), th
 
 - **Dynamic state recorded only when it changes** (idea and code from totk-pc-recomp, MIT): there it took the replay
   from 7.77 to 6.67 ms.
-- **Less work per draw**: descriptor sets kept across frames by their contents (`MKW_DRAW_CACHE`).
+- **Less work per draw**: descriptor sets kept across frames by their contents (`ORBITALS_DRAW_CACHE`).
 - **Recording in parallel**: chunks of a submit on several threads; today they fight over the texture lock, which has
   to be split first.
 - **The kernel's global lock**: waits by address are done (−1.3 ms\*); the rest of the lock remains.

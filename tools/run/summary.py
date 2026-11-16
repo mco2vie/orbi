@@ -22,7 +22,7 @@ RACE = re.compile(r"seq: watch off at the start of (\w+) frame (\d+)")
 # 06/11/2026: the boot prewarm read nothing for a day and no summary showed it)
 SPEED = re.compile(r"game: speed ([\d.]+)x over ([\d.]+) s \((\d+) frames, (\d+) interval changes")
 SLOW = 0.98  # game seconds per real second below which the game runs in slow motion (runtime/core/boot/game.c)
-FAIL = re.compile(r"\[host\] ((?:[\w ]+: )+)(.*?(?:[a-z] failed|not implemented|cannot \w+|over MKW_\w+|device lost|another format.*rewritten))")
+FAIL = re.compile(r"\[host\] ((?:[\w ]+: )+)(.*?(?:[a-z] failed|not implemented|cannot \w+|over ORBITALS_\w+|device lost|another format.*rewritten))")
 
 
 def pct(xs: list[float], q: float) -> float:
@@ -31,7 +31,7 @@ def pct(xs: list[float], q: float) -> float:
 
 def frames(label: str, xs: list[tuple[float, float]]) -> str:
     if not xs:
-        return f"{label}: no perf lines (MKW_TRACE=perf or MKW_FLIGHT prints them every 60 frames; runtime/core/diag/perf.c perf_base)"
+        return f"{label}: no perf lines (ORBITALS_TRACE=perf or ORBITALS_FLIGHT prints them every 60 frames; runtime/core/diag/perf.c perf_base)"
     avg = [a for a, _ in xs]
     return (
         f"{label}: {len(xs)} windows of 60 frames, interval median {statistics.median(avg):.1f} ms, "
@@ -40,7 +40,7 @@ def frames(label: str, xs: list[tuple[float, float]]) -> str:
 
 
 def host_time(lines: list[str]) -> list[str]:
-    """The last MKW_HOST_TIME census, its five costliest functions."""
+    """The last ORBITALS_HOST_TIME census, its five costliest functions."""
     starts = [i for i, ln in enumerate(lines) if "host time: frame" in ln]
     if not starts:
         return []
@@ -81,7 +81,7 @@ def summary(path: Path) -> list[str]:
     out = [f"== {path}"]
 
     fatal = [ln for ln in lines if "FATAL: " in ln or "fatal signal" in ln or "in lifted function" in ln]
-    exits = [ln for ln in lines if re.search(r"MKW_SEQ_EXIT: .*exit|window closed; exiting|frametime: exit", ln)]
+    exits = [ln for ln in lines if re.search(r"ORBITALS_SEQ_EXIT: .*exit|window closed; exiting|frametime: exit", ln)]
     if fatal:
         out.append("end: " + " | ".join(ln.strip()[:200] for ln in fatal[:3]))
     elif exits:

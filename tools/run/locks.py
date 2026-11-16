@@ -1,9 +1,9 @@
-"""The waits for the runtime's locks in a run with MKW_LOCK_PROF=1: per lock and per caller, in ms per second of race.
+"""The waits for the runtime's locks in a run with ORBITALS_LOCK_PROF=1: per lock and per caller, in ms per second of race.
 
 Why: comparing the kernel lock G before and after a change needs the race's windows
 of the "perf: lock waits" lines added up and named; by hand, the log's addresses were read wrong once (06/11/2026:
 sym.py took the absolute addresses for offsets). Lock and caller are named from build/mkw's symbols (nm, addr2line).
-Only the windows after the race starts (MKW_SEQ_UNTIL's "watch off" line) count. The holders' part: how long the
+Only the windows after the race starts (ORBITALS_SEQ_UNTIL's "watch off" line) count. The holders' part: how long the
 caller that took a lock kept it while some thread slept waiting for it (which section to shorten).
 
 Usage: uv run tools/run/locks.py build/run/NAME.log [...] [--top 12]   (the build/mkw of that run)
@@ -84,7 +84,7 @@ def summary(path: Path, syms: list[tuple[int, str]], top: int) -> list[str]:
                 ms_by[key] += float(ms)
                 n_by[key] += int(n)
     if not seconds:
-        return [f"== {path}: no race windows with lock waits (MKW_LOCK_PROF=1 MKW_TRACE=perf)"]
+        return [f"== {path}: no race windows with lock waits (ORBITALS_LOCK_PROF=1 ORBITALS_TRACE=perf)"]
     by_lock: Counter = Counter()
     for (lk, _), ms in waits.items():
         by_lock[lock_name(lk, syms)] += ms

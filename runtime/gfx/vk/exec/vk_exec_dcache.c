@@ -1,5 +1,5 @@
-// Descriptor sets kept across frames by their contents (MKW_DRAW_CACHE) and the measurement that sized the idea
-// (MKW_DRAW_CACHE_PROBE). The replay binds through vk_dcache_get from
+// Descriptor sets kept across frames by their contents (ORBITALS_DRAW_CACHE) and the measurement that sized the idea
+// (ORBITALS_DRAW_CACHE_PROBE). The replay binds through vk_dcache_get from
 // vk_exec_bind.c dc_bind, with the uniform buffers dynamic (vk_pipeline.c dyn_ubos).
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +12,7 @@
 
 #define MAX_DESC 1024   // as vk_exec_bind.c
 
-// MKW_DRAW_CACHE_PROBE=1 (a measurement): how many draws find their descriptors already built in an earlier frame,
+// ORBITALS_DRAW_CACHE_PROBE=1 (a measurement): how many draws find their descriptors already built in an earlier frame,
 // counted two ways: as they are (a set cache today) and with the uniform buffers' offsets left out (a cache whose
 // uniform buffers are dynamic: the game's per-object uniform blocks move every frame, recdiff.py). A table of key
 // hashes kept across frames; vk_exec_draw_probe_log prints the counts.
@@ -41,7 +41,7 @@ static uint64_t probe_hash(const VkPipeInfo *info, const VkDescSlot *d, uint32_t
 }
 
 void vk_dcache_probe(const VkPipeInfo *info, const VkDescSlot *d, uint32_t nd) {
-    if (PR.on < 0) PR.on = cfg_get("MKW_DRAW_CACHE_PROBE") && atoi(cfg_get("MKW_DRAW_CACHE_PROBE"));
+    if (PR.on < 0) PR.on = cfg_get("ORBITALS_DRAW_CACHE_PROBE") && atoi(cfg_get("ORBITALS_DRAW_CACHE_PROBE"));
     if (!PR.on) return;
     VkDescSlot tmp[MAX_DESC];
     memcpy(tmp, d, nd * sizeof *d);
@@ -55,7 +55,7 @@ void vk_dcache_probe(const VkPipeInfo *info, const VkDescSlot *d, uint32_t nd) {
     uint64_t h0 = probe_hash(info, d, nd), h1 = probe_hash(info, tmp, nd);
     plat_mutex_lock(&PR.lock);
     if (!PR.seen[0] && (!(PR.seen[0] = calloc(PROBE_SLOTS, 8)) || !(PR.seen[1] = calloc(PROBE_SLOTS, 8))))
-        rt_fatal("vk: out of memory (MKW_DRAW_CACHE_PROBE)");
+        rt_fatal("vk: out of memory (ORBITALS_DRAW_CACHE_PROBE)");
     PR.draws++;
     PR.hit[0] += (uint64_t)probe_put(PR.seen[0], h0);
     PR.hit[1] += (uint64_t)probe_put(PR.seen[1], h1);
@@ -70,9 +70,9 @@ void vk_exec_draw_probe_log(void) {
     PR.draws = PR.hit[0] = PR.hit[1] = 0;
 }
 
-// ---- MKW_DRAW_CACHE: descriptor sets kept across frames by their contents
+// ---- ORBITALS_DRAW_CACHE: descriptor sets kept across frames by their contents
 // A race frame binds what the last one bound but for its uniform blocks' addresses (recdiff.py): with uniform buffers
-// dynamic (vk_pipeline.c dyn_ubos) 96-98 % of the draws find their set made in an earlier frame (MKW_DRAW_CACHE_PROBE,
+// dynamic (vk_pipeline.c dyn_ubos) 96-98 % of the draws find their set made in an earlier frame (ORBITALS_DRAW_CACHE_PROBE,
 // build/cap/race), and the draw binds it with its offsets instead of writing and pushing its descriptors. Sets name
 // objects by handle, and a destroyed object's handle can return for a new one: when vk_destroy_gen moves, or the table
 // fills, the table empties and its pools are destroyed once the GPU is past the submission being recorded.

@@ -1,6 +1,6 @@
 """Where each thread of a run sleeps in the kernel: the kernel stacks of a `perf record -e cs -g`, named and counted.
 
-Why: the runtime's lock profile (MKW_LOCK_PROF) does not see the kernel's own locks. The shadow sync's PAGEMAP_SCAN
+Why: the runtime's lock profile (ORBITALS_LOCK_PROF) does not see the kernel's own locks. The shadow sync's PAGEMAP_SCAN
 and the read traps' mprotect queue on the process's mmap_lock (cs-off/cs-on, 06/11/2026), which only the context
 switches' kernel stacks show. With kptr_restrict=2 the kernel hides its addresses even from root and
 `perf report --kallsyms` named nothing, so the stacks are named here from a copy of /proc/kallsyms taken with

@@ -23,13 +23,13 @@ typedef struct {
     VkDeviceSize stg_bytes;   // staging the batch holds (vk_upload_flush_over)
     uint64_t texels;          // ASTC texels its dispatches decode (vk_upload_work)
     uint32_t calls;           // vk_upload_begin calls that recorded into it
-    int ut;                   // MKW_UPLOAD_TIME slot, -1: untimed
+    int ut;                   // ORBITALS_UPLOAD_TIME slot, -1: untimed
     uint32_t crumb;           // its start mark (diag/vk_crumbs.c), 0 none
 } Batch;
 
 enum { DEAD_IMAGE = 1, DEAD_IMAGE_VMA, DEAD_VIEW, DEAD_BUFFER_VMA, DEAD_CALL };
 // seq: the upload batch, tl: the submission part (vk_sync_part_done) and fence: the submission (timeline value) that may
-// still use it; vma: NULL = the runtime's; use: MKW_GPU_GUARD, the newest part that named it (vk_mem_defer_use)
+// still use it; vma: NULL = the runtime's; use: ORBITALS_GPU_GUARD, the newest part that named it (vk_mem_defer_use)
 typedef struct { int kind; uint64_t handle; VmaAllocation alloc; uint64_t seq, tl, fence; VmaAllocator vma; uint64_t use; } Dead;
 
 static PlatRMutex cmd_lock;
@@ -289,7 +289,7 @@ VkCommandBuffer vk_upload_begin_staging(VkDeviceSize size, VkBuffer *buf, void *
 // `limit` bytes of staging, UPLOAD_TEXELS ASTC texels to decode or UPLOAD_CALLS recordings: the batch is only sent with
 // the next submission, and the title capture's 8 155 writes in one batch ran the staging out of memory (wt1). The other
 // two bound its GPU time under amdgpu's 2 s job timeout, which the race capture's load passed (xb-*, hang1): its
-// batches took 170-430 ms per ~67 M texels, and 752-1 112 ms with 642 textures (MKW_UPLOAD_TIME up1, up2; each a full
+// batches took 170-430 ms per ~67 M texels, and 752-1 112 ms with 642 textures (ORBITALS_UPLOAD_TIME up1, up2; each a full
 // barrier, the GPU-only ones a clear of the whole image). Not inside a vk_upload_begin.
 #define UPLOAD_TEXELS (64ull << 20)
 #define UPLOAD_CALLS 128
@@ -362,7 +362,7 @@ uint64_t vk_mem_defer_fence(uint64_t fence) {
 static void defer(int kind, uint64_t handle, VmaAllocation alloc) {
     plat_once(&cmd_once, cmd_init, NULL);
     plat_rmutex_lock(&cmd_lock);
-    // MKW_GPU_GUARD: tied to the submission being recorded, every part of it is covered; otherwise only the parts sent.
+    // ORBITALS_GPU_GUARD: tied to the submission being recorded, every part of it is covered; otherwise only the parts sent.
     uint64_t fence = defer_fence ? defer_fence : idle_defer ? 0 : rec_fence;
     if (defer_use && !fence)
         vk_guard_tie(kind == DEAD_VIEW ? "image view" : kind == DEAD_BUFFER_VMA ? "buffer" : "image", handle, 0,

@@ -35,7 +35,7 @@
 
 #define PAGE NVN_VPOOL_PAGE
 #define BLOCK_SLOTS 256   // 16 MiB of 64 KiB slots
-#define SMALL_SPARSE (4u << 20)   // storage of an image that gets slots past MKW_SPARSE_MIB
+#define SMALL_SPARSE (4u << 20)   // storage of an image that gets slots past ORBITALS_SPARSE_MIB
 
 typedef struct SlotBlock {
     VkBuffer buf;                 // over the whole block, for the zero fill; none when no memory type serves both (#215)
@@ -108,9 +108,9 @@ static int ndirty;               // images with a non-empty dirty list
 static Slot **dying;              // refs reached 0 since the last flush: reaped behind the next submission
 static int ndying, cdying;
 static VkSemaphore order_tl;      // timeline: one value per graphics-queue submission and per bind (vk_sparse_order)
-static VkSemaphore bind_sem;      // MKW_SPARSE_ORDER=0: binary, signalled by a bind for the next replayed submission
+static VkSemaphore bind_sem;      // ORBITALS_SPARSE_ORDER=0: binary, signalled by a bind for the next replayed submission
 static uint64_t order_val, bind_val;
-static int binary_pending;        // MKW_SPARSE_ORDER=0: a bind signalled bind_sem for the submission being made   // last value handed out; value of the last bind (0: none yet)
+static int binary_pending;        // ORBITALS_SPARSE_ORDER=0: a bind signalled bind_sem for the submission being made   // last value handed out; value of the last bind (0: none yet)
 static uint64_t sparse_va;   // address space the live sparse images reserve (their memory requirements' size)
 static int64_t n_slots, n_failed, n_binds, n_images, n_blocks, n_over, n_written, n_tail_writes, n_host_blocks;
 static VmaAllocation *dying_tails;   // tail memory of destroyed images: freed behind the next submission
@@ -121,7 +121,7 @@ static void grow(void **arr, int *cap, size_t elem) {
     if (!(*arr = realloc(*arr, (size_t)*cap * elem))) rt_fatal("vk: out of memory (sparse)");
 }
 
-// MKW_SPARSE_MIB: most slot memory. run-sp3 (3 GB cap) bound 1 472 MiB, nearly all in three 8192x8192x68 arrays
+// ORBITALS_SPARSE_MIB: most slot memory. run-sp3 (3 GB cap) bound 1 472 MiB, nearly all in three 8192x8192x68 arrays
 // (BC6H 509, two ASTC as BC7 505 and 374), and 64 other textures (menu icons, the ASTC the arrays are copied from) had
 // no memory left. Past it a block stays non-resident (reads zero); a new image binds its coarse levels first.
 // Unset, it comes from the GPU type and its largest device-local heap (vk_default_sparse_mib). 0 lifts it.
@@ -138,9 +138,9 @@ static uint64_t budget_default(void) {
 static uint64_t budget(void) {
     static uint64_t v;
     if (!v) {
-        const char *e = cfg_get("MKW_SPARSE_MIB");
+        const char *e = cfg_get("ORBITALS_SPARSE_MIB");
         uint64_t mib = e && *e ? (uint64_t)atol(e) : budget_default();
-        rt_log("vk: sparse: tile slots up to %llu MiB (MKW_SPARSE_MIB%s; 0 lifts it)", (unsigned long long)mib,
+        rt_log("vk: sparse: tile slots up to %llu MiB (ORBITALS_SPARSE_MIB%s; 0 lifts it)", (unsigned long long)mib,
                e && *e ? "" : " unset, from the GPU");
         v = mib ? mib << 20 : UINT64_MAX;
     }
@@ -149,7 +149,7 @@ static uint64_t budget(void) {
 
 static int on(void) {
     static int v = -1;
-    if (v < 0) v = !(cfg_get("MKW_SPARSE_IMAGES") && !atoi(cfg_get("MKW_SPARSE_IMAGES")));   // default on
+    if (v < 0) v = !(cfg_get("ORBITALS_SPARSE_IMAGES") && !atoi(cfg_get("ORBITALS_SPARSE_IMAGES")));   // default on
     return v;
 }
 
@@ -189,14 +189,14 @@ static SlotBlock *new_block(VkCtx *c, uint32_t type_bits, VkDeviceSize slot_size
     // #215 (GTX 750 Ti, 0.1.10): buffer types 0xe81, sparse image types 0x104, none in common, so every block failed
     // and the terrain had no tile at all. Then the block takes the image's types alone and has no buffer: its slots
     // start as the driver hands the memory out (not zero-filled here) and a reused slot keeps its last texels until
-    // the game writes it. MKW_SPARSE_NO_BUFFER=1 takes that path on any GPU, to test it where the types meet.
+    // the game writes it. ORBITALS_SPARSE_NO_BUFFER=1 takes that path on any GPU, to test it where the types meet.
     static int no_buf_env = -1;
-    if (no_buf_env < 0) no_buf_env = cfg_get("MKW_SPARSE_NO_BUFFER") && atoi(cfg_get("MKW_SPARSE_NO_BUFFER"));
+    if (no_buf_env < 0) no_buf_env = cfg_get("ORBITALS_SPARSE_NO_BUFFER") && atoi(cfg_get("ORBITALS_SPARSE_NO_BUFFER"));
     if (!req.memoryTypeBits || no_buf_env) {
         static int logged;
         if (!logged++)
             rt_log("vk: sparse: tile blocks without a buffer (buffer types %#x, image types %#x%s): slots not zero-filled",
-                   rb.memoryTypeBits, type_bits, no_buf_env ? ", MKW_SPARSE_NO_BUFFER" : "");
+                   rb.memoryTypeBits, type_bits, no_buf_env ? ", ORBITALS_SPARSE_NO_BUFFER" : "");
         vkDestroyBuffer(c->device, b->buf, NULL);
         b->buf = VK_NULL_HANDLE;
         req.memoryTypeBits = type_bits;
@@ -280,7 +280,7 @@ static Slot *slot_get(VkCtx *c, const SparseImg *s, uint64_t pa, uint32_t sub, L
     if (big && ((uint64_t)(n_slots + 1) * s->slot_size > budget() ||
                 (!b && (uint64_t)(n_blocks + 1) * BLOCK_SLOTS * s->slot_size > budget()))) {
         if (++n_over <= 4 || !(n_over & (n_over - 1)))
-            rt_log("vk: sparse: tile slots over MKW_SPARSE_MIB (%lld MiB in blocks; %lld tiles left non-resident)",
+            rt_log("vk: sparse: tile slots over ORBITALS_SPARSE_MIB (%lld MiB in blocks; %lld tiles left non-resident)",
                    (long long)(budget() >> 20), (long long)n_over);
         return NULL;
     }
@@ -366,7 +366,7 @@ static void blk_pos(const SparseImg *s, uint32_t i, uint32_t *layer, uint32_t *l
     *l = lv, *bx = r % s->bx[lv], *by = r / s->bx[lv];
 }
 
-// The bind of blocks i..i+run-1 of s (one row; run 1 without MKW_SPARSE_MERGE) to what bound[] names now. The blocks
+// The bind of blocks i..i+run-1 of s (one row; run 1 without ORBITALS_SPARSE_MERGE) to what bound[] names now. The blocks
 // of one bind are laid out in its memory x first (Vulkan 1.3 §33.4.4), so a run of slots contiguous in one block binds
 // as one. RADV makes one VA update (a GEM_VA ioctl, ~50 us, plus the kernel's wait for the VM) per row of blocks of
 // each bind: bind 2 of the boot, 11 471 blocks of the 8192x8192x68 arrays one by one, took 576-995 ms in
@@ -385,7 +385,7 @@ static VkSparseImageMemoryBind make_bind(const SparseImg *s, uint32_t i, uint32_
         .memoryOffset = sl ? sl->blk->base + (VkDeviceSize)sl->idx * s->slot_size : 0};
 }
 
-// MKW_SPARSE_MERGE (default 1; 0: one bind per block, as before 14/11/2026; "ab": in the B blocks only).
+// ORBITALS_SPARSE_MERGE (default 1; 0: one bind per block, as before 14/11/2026; "ab": in the B blocks only).
 static int merge_on(void) {
     static int v = -1;
     if (v < 0) v = rt_knob("SPARSE_MERGE", "1");
@@ -508,7 +508,7 @@ static int order_on(void);
 // the game copies into them right after creating the array, and a copy recorded in the upload batch (ASTC decoded
 // into BC7, vk_texture_astc_copy) went out before a bind left for the next replayed submission and was lost (m17).
 static void tail_bind_now(VkCtx *c, SparseImg *s) {
-    if (!s->tail_pending || !order_on()) return;   // MKW_SPARSE_ORDER=0: with the other binds (vk_sparse_order)
+    if (!s->tail_pending || !order_on()) return;   // ORBITALS_SPARSE_ORDER=0: with the other binds (vk_sparse_order)
     VkSparseImageMemoryBindInfo ib;
     VkSparseImageOpaqueMemoryBindInfo ob;
     VkSparseImageMemoryBind *bb = malloc(sizeof *bb * ((size_t)s->layers * s->tail_blocks + 1));
@@ -724,12 +724,12 @@ void vk_sparse_written(VkImage img, uint32_t level, uint32_t layer0, uint32_t la
 // that submission (wait for the last bind, signal its own value). binds: first issue the queued binds behind every
 // earlier submission (vk_sync.c; not vk_upload_flush, which holds cmd_lock, taken under sp_lock by slot_get). fence:
 // the timeline value whose completion frees the slots unbound so far (a part or the end of a replayed submission).
-// MKW_SPARSE_ORDER=0 (A/B): the order before 31/10/2026, binds behind the previous frame's value only, and no wait or
+// ORBITALS_SPARSE_ORDER=0 (A/B): the order before 31/10/2026, binds behind the previous frame's value only, and no wait or
 // signal on the other submissions. binds 2: only issue the queued binds, before the upload batch that a replayed part
 // flushes ahead of itself (vk_sync.c), so the batch's copies into sparse levels land in bound memory.
 static int order_on(void) {
     static int v = -1;
-    if (v < 0) v = !(cfg_get("MKW_SPARSE_ORDER") && !atoi(cfg_get("MKW_SPARSE_ORDER")));
+    if (v < 0) v = !(cfg_get("ORBITALS_SPARSE_ORDER") && !atoi(cfg_get("ORBITALS_SPARSE_ORDER")));
     return v;
 }
 

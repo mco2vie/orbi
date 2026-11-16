@@ -16,9 +16,9 @@ hex: a translation keeps them as the dump with --tags gives them. \\n is a line 
 Usage:
   uv run tools/i18n/game_texts.py dump EUde [JPja ...] [-o DIR] [--tags]   every text of those folders
   uv run tools/i18n/game_texts.py todo ca            the base language's lines (with tags) ca.tsv still lacks
-  uv run tools/i18n/game_texts.py build ca [-o DIR]  the overlay (default build/lang/ca): MKW_ROMFS_MODS=DIR
+  uv run tools/i18n/game_texts.py build ca [-o DIR]  the overlay (default build/lang/ca): ORBITALS_ROMFS_MODS=DIR
   uv run tools/i18n/game_texts.py list               the folders the game has
-The game copy is game/ in the repository (a link to your copy) or MKW_GAME.
+The game copy is game/ in the repository (a link to your copy) or ORBITALS_GAME.
 """
 
 import argparse
@@ -37,7 +37,7 @@ TAG = re.compile(r"\{(0[EF](?: [0-9A-F]{4})*)\}")
 
 
 def game_dir() -> Path:
-    return Path(os.environ.get("MKW_GAME", ROOT / "game"))
+    return Path(os.environ.get("ORBITALS_GAME", ROOT / "game"))
 
 
 # ---- SARC

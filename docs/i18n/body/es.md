@@ -157,7 +157,7 @@ ellos.
 
 Linux, con `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, las cabeceras de Vulkan y VMA 3.4.0
 (detalles en [tools/build/README.md](tools/build/README.md)). Pon tu volcado en `game/` (`game/exefs`, `game/romfs`) o
-define `MKW_GAME=<dir>`, y desde la raíz del repositorio:
+define `ORBITALS_GAME=<dir>`, y desde la raíz del repositorio:
 
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt

@@ -8,7 +8,7 @@ have under a quarter as many (a moving object pops every frame, a flicker once).
 a cactus and a bus that vanishes.
 Usage: uv run tools/imagen/pops.py DIR... [--min N] [--sheet OUT.png]  ->  dump, frame, blocks, bounding box
 (thumbnail pixels); totals. --sheet: one row per event, frames k-1, k, k+1, to tell a flicker from an animation.
---ab LOG [--period S] [--invert]: pops and frames per MKW_AB block (B = the switch on), from each frame's time in the
+--ab LOG [--period S] [--invert]: pops and frames per ORBITALS_AB block (B = the switch on), from each frame's time in the
 dumps' frames.tsv: blocks of S seconds (6) in the order A B B A from the race start (the log's last
 "seq: enter IsSequenceFlag"), as the world clock counts them (checked on lf9's logged edges)."""
 

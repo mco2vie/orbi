@@ -1,10 +1,10 @@
-"""In-launch A/B summary: the perf lines of a run with MKW_AB=<seconds> (runtime/core/diag/perf.c rt_ab), A against B.
+"""In-launch A/B summary: the perf lines of a run with ORBITALS_AB=<seconds> (runtime/core/diag/perf.c rt_ab), A against B.
 
 Why: two runs of the same build differ by up to 12 ms per frame in a race (rt-j4 37 ms, rt-k0 49 ms, 01/11/2026), more
-than most changes. With MKW_AB the blocks of A and B alternate (A B B A) inside one race, so desktop load and scene
+than most changes. With ORBITALS_AB the blocks of A and B alternate (A B B A) inside one race, so desktop load and scene
 weigh the same on both. Only 60-frame windows wholly A ("ab 0/60") or wholly B ("ab 60/60") count.
 The race's stretches are not equally heavy, so blocks of 6 s can still favour one side (sl-ab1/sl-ab2i, 06/11/2026:
-+0.77 and -1.68 ms for the same change). Given runs with MKW_AB_INVERT=1 too, the means of B - A over the plain runs
++0.77 and -1.68 ms for the same change). Given runs with ORBITALS_AB_INVERT=1 too, the means of B - A over the plain runs
 and over the inverted ones give the change (their mean) and the scene (half their difference). The race's first window
 is left out: it holds the start's stall (33-44 ms, sl-ab1/sl-ab3), wholly A in plain runs and mixed in inverted ones.
 
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 LINE = re.compile(r"interval avg ([\d.]+) ms.*replay avg ([\d.]+) ms; ab (\d+)/(\d+); world (-?[\d.]+) s")
-GPU = re.compile(r"perf: frame \d+: gpu avg ([\d.]+) ms")   # the window's second line (MKW_TRACE=perf with timestamps)
+GPU = re.compile(r"perf: frame \d+: gpu avg ([\d.]+) ms")   # the window's second line (ORBITALS_TRACE=perf with timestamps)
 
 
 def summary(path: Path) -> tuple[str, tuple[float, float] | None, bool]:
@@ -25,7 +25,7 @@ def summary(path: Path) -> tuple[str, tuple[float, float] | None, bool]:
     gpu: dict[str, list[float]] = {"A": [], "B": []}
     last = ""   # the side of the window line just read: its gpu line follows it
     text = path.read_text(errors="replace")
-    inverted = "(MKW_AB_INVERT)" in text
+    inverted = "(ORBITALS_AB_INVERT)" in text
     started = False
     for line in text.splitlines():
         g = GPU.search(line)

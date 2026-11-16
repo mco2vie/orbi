@@ -3,7 +3,7 @@
 # dependencies = ["pillow==11.3.0"]
 # ///
 """Finds the draw program behind a coloured artifact by replaying one frame capture with half of the candidate
-programs skipped each time (MKW_SKIP_PROGRAMS takes key prefixes), until one key prefix is left.
+programs skipped each time (ORBITALS_SKIP_PROGRAMS takes key prefixes), until one key prefix is left.
 
 Why: artifacts that only show on GPUs we do not have (#174, Intel ANV: red halos and a red tint on the 3D scene) cannot
 be narrowed here, and a game run per guess costs the reporter minutes. A capture replays in seconds on their machine,
@@ -17,7 +17,7 @@ too: the final program is checked alone and printed with what it removed. If nei
 does not come from one draw program (a compute pass, or several programs): the script says so and stops.
 
 Capture first, on the GPU that shows the artifact (Linux), with the scene on screen at the given present:
-    MKW_CAPTURE=1 MKW_CAPTURE_AT=2000 MKW_CAPTURE_DIR=~/mkw-cap ./mkw
+    ORBITALS_CAPTURE=1 ORBITALS_CAPTURE_AT=2000 ORBITALS_CAPTURE_DIR=~/mkw-cap ./mkw
 Usage: uv run tools/test/skip_bisect.py CAPTURE_DIR [--mkw PATH] [--color red] [--drop 0.6] [--out DIR]
        (--mkw: build/mkw from a source build; from the AppImage, ~/.local/share/mkw-recomp/mkw)
 """
@@ -30,7 +30,7 @@ from pathlib import Path
 
 from PIL import Image
 
-HEX = "0123456789abcdef"  # 16 one-digit prefixes at most: MKW_SKIP_PROGRAMS keeps 16 entries (vk_exec_draw.c)
+HEX = "0123456789abcdef"  # 16 one-digit prefixes at most: ORBITALS_SKIP_PROGRAMS keeps 16 entries (vk_exec_draw.c)
 PREFIX_DIGITS = 5  # 20 bits: about a million prefixes for the ~23 000 programs of a version
 
 
@@ -51,9 +51,9 @@ class Replayer:
         self.n += 1
         d = self.out / f"r{self.n:02d}"
         env = dict(os.environ)
-        env.pop("MKW_SKIP_PROGRAMS", None)
+        env.pop("ORBITALS_SKIP_PROGRAMS", None)
         if skip:
-            env["MKW_SKIP_PROGRAMS"] = ",".join(skip)
+            env["ORBITALS_SKIP_PROGRAMS"] = ",".join(skip)
         with open(self.out / f"r{self.n:02d}.log", "w") as log:
             r = subprocess.run([str(self.mkw), "--replay", str(self.capture), "--out", str(d), "--tag", "f"],
                                env=env, stdout=log, stderr=subprocess.STDOUT)  # fmt: skip

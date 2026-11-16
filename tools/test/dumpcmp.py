@@ -1,7 +1,7 @@
 # /// script
 # dependencies = []
 # ///
-"""Two MKW_DUMP folders of the same frame (the game's, saved with a capture, and a replay's) compared pass by pass.
+"""Two ORBITALS_DUMP folders of the same frame (the game's, saved with a capture, and a replay's) compared pass by pass.
 
 Why: a replay that differs from the game is found at the first pass whose targets differ, not by looking at the final
 image (the race replay was dark with every input apparently there, 07/11/2026). Each dump's images.txt holds, per

@@ -44,7 +44,7 @@ typedef struct Tex {
     uint64_t shash;               // XXH3 of the storage at the last upload (same_storage: no write watch)
     uint32_t shash_epoch;         // submit_epoch of the last hash check
     uint8_t sparse;               // a Vulkan sparse image whose tiles follow the game's MapVirtual (vk_sparse.c)
-    uint64_t use;                 // MKW_GPU_GUARD: newest submission part that looked it up (vk_guard_note)
+    uint64_t use;                 // ORBITALS_GPU_GUARD: newest submission part that looked it up (vk_guard_note)
 } Tex;
 
 // A slot keeps what vk_texture_by_id resolved for it, so a draw binding skips the key lookup and the address chain: the
@@ -131,7 +131,7 @@ int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now);
 extern uint64_t trace_addr;
 int tracing(uint64_t addr);
 
-// vk_tex_alias.c: aliases (MKW_TEX_ALIAS) and GPU writes into mirrored storage
+// vk_tex_alias.c: aliases (ORBITALS_TEX_ALIAS) and GPU writes into mirrored storage
 enum { WB_SMALL = 64 << 10 };
 // What goes back to its storage when the CPU waits for a fence (vk_texture_write_back_small): targets up to WB_SMALL
 // bytes, and pitch (LINEAR, LINEAR_RENDER_TARGET) textures of any size: that layout is asked for so that the CPU reads

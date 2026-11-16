@@ -1,4 +1,4 @@
-// MKW_BIND_XF (a measurement for the draw cache, default off): graphics descriptors kept
+// ORBITALS_BIND_XF (a measurement for the draw cache, default off): graphics descriptors kept
 // across frames by the draw's inputs (the pipeline and the bound-slot bytes it reads, vk_exec_bind.c xb_key). =check
 // resolves every draw as always and counts how often the kept storage-buffer and texture descriptors are equal to the
 // new ones (the cross-frame hit rate a cache could use); =use takes them on a hit without resolving, skipping the
@@ -27,18 +27,18 @@ static uint64_t n_draws, n_hit, n_equal, n_diff;
 
 int xb_mode(void) {
     if (mode < 0) {
-        const char *e = cfg_get("MKW_BIND_XF");
+        const char *e = cfg_get("ORBITALS_BIND_XF");
         mode = !e ? 0 : !strcmp(e, "check") ? 1 : !strcmp(e, "use") ? 2 : 0;
-        if (mode) rt_log("vk_exec: graphics descriptors kept across frames, %s (MKW_BIND_XF, a measurement)",
+        if (mode) rt_log("vk_exec: graphics descriptors kept across frames, %s (ORBITALS_BIND_XF, a measurement)",
                          mode == 1 ? "compared with each new build" : "taken without resolving on a hit");
-        if (mode && !(tab = calloc(XB_SLOTS, sizeof *tab))) rt_fatal("vk: out of memory (MKW_BIND_XF)");
+        if (mode && !(tab = calloc(XB_SLOTS, sizeof *tab))) rt_fatal("vk: out of memory (ORBITALS_BIND_XF)");
     }
     return mode;
 }
 
 static void xb_log(void) {
     if (++n_draws % 3000) return;
-    rt_log("vk_exec: MKW_BIND_XF over 3000 draws: %llu found, %llu equal, %llu different", (unsigned long long)n_hit,
+    rt_log("vk_exec: ORBITALS_BIND_XF over 3000 draws: %llu found, %llu equal, %llu different", (unsigned long long)n_hit,
            (unsigned long long)n_equal, (unsigned long long)n_diff);
     n_hit = n_equal = n_diff = 0;
 }
@@ -64,7 +64,7 @@ void xb_put(uint64_t key, const VkPipeInfo *info, const VkDescSlot *d, uint32_t 
     XbEnt *e = &tab[key & (XB_SLOTS - 1)];
     if (e->nd != nd) {
         free(e->d);
-        if (!(e->d = malloc(sizeof *d * (nd ? nd : 1)))) rt_fatal("vk: out of memory (MKW_BIND_XF)");
+        if (!(e->d = malloc(sizeof *d * (nd ? nd : 1)))) rt_fatal("vk: out of memory (ORBITALS_BIND_XF)");
     }
     memcpy(e->d, d, sizeof *d * nd);
     e->key = key, e->info = info, e->nd = nd;

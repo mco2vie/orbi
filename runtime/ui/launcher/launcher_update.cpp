@@ -143,7 +143,7 @@ static bool spawn(const char *const *args) {
 void update_check_start(const char *exe_dir) {
     if (!g_lock) g_lock = SDL_CreateMutex();
     char python[1200], script[1200];
-    if (!cfg_bool("MKW_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
+    if (!cfg_bool("ORBITALS_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
         !find_tools(exe_dir, python, script, sizeof python))
         return;
     g_state = UpdateState{};

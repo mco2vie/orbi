@@ -151,7 +151,7 @@ autor dele; quando relatar um bug aqui, diga quais mods estavam ligados (o log o
 
 Linux, com `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, os cabeçalhos do Vulkan e VMA 3.4.0
 (detalhes em [tools/build/README.md](tools/build/README.md)). Coloque o seu dump em `game/` (`game/exefs`,
-`game/romfs`) ou defina `MKW_GAME=<dir>`, e na raiz do repositório:
+`game/romfs`) ou defina `ORBITALS_GAME=<dir>`, e na raiz do repositório:
 
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt

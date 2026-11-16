@@ -39,13 +39,13 @@ const char *copy_region(VkExec *ex, VkImage image, VkFormat vf, VkImageAspectFla
 const char *copy_out(VkExec *ex, VkImage image, VkFormat vf, VkImageAspectFlags aspect, uint32_t level,
                      uint32_t layer, uint32_t w, uint32_t h, uint32_t d, const char *name);
 
-// vk_dump_buf.c: MKW_DUMP_BUF
+// vk_dump_buf.c: ORBITALS_DUMP_BUF
 extern uint64_t bd_addr, bd_size, bd_off, bd_stride;
 extern uint32_t bd_w, bd_h;
 extern FILE *bufs_f;
 void buf_snap(VkExec *ex, int pass);
 
-// vk_dump_draws.c: MKW_DUMP_DRAWS, called with rec_lock held
+// vk_dump_draws.c: ORBITALS_DUMP_DRAWS, called with rec_lock held
 void draws_init(void);    // reads the environment (vk_dump_init)
 void draws_reset(void);   // a new dump (vk_dump_rearm)
 void draws_select(VkExec *ex, const VkPipeState *s, int pass);   // a draw of pass: starts the run, marks it

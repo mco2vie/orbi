@@ -1,7 +1,7 @@
 // --probe-window: presents the boot's black frame (gfx_window_early), then 300 frames of a cycling clear colour through
 // vk_present_image, reads the swapchain image back and compares every pixel, measures the vsync rate, flips the focus
 // state and drives the cursor release with synthetic window events (the window back end's wsys_probe_*, gfx_wsys.h) and
-// resizes the window. Run with MKW_VK_VALIDATION=1 to count validation errors.
+// resizes the window. Run with ORBITALS_VK_VALIDATION=1 to count validation errors.
 #include <stdio.h>
 #include <string.h>
 
@@ -131,10 +131,10 @@ static int present_and_check(Source *s, int first, int i, int *w_out, int *h_out
 }
 
 int probe_window(void) {
-    // The exact colour checks need the plain picture, whatever orbital.ini says: the SDR swapchain (HDR10, MKW_HDR auto on an
+    // The exact colour checks need the plain picture, whatever orbital.ini says: the SDR swapchain (HDR10, ORBITALS_HDR auto on an
     // HDR screen, encodes them in PQ) and no performance overlay (it draws over the top right corner)
-    plat_setenv("MKW_HDR", "off");
-    plat_setenv("MKW_PERF_OVERLAY", "off");
+    plat_setenv("ORBITALS_HDR", "off");
+    plat_setenv("ORBITALS_PERF_OVERLAY", "off");
     gfx_window_early();   // the boot's black frame first: the presents below must still read back exact
     VkCtx *c = vk_ctx();
     if (!c) return fail("no Vulkan device");

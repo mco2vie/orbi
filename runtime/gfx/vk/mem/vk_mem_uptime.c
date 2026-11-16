@@ -1,4 +1,4 @@
-// MKW_UPLOAD_TIME=1 (diagnosis): the GPU time of each upload batch (vk_mem_upload.c), from a
+// ORBITALS_UPLOAD_TIME=1 (diagnosis): the GPU time of each upload batch (vk_mem_upload.c), from a
 // timestamp at its start to one at its end, logged with what it held when it took over 50 ms, and the longest so far.
 // Why: the capture replays of 08/11/2026 (xb-*, hang1) lost the GPU in the load, on an upload batch RADV_DEBUG=hang saw
 // run past 1 s; amdgpu resets the ring of any job past 2 s (lockup_timeout).
@@ -25,13 +25,13 @@ static struct { void *at; uint32_t n; } callers[UT_SLOTS][UT_CALLERS];   // who 
 // Starts timing the batch recorded into cb: its slot, or -1 (off, or every slot taken). Under the upload lock.
 int vk_uptime_begin(VkCommandBuffer cb) {
     if (on < 0) {
-        const char *e = cfg_get("MKW_UPLOAD_TIME");
+        const char *e = cfg_get("ORBITALS_UPLOAD_TIME");
         on = e && *e && strcmp(e, "0");
         if (on) {
             VkQueryPoolCreateInfo qi = {.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
                                         .queryType = VK_QUERY_TYPE_TIMESTAMP, .queryCount = 2 * UT_SLOTS};
             if (vkCreateQueryPool(vk_ctx()->device, &qi, NULL, &pool) != VK_SUCCESS) on = 0;
-            rt_log("vk: MKW_UPLOAD_TIME: upload batches over 50 ms of GPU logged%s", on ? "" : " (no query pool: off)");
+            rt_log("vk: ORBITALS_UPLOAD_TIME: upload batches over 50 ms of GPU logged%s", on ? "" : " (no query pool: off)");
         }
     }
     if (!on) return -1;

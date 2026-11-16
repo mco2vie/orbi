@@ -63,7 +63,7 @@ def lower_bounds(sdk: Nso, types: list[str]) -> Counter:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--nvn-h", type=Path, default=DEFAULT_NVN_H)
-    ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("MKW_GAME", "game")) / "exefs")
+    ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs")
     args = ap.parse_args()
     nvn1 = {m.group(2): int(m.group(1), 0) for m in RESERVED.finditer(args.nvn_h.read_text())}
     bound = lower_bounds(Nso(str(args.exefs / "sdk")), list(nvn1))

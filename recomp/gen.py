@@ -47,7 +47,7 @@ from lifter import hx  # noqa: E402
 from module import Module  # noqa: E402
 
 # Written into every generated file: a commit check can refuse anything carrying it (game-derived code).
-GENERATED_MARKER = 'MKW_RECOMP_' + 'GENERATED_FROM_GAME_CODE'
+GENERATED_MARKER = 'ORBITALS_RECOMP_' + 'GENERATED_FROM_GAME_CODE'
 
 TERMINATORS = ('b', 'br', 'ret', 'trap')
 MUSTTAIL = '__attribute__((musttail)) return'

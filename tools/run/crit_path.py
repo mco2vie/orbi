@@ -1,7 +1,7 @@
-"""Critical path of each frame from a MKW_CRIT recording (runtime/core/kernel/kernel_diag.c, with MKW_TRACE=sched).
+"""Critical path of each frame from a ORBITALS_CRIT recording (runtime/core/kernel/kernel_diag.c, with ORBITALS_TRACE=sched).
 
 Why: whether waiting for a virtual core or any other wait lies on the frame's
-chain: the per-thread shares of MKW_TRACE=sched do not say which waits delay the present.
+chain: the per-thread shares of ORBITALS_TRACE=sched do not say which waits delay the present.
 From totk-pc-recomp tools/crit_path.py @ eccf4dd (MIT, Copyright (c) 2026 Valiantsin Dzerakh); only this header and two
 lint fixes (Path, pairwise) changed.
 
@@ -11,7 +11,7 @@ the wake that ended the wait names the waker: the time from that signal to the e
 the walk goes on on the waker at the moment it signalled. A wait no guest thread ended (a timeout, a host signal)
 counts whole. The sums per frame add up to the frame interval.
 
-Usage: uv run tools/run/crit_path.py <crit.bin> [--top N]   (MKW_CRIT=w8-20 MKW_CRIT_OUT=... tools/run/race.sh NAME)
+Usage: uv run tools/run/crit_path.py <crit.bin> [--top N]   (ORBITALS_CRIT=w8-20 ORBITALS_CRIT_OUT=... tools/run/race.sh NAME)
 """
 
 import argparse

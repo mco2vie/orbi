@@ -33,7 +33,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("addr")
     ap.add_argument("--count", type=int)
-    ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("MKW_GAME", "game")) / "exefs")
+    ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs")
     a = ap.parse_args()
     mod, off = a.addr.split("+")
     off = int(off, 16)

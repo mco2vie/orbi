@@ -1,10 +1,10 @@
 """CPU time and run-queue wait of each thread of a running build/mkw over a window, grouped by thread name.
 
-Why: a change that lets more guest threads run at once (MKW_CORE_NUM_GATE) can
+Why: a change that lets more guest threads run at once (ORBITALS_CORE_NUM_GATE) can
 take host CPU from the replay and render threads; /proc/<pid>/task/<tid>/schedstat gives, per thread, the time on a
 CPU and the time ready but waiting for one (the run queue), which no log of the runtime measures.
 
-Waits for the run's log to show the race start (MKW_SEQ_UNTIL's "watch off" line), skips --skip seconds, then reads
+Waits for the run's log to show the race start (ORBITALS_SEQ_UNTIL's "watch off" line), skips --skip seconds, then reads
 schedstat at the start and the end of --secs seconds. Threads alive at both ends count. Per name (the guest threads
 share theirs): threads, CPU ms per s and run-queue wait ms per s, and the share of wait in (CPU + wait).
 

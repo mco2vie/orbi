@@ -44,7 +44,7 @@ Timer/
     "spans": [
       {
         "set": "timer",
-        "env": "MKW_TIMER",
+        "env": "ORBITALS_TIMER",
         "module": "main",
         "off": "48e728",
         "words": [
@@ -57,7 +57,7 @@ Timer/
     "sites": [
       {
         "set": "classicgp",
-        "env": "MKW_CLASSICGP",
+        "env": "ORBITALS_CLASSICGP",
         "module": "main",
         "off": "7d201c",
         "orig": "51001D4A",
@@ -75,8 +75,8 @@ Timer/
 | `name` | the folder name; what `MODS` lists and the menu toggles |
 | `title` | what the row shows (a rename sets it) |
 | `has_romfs`, `romfs_files`, `has_exefs`, `exefs_builds`, `exefs_match` | written by `import.py` from what it found: shown in the row, and `exefs_match` is false when the shipped `.ips` names another game build |
-| `switches` | bare switch names, **without** `MKW_`: enabling the mod sets `MKW_<name>=<value>` for the next start. Every switch a patch set uses must appear here, or enabling the mod would not turn its code on |
-| `patches.sites` | one instruction replaced: `set` (the patch set's name), `env` (its `MKW_` switch), `module`, `off` (hex offset inside that module), `orig` (the word the binary must hold), `repl` (the words to run instead, same count as `orig` - one) |
+| `switches` | bare switch names, **without** `ORBITALS_`: enabling the mod sets `ORBITALS_<name>=<value>` for the next start. Every switch a patch set uses must appear here, or enabling the mod would not turn its code on |
+| `patches.sites` | one instruction replaced: `set` (the patch set's name), `env` (its `ORBITALS_` switch), `module`, `off` (hex offset inside that module), `orig` (the word the binary must hold), `repl` (the words to run instead, same count as `orig` - one) |
 | `patches.spans` | a region the switch skips whole, for a mod whose patch is a branch over code (a site cannot be a branch): `set`, `env`, `module`, `off`, `words` (every original word, in order). With the switch on, the region is jumped over; with it off, it runs as shipped |
 
 Rules the generate enforces (`recomp/patches.py`, `recomp/gen.py`):

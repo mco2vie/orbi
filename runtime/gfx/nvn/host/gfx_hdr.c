@@ -1,11 +1,11 @@
 // HDR output, as the console does it: Mario Kart World draws its own HDR picture when nn::vi says the display is in
 // HDR10 (ov_gfx.c answers its queries from here), and the present hands that picture to an HDR10 swapchain.
-// Why: players with HDR screens (#168) and Adrià's decisions of 12/11/2026: MKW_HDR auto (the default: HDR when the
+// Why: players with HDR screens (#168) and Adrià's decisions of 12/11/2026: ORBITALS_HDR auto (the default: HDR when the
 // display is in HDR, as the console turns it on by itself) or off; peak and paper white from the system; followed live
 // (the window's HDR event and the setting rebuild the swapchain, and the game asks again every frame).
 // The display is in HDR when SDL says so (Windows, Wayland with colour management); where SDL cannot tell (X11, inside
 // gamescope) when the surface offers HDR10, as gamescope does only with its HDR on.
-// MKW_HDR_FAKE=1 answers HDR10 to the game on an SDR swapchain, to see what the game draws then on a machine without
+// ORBITALS_HDR_FAKE=1 answers HDR10 to the game on an SDR swapchain, to see what the game draws then on a machine without
 // an HDR screen; the picture is then wrong.
 // References: Hookshot and nx2navi (Switch 2 recompilations) answer nn::vi the same way for their games (format 1,
 // HDR10) and pick the swapchain by its colour space; no code of them is taken.
@@ -24,7 +24,7 @@ enum { NITS_SCRGB_ONE = 80, WHITE_DEFAULT = 203, PEAK_DEFAULT = 1000 };   // scR
 
 static volatile int32_t g_on;              // the swapchain is HDR10
 static volatile uint32_t g_peak, g_white;  // nits, as told to the game
-static char g_cfg[8];                      // the MKW_HDR the swapchain was made with
+static char g_cfg[8];                      // the ORBITALS_HDR the swapchain was made with
 
 int gfx_hdr_output(uint16_t *peak, uint16_t *white) {
     static int fake = -1;
@@ -39,10 +39,10 @@ int gfx_hdr_output(uint16_t *peak, uint16_t *white) {
     return on;
 }
 
-int gfx_hdr_cfg_changed(void) { return strcmp(cfg_value("MKW_HDR"), g_cfg) != 0; }
+int gfx_hdr_cfg_changed(void) { return strcmp(cfg_value("ORBITALS_HDR"), g_cfg) != 0; }
 
 int gfx_hdr_pick(const VkSurfaceFormatKHR *fmts, uint32_t n, VkSurfaceFormatKHR *out) {
-    snprintf(g_cfg, sizeof g_cfg, "%s", cfg_value("MKW_HDR"));
+    snprintf(g_cfg, sizeof g_cfg, "%s", cfg_value("ORBITALS_HDR"));
     float white = 0, headroom = 0;
     int sys = wsys_hdr(&white, &headroom), found = 0;
     if (strcmp(g_cfg, "off") && sys != 0 && vk_ctx()->has_colorspace)
@@ -59,8 +59,8 @@ int gfx_hdr_pick(const VkSurfaceFormatKHR *fmts, uint32_t n, VkSurfaceFormatKHR 
     static int logged = -1;
     if (logged != found) {
         logged = found;
-        if (found) rt_log("gfx: HDR10 output, peak %u nits, paper white %u (MKW_HDR %s)", p, w, g_cfg);
-        else if (!strcmp(g_cfg, "off")) rt_log("gfx: SDR output (MKW_HDR off)");
+        if (found) rt_log("gfx: HDR10 output, peak %u nits, paper white %u (ORBITALS_HDR %s)", p, w, g_cfg);
+        else if (!strcmp(g_cfg, "off")) rt_log("gfx: SDR output (ORBITALS_HDR off)");
         else if (sys == 0) rt_log("gfx: SDR output: the display is not in HDR");
         else rt_log("gfx: SDR output: the display offers no HDR10 format%s", vk_ctx()->has_colorspace ? "" :
                     " (no VK_EXT_swapchain_colorspace)");

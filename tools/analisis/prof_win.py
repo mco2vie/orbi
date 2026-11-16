@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Report of a Windows sampling profile (MKW_PROFILE=<path>, runtime/core/diag/prof_win.c): samples per thread, per module
+"""Report of a Windows sampling profile (ORBITALS_PROFILE=<path>, runtime/core/diag/prof_win.c): samples per thread, per module
 and per function. Functions of mkw.exe and orbitalgame.dll are named with llvm-symbolizer (llvm-mingw of build/win) from the
 binaries of build/dist/windows; other modules (the NVIDIA driver, ntdll, kernel32) are summed by module.
-Slow-frame dumps (MKW_PROFILE_SLOW=<ms>: PROFILE.f<frame>, `tstack` lines with the thread) are summed per thread
+Slow-frame dumps (ORBITALS_PROFILE_SLOW=<ms>: PROFILE.f<frame>, `tstack` lines with the thread) are summed per thread
 instead: for each thread its samples, the functions it was in (leaf) and the first frame of ours under a driver or
 system call, over every dump given.
 
@@ -151,7 +151,7 @@ def main() -> None:
             rips.append((int(w[1], 16), int(w[2]), int(w[3]) if len(w) > 3 else 0))
         elif w[0] in ("main", "render", "replay"):
             roles.update({int(w[i + 1]): w[i] for i in range(0, len(w) - 1, 2)})
-        elif w[0] == "stack":   # MKW_PROFILE_CHAINS / _RENDER: count, then the chain from the sampled Rip
+        elif w[0] == "stack":   # ORBITALS_PROFILE_CHAINS / _RENDER: count, then the chain from the sampled Rip
             chains.append((int(w[1]), [int(x, 16) for x in w[2:]]))
     modules.sort()
     starts = [m[0] for m in modules]

@@ -8,7 +8,7 @@ Why: a game run takes minutes and its frames are never the same twice; frame gen
 middle frame is known. A change to the shaders or their constants is judged by these numbers before any game run.
 
 Two cases:
-  three consecutive frames A B C (MKW_SHOTS=lo-hi:1 with MKW_SHOTS_FULL=1 saves them): the frame made between A and C
+  three consecutive frames A B C (ORBITALS_SHOTS=lo-hi:1 with ORBITALS_SHOTS_FULL=1 saves them): the frame made between A and C
       against B;
   --synthetic IMG: IMG moved by --shift pixels from A to C (B halfway) under a still box standing in for the HUD, so the
       motion is known exactly and the box must not move.
@@ -18,7 +18,7 @@ into OUT/sheet.png. Pictures stay in OUT (build/, never in git).
 
 Usage: uv run tools/imagen/fg_check.py A.png B.png C.png [--out build/fg] [--mkw build/dist/linux/mkw]
        uv run tools/imagen/fg_check.py --synthetic IMG [--shift 24,6] [--out build/fg]
-Environment (MKW_FG_LAMBDA, MKW_FG_BIAS) reaches the probe.
+Environment (ORBITALS_FG_LAMBDA, ORBITALS_FG_BIAS) reaches the probe.
 """
 
 import argparse
@@ -98,7 +98,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     write_rgba(out / "a.rgba", a)
     write_rgba(out / "b.rgba", c)
-    env = dict(os.environ, MKW_FG_PROBE=str(out))
+    env = dict(os.environ, ORBITALS_FG_PROBE=str(out))
     r = subprocess.run([args.mkw, "--probe-framegen"], env=env, capture_output=True, text=True)
     print("\n".join(line for line in r.stdout.splitlines() if line.startswith("probe-framegen")))
     if r.returncode:

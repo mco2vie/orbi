@@ -215,13 +215,13 @@ NVN_API(nvnTextureInitialize) {
     live_put(o);
     NVN_LOG("Texture %p %ux%ux%u lv%u fmt=%#x tgt=%d flags=%#x size=%#llx", (void *)o, o->d.width, o->d.height,
             o->d.depth, o->d.levels, o->d.format, o->d.target, o->d.flags, (unsigned long long)o->L.size);
-    // MKW_TRACE_SHADOW_SIZE=1: the guest call chain that creates the cascaded shadow
+    // ORBITALS_TRACE_SHADOW_SIZE=1: the guest call chain that creates the cascaded shadow
     // map (D16, 3 layers; 3072 docked, 2048 handheld), to find where the game picks its size.
-    if (o->d.format == 0x32 && o->d.depth == 3 && o->d.width >= 1024 && cfg_get("MKW_TRACE_SHADOW_SIZE")) {
+    if (o->d.format == 0x32 && o->d.depth == 3 && o->d.width >= 1024 && cfg_get("ORBITALS_TRACE_SHADOW_SIZE")) {
         rt_log("nvn: shadow map %ux%ux3 created, lr %#llx", o->d.width, o->d.height, (unsigned long long)c->x[30]);
         kern_backtrace(c);
     }
-    if ((o->d.flags & NVN_TEXTURE_FLAGS_SPARSE) && cfg_get("MKW_SPARSE_TRACE"))   // tools/gpu/sparse_fit.py
+    if ((o->d.flags & NVN_TEXTURE_FLAGS_SPARSE) && cfg_get("ORBITALS_SPARSE_TRACE"))   // tools/gpu/sparse_fit.py
         rt_log("sparse: tex %#llx %ux%ux%u lv%u fmt %#x tgt %d size %#llx layer %#llx tileH %u",
                (unsigned long long)(uintptr_t)o->mem, o->d.width, o->d.height, o->d.depth, o->d.levels, o->d.format,
                o->d.target, (unsigned long long)o->L.size, (unsigned long long)o->L.layer_size, o->L.tileH);
@@ -683,7 +683,7 @@ static void sleep_until(uint64_t deadline) {
 // and with acquires paced only by time the game wrote frame N+2's half while the GPU still drew frame N from it (a
 // dark tree for one frame; dumps lf6-lf9 and fe2, 06/11/2026). release[i]: the fence of the submits before the present
 // that replaced image i. The window object is the game's (its size is fixed): the fences live in a table of their own.
-// MKW_ACQUIRE_GPU (default 1; "ab"): 0 paces by time only, as before.
+// ORBITALS_ACQUIRE_GPU (default 1; "ab"): 0 paces by time only, as before.
 static struct { const win_t *w; uint64_t release[4]; int last; } relt[4];
 static PlatMutex rel_lock = PLAT_MUTEX_INIT;
 static int acq_mode = -1;
@@ -713,7 +713,7 @@ static void release_note(const win_t *w, int idx) {   // QueuePresentTexture of 
 static void acquire_wait(const win_t *w, int idx) {
     if (acq_mode < 0) {
         acq_mode = rt_knob("ACQUIRE_GPU", "1");
-        rt_log("nvn: an acquired image waits for the GPU to finish the frame that replaced it %s (MKW_ACQUIRE_GPU)",
+        rt_log("nvn: an acquired image waits for the GPU to finish the frame that replaced it %s (ORBITALS_ACQUIRE_GPU)",
                acq_mode == 2 ? "in the B blocks" : acq_mode ? "on" : "off");
     }
     if (!RT_KNOB_ON(acq_mode)) return;
@@ -773,7 +773,7 @@ NVN_API(nvnQueuePresentTexture) {
     o->presents++;
     turbo_poll();
     release_note(o, idx);
-    nvn_present_fence_note();   // MKW_TRACE=perf: which frame each blocking SyncWait waits for
+    nvn_present_fence_note();   // ORBITALS_TRACE=perf: which frame each blocking SyncWait waits for
     if (rt_trace & RT_TRACE_PERF) nvn_sync_wait_window();
     const tex_t *t = (const tex_t *)o->tex[idx];
     uint64_t period = present_period(o), now = kern_now_ns();
@@ -784,5 +784,5 @@ NVN_API(nvnQueuePresentTexture) {
     frame_step_present(slot, o->interval);   // game.c: the game clock counts presents
     rt_frame_presented(t, o->presents);
     freeze_present();   // core/hacks/freeze.c: the game waits here while frozen
-    nvn2_write_watch_arm();   // MKW_WRITE_WATCH diagnosis
+    nvn2_write_watch_arm();   // ORBITALS_WRITE_WATCH diagnosis
 }

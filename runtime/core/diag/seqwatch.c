@@ -1,4 +1,4 @@
-// Sequence watch (MKW_SEQ_WATCH=1): which of MKW's global sequence nodes (AIGlobalSeq*: TitleWait, TitleMenuMain,
+// Sequence watch (ORBITALS_SEQ_WATCH=1): which of MKW's global sequence nodes (AIGlobalSeq*: TitleWait, TitleMenuMain,
 // PartsSelectEx, WaitIntroMovie, WaitRaceStart... the game's own phases) are active, so screens are found by the game's
 // state instead of frame numbers (Adrià, 01/11/2026: scripts by frame skipped the cup movie or stalled on a screen).
 //
@@ -14,28 +14,28 @@
 //
 //   log           "seq: enter <node> frame N" / "seq: leave <node> frame N"
 //   ctl seq       the active nodes (ctl.c)
-//   MKW_SEQ_HOLD=<node>[,<node>...]   no input script presses from the node's start until it ends or a movie
+//   ORBITALS_SEQ_HOLD=<node>[,<node>...]   no input script presses from the node's start until it ends or a movie
 //                 ends (seqwatch_movie_end, ov_codec.c): WaitIntroMovie keeps updating through the race (live30),
 //                 so the cup movie's end of stream is what releases it
-//   MKW_SEQ_UNTIL=<node>[,<node>...]   the watch goes off at the last of these events, each after the one before
+//   ORBITALS_SEQ_UNTIL=<node>[,<node>...]   the watch goes off at the last of these events, each after the one before
 //                 (<node>: its start, -<node>: its end): what follows is measured without the hook's cost. The race:
 //                 -WaitIntroMovie,IsSequenceFlag (rt-seq and live31-35: IsSequenceFlag also runs in the menus, and
 //                 ~280 frames after the cup movie when the race starts)
-//   MKW_SEQ_EXIT=<s>       with MKW_SEQ_UNTIL: the run ends s seconds after the node started, with the MKW_HOST_TIME
+//   ORBITALS_SEQ_EXIT=<s>       with ORBITALS_SEQ_UNTIL: the run ends s seconds after the node started, with the ORBITALS_HOST_TIME
 //                 census of just that window (Adrià, 01/11/2026: 20 s of race are enough; runs waited minutes past it)
-//   MKW_SEQ_CTL=<n>:<cmd>[;<n>:<cmd>...]   with MKW_SEQ_UNTIL: the ctl command (ctl.c: shot, dump...) n presents after
+//   ORBITALS_SEQ_CTL=<n>:<cmd>[;<n>:<cmd>...]   with ORBITALS_SEQ_UNTIL: the ctl command (ctl.c: shot, dump...) n presents after
 //                 its event, counted here: at.sh reads the log and lagged up to 10 frames, so a fault of five frames
 //                 (the white square of the countdown, sq1-sq4, 06/11/2026) was missed again and again
-//   MKW_FN_WATCH=main+<hex>[,...]   with MKW_SEQ_WATCH: "fn: main+X obj O vt main+V from main+L frame N" each time
+//   ORBITALS_FN_WATCH=main+<hex>[,...]   with ORBITALS_SEQ_WATCH: "fn: main+X obj O vt main+V from main+L frame N" each time
 //                 one of these functions runs on another object than its previous call, so a menu cursor's move is one
 //                 line (menus driven by the log, not by screenshots). The watch goes off with
-//                 MKW_SEQ_UNTIL's event, as the nodes'. Each function logs FN_LINES lines at most.
-//   MKW_PROBE=<node>+<n>[:<frames>][,...]   with MKW_SEQ_WATCH: seqwatch_probe() is true for <frames> presents
-//                 (default 2) from n presents after each start of <node> (<node> "until": MKW_SEQ_UNTIL's event, after
+//                 ORBITALS_SEQ_UNTIL's event, as the nodes'. Each function logs FN_LINES lines at most.
+//   ORBITALS_PROBE=<node>+<n>[:<frames>][,...]   with ORBITALS_SEQ_WATCH: seqwatch_probe() is true for <frames> presents
+//                 (default 2) from n presents after each start of <node> (<node> "until": ORBITALS_SEQ_UNTIL's event, after
 //                 which the nodes go unwatched). A probe logs every call while it is true, without deduplicating: uw18
 //                 and uw19 (11/11/2026) grouped the 2D draws by a partial key and lost the panes they were after, and
 //                 uw20 counted its own window from the wrong movie
-//   MKW_UI_FOCUS=1 with MKW_SEQ_WATCH: "ui: focus <pane path> frame N" when a menu button takes the cursor: the game
+//   ORBITALS_UI_FOCUS=1 with ORBITALS_SEQ_WATCH: "ui: focus <pane path> frame N" when a menu button takes the cursor: the game
 //                 calls main+0xce8564 (slot 18 of the UIControl button vtables) on the button that takes it and
 //                 main+0x21e12f8 on the one that leaves (tt1: one pair per DOWN of the script). The button object
 //                 holds its pane's name ("L_Chara_00" at +0x21c, "L_CharaSheet_00/L_Chara_00" further on): the line
@@ -60,8 +60,8 @@
 #define SLOT_ENTER 10
 #define SLOT_UPDATE 11
 #define SLOT_LEAVE 12
-#define SLOT_FN 20   // MKW_FN_WATCH
-#define SLOT_FOCUS 21   // MKW_UI_FOCUS
+#define SLOT_FN 20   // ORBITALS_FN_WATCH
+#define SLOT_FOCUS 21   // ORBITALS_UI_FOCUS
 #define UI_NAME_SPAN 0x1000    // bytes of the button object searched for its pane name
 #define FN_MAX 32
 #define STALE 3
@@ -73,29 +73,29 @@ static uint64_t haddr[HSIZE];   // watched function -> SLOT_ENTER or SLOT_LEAVE 
 static int8_t hval[HSIZE];
 static volatile uint8_t active[MAX_NODES];
 static volatile uint64_t last_update[MAX_NODES];   // present count at the node's latest +11 or +10
-static volatile uint8_t held[MAX_NODES];   // MKW_SEQ_HOLD
+static volatile uint8_t held[MAX_NODES];   // ORBITALS_SEQ_HOLD
 static volatile int32_t nheld_active;
 static volatile int32_t movie_ended;      // since the latest start of a held node
 static volatile int seq_on;                // the watch is on (g_fnprof is shared with the import census)
 static int64_t name_off = -1;              // name slot - vtable pointer, the same in every node class
 #define UNTIL_MAX 4
-static int until_node[UNTIL_MAX];          // MKW_SEQ_UNTIL: the chain of events, in order
+static int until_node[UNTIL_MAX];          // ORBITALS_SEQ_UNTIL: the chain of events, in order
 static uint8_t until_on[UNTIL_MAX];        // 1: the node's start, 0: its end (-<node>)
 static int nuntil, until_at;               // until_at: the next event of the chain (under set_active's lock)
-static uint64_t exit_ns;                   // MKW_SEQ_EXIT, in ns
-static volatile uint64_t window_end;       // when the run ends (kern_now_ns), 0 before MKW_SEQ_UNTIL's node started
+static uint64_t exit_ns;                   // ORBITALS_SEQ_EXIT, in ns
+static volatile uint64_t window_end;       // when the run ends (kern_now_ns), 0 before ORBITALS_SEQ_UNTIL's node started
 #define SEQ_CTL_MAX 128
-static struct { uint64_t n; char cmd[200]; } seq_ctl[SEQ_CTL_MAX];   // MKW_SEQ_CTL
+static struct { uint64_t n; char cmd[200]; } seq_ctl[SEQ_CTL_MAX];   // ORBITALS_SEQ_CTL
 static int nseq_ctl, seq_ctl_at;
-static volatile uint64_t window_frame;     // the present count at MKW_SEQ_UNTIL's event + 1, 0 before
-static volatile uint64_t window_t0;        // kern_now_ns at MKW_SEQ_UNTIL's event, 0 before: the A/B world clock
+static volatile uint64_t window_frame;     // the present count at ORBITALS_SEQ_UNTIL's event + 1, 0 before
+static volatile uint64_t window_t0;        // kern_now_ns at ORBITALS_SEQ_UNTIL's event, 0 before: the A/B world clock
 #define PROBE_MAX 8
-#define PROBE_UNTIL -2                     // MKW_PROBE's node "until"
+#define PROBE_UNTIL -2                     // ORBITALS_PROBE's node "until"
 static struct { int node; uint64_t n, frames; volatile uint64_t from; } probes[PROBE_MAX];   // from: first present
 static int nprobes;
 
 #define FN_LINES 64   // lines per watched function: one called every frame on many objects goes quiet after them
-static struct { uint64_t addr, obj; int lines; } fnw[FN_MAX];   // MKW_FN_WATCH, its previous call's object
+static struct { uint64_t addr, obj; int lines; } fnw[FN_MAX];   // ORBITALS_FN_WATCH, its previous call's object
 static int nfnw;
 
 static uint32_t h(uint64_t a) { return (uint32_t)((a >> 2) * 0x9E3779B1u) & (HSIZE - 1); }
@@ -120,14 +120,14 @@ static int node_index(const char *name) {
 }
 
 void seqwatch_init(void) {
-    // MKW_QUICK_RACE's presses wait for phases (input.c): the watch goes on for it and off where it arrives
-    const char *on = cfg_get("MKW_SEQ_WATCH"), *quick = cfg_value("MKW_QUICK_RACE");
+    // ORBITALS_QUICK_RACE's presses wait for phases (input.c): the watch goes on for it and off where it arrives
+    const char *on = cfg_get("ORBITALS_SEQ_WATCH"), *quick = cfg_value("ORBITALS_QUICK_RACE");
     int quick_on = strcmp(quick, "off") != 0;
     if ((!on || !*on || *on == '0') && !quick_on) return;
     // Each version's own table: another's offsets would watch unrelated code
     char own[48];
     snprintf(own, sizeof own, "build/seq_nodes-%d.tsv", rt_version()->number);
-    const char *path = cfg_get("MKW_SEQ_NODES");
+    const char *path = cfg_get("ORBITALS_SEQ_NODES");
     if (!path || !*path) path = own;
     FILE *f = fopen(path, "r");
     if (!f) { rt_log("seq: no %s (uv run tools/analisis/seq_nodes.py): watch off", path); return; }
@@ -146,17 +146,17 @@ void seqwatch_init(void) {
         watch(LD64(nodes[k].slot + 8u * SLOT_LEAVE), SLOT_LEAVE);
         watch(LD64(nodes[k].slot + 8u * SLOT_UPDATE), SLOT_UPDATE);
     }
-    const char *hold = cfg_get("MKW_SEQ_HOLD");
+    const char *hold = cfg_get("ORBITALS_SEQ_HOLD");
     for (const char *p = hold; p && *p;) {
         size_t n = strcspn(p, ",");
         char name[48];
         snprintf(name, sizeof name, "%.*s", (int)n, p);
         int k = node_index(name);
-        if (k < 0) rt_log("seq: MKW_SEQ_HOLD: no node %s", name);
+        if (k < 0) rt_log("seq: ORBITALS_SEQ_HOLD: no node %s", name);
         else held[k] = 1;
         p += n + (p[n] == ',');
     }
-    const char *until = cfg_get("MKW_SEQ_UNTIL"), *ex = cfg_get("MKW_SEQ_EXIT");
+    const char *until = cfg_get("ORBITALS_SEQ_UNTIL"), *ex = cfg_get("ORBITALS_SEQ_EXIT");
     // free roam starts from the title's scene with no load: IntoRace2 five frames after Plus (fr1)
     if ((!until || !*until) && quick_on) until = strcmp(quick, "free") ? "ReadyRace" : "IntoRace2";
     for (const char *p = until; p && *p && nuntil < UNTIL_MAX;) {
@@ -165,39 +165,39 @@ void seqwatch_init(void) {
         int end = *p == '-';
         snprintf(name, sizeof name, "%.*s", (int)(n - (size_t)end), p + end);
         int k = node_index(name);
-        if (k < 0) rt_log("seq: MKW_SEQ_UNTIL: no node %s", name);
+        if (k < 0) rt_log("seq: ORBITALS_SEQ_UNTIL: no node %s", name);
         else until_node[nuntil] = k, until_on[nuntil++] = (uint8_t)!end;
         p += n + (p[n] == ',');
     }
     if (ex && *ex) exit_ns = (uint64_t)(atof(ex) * 1e9);
-    for (const char *p = cfg_get("MKW_SEQ_CTL"); p && *p && nseq_ctl < SEQ_CTL_MAX;) {   // in order of n
+    for (const char *p = cfg_get("ORBITALS_SEQ_CTL"); p && *p && nseq_ctl < SEQ_CTL_MAX;) {   // in order of n
         size_t n = strcspn(p, ";");
         char *colon;
         uint64_t at = strtoull(p, &colon, 10);
         if (*colon == ':' && colon < p + n) {
             seq_ctl[nseq_ctl].n = at;
             snprintf(seq_ctl[nseq_ctl++].cmd, sizeof seq_ctl[0].cmd, "%.*s", (int)(p + n - colon - 1), colon + 1);
-        } else rt_log("seq: MKW_SEQ_CTL: %.*s is not <n>:<command>", (int)n, p);
+        } else rt_log("seq: ORBITALS_SEQ_CTL: %.*s is not <n>:<command>", (int)n, p);
         p += n + (p[n] == ';');
     }
-    for (const char *p = cfg_get("MKW_FN_WATCH"); p && *p && nfnw < FN_MAX;) {
+    for (const char *p = cfg_get("ORBITALS_FN_WATCH"); p && *p && nfnw < FN_MAX;) {
         size_t n = strcspn(p, ",");
         unsigned long long off;
         if (sscanf(p, "main+%llx", &off) == 1) watch(fnw[nfnw++].addr = MAIN_BASE + off, SLOT_FN);
-        else rt_log("seq: MKW_FN_WATCH: %.*s is not main+<hex>", (int)n, p);
+        else rt_log("seq: ORBITALS_FN_WATCH: %.*s is not main+<hex>", (int)n, p);
         p += n + (p[n] == ',');
     }
-    for (const char *p = cfg_get("MKW_PROBE"); p && *p && nprobes < PROBE_MAX;) {
+    for (const char *p = cfg_get("ORBITALS_PROBE"); p && *p && nprobes < PROBE_MAX;) {
         size_t n = strcspn(p, ",");
         char name[48];
         unsigned long long at = 0, frames = 2;
         int got = sscanf(p, "%47[^+,]+%llu:%llu", name, &at, &frames);
         int k = got >= 2 ? (!strcmp(name, "until") ? PROBE_UNTIL : node_index(name)) : -1;
-        if (k == -1) rt_log("seq: MKW_PROBE: %.*s is not <node>+<n>[:<frames>]", (int)n, p);
+        if (k == -1) rt_log("seq: ORBITALS_PROBE: %.*s is not <node>+<n>[:<frames>]", (int)n, p);
         else probes[nprobes].node = k, probes[nprobes].n = at, probes[nprobes++].frames = frames;
         p += n + (p[n] == ',');
     }
-    rt_log("seq: watching %d sequence nodes and %d functions (MKW_SEQ_WATCH, MKW_FN_WATCH)", nnodes, nfnw);
+    rt_log("seq: watching %d sequence nodes and %d functions (ORBITALS_SEQ_WATCH, ORBITALS_FN_WATCH)", nnodes, nfnw);
     seq_on = 1;
     rt_fnprof_set(1);
 }
@@ -223,7 +223,7 @@ static void set_active(int k, uint8_t on, uint64_t frame, const char *why) {
         // the seconds since the guest started: how long a scene takes in real time (hacks: turbo, skipped movies)
         rt_log("seq: %s %s frame %llu at %.1f s%s", on ? "enter" : "leave", nodes[k].name, (unsigned long long)frame,
                (kern_now_ns() - rt_guest_start_ns) / 1e9, why);
-        if (on) input_script_phase(nodes[k].name);   // MKW_INPUT_SCRIPT lines that wait for this phase
+        if (on) input_script_phase(nodes[k].name);   // ORBITALS_INPUT_SCRIPT lines that wait for this phase
         for (int i = 0; i < nprobes; i++)
             if (on && probes[i].node == k) __atomic_store_n(&probes[i].from, frame + probes[i].n, __ATOMIC_RELEASE);
         if (until_at < nuntil && k == until_node[until_at] && on == until_on[until_at] && ++until_at == nuntil &&
@@ -236,8 +236,8 @@ static void set_active(int k, uint8_t on, uint64_t frame, const char *why) {
             for (int i = 0; i < nprobes; i++)
                 if (probes[i].node == PROBE_UNTIL) __atomic_store_n(&probes[i].from, frame + probes[i].n, __ATOMIC_RELEASE);
             if (exit_ns) window_end = kern_now_ns() + exit_ns;
-            rt_log("seq: watch off at %s %s frame %llu (MKW_SEQ_UNTIL)%s", on ? "the start of" : "the end of", nodes[k].name, (unsigned long long)frame,
-                   exit_ns ? "; the run ends after MKW_SEQ_EXIT" : "");
+            rt_log("seq: watch off at %s %s frame %llu (ORBITALS_SEQ_UNTIL)%s", on ? "the start of" : "the end of", nodes[k].name, (unsigned long long)frame,
+                   exit_ns ? "; the run ends after ORBITALS_SEQ_EXIT" : "");
         }
     }
     plat_mutex_unlock(&lock);
@@ -247,7 +247,7 @@ static int pane_char(char c) {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '/';
 }
 
-// The pane name a button object holds (MKW_UI_FOCUS): the first run of 4+ name characters with a '_' (pane names are
+// The pane name a button object holds (ORBITALS_UI_FOCUS): the first run of 4+ name characters with a '_' (pane names are
 // "L_Btn_02"; a shorter rule took bytes of pointers, tt2), the one with a '/' (the path) when there is one.
 static void ui_name(const char *o, char *out, size_t cap) {
     out[0] = 0;
@@ -308,7 +308,7 @@ int seqwatch_window(void) { return __atomic_load_n(&window_end, __ATOMIC_RELAXED
 void seqwatch_frame(uint64_t frame) {
     uint64_t end = __atomic_load_n(&window_end, __ATOMIC_RELAXED);
     if (end && kern_now_ns() >= end && !cap_busy()) {   // a capture in progress ends first (its file would be cut)
-        rt_log("seq: MKW_SEQ_EXIT: %.1f s after MKW_SEQ_UNTIL, frame %llu: exit", exit_ns / 1e9, (unsigned long long)frame);
+        rt_log("seq: ORBITALS_SEQ_EXIT: %.1f s after ORBITALS_SEQ_UNTIL, frame %llu: exit", exit_ns / 1e9, (unsigned long long)frame);
         hostfn_time_window(frame);
         prof_write();
         fflush(stderr);
@@ -316,7 +316,7 @@ void seqwatch_frame(uint64_t frame) {
     }
     uint64_t w = __atomic_load_n(&window_frame, __ATOMIC_ACQUIRE);
     while (w && seq_ctl_at < nseq_ctl && frame >= w - 1 + seq_ctl[seq_ctl_at].n) {
-        rt_log("seq: MKW_SEQ_CTL +%llu (frame %llu): %s", (unsigned long long)seq_ctl[seq_ctl_at].n,
+        rt_log("seq: ORBITALS_SEQ_CTL +%llu (frame %llu): %s", (unsigned long long)seq_ctl[seq_ctl_at].n,
                (unsigned long long)frame, seq_ctl[seq_ctl_at].cmd);
         ctl_run(seq_ctl[seq_ctl_at++].cmd);
     }
@@ -330,7 +330,7 @@ int seqwatch_hold(void) {
 
 void seqwatch_movie_end(void) {
     if (__atomic_load_n(&nheld_active, __ATOMIC_RELAXED) > 0 && !__atomic_exchange_n(&movie_ended, 1, __ATOMIC_RELAXED))
-        rt_log("seq: movie ended frame %llu: MKW_SEQ_HOLD released",
+        rt_log("seq: movie ended frame %llu: ORBITALS_SEQ_HOLD released",
                (unsigned long long)__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED));
 }
 
@@ -348,5 +348,5 @@ void seqwatch_log_active(void) {
     int n = 0;
     for (int k = 0; k < nnodes && n < (int)sizeof buf - 50; k++)
         if (active[k]) n += snprintf(buf + n, sizeof buf - (size_t)n, " %s", nodes[k].name);
-    rt_log("ctl: seq%s", n ? buf : (nnodes ? " (none active)" : " (MKW_SEQ_WATCH off)"));
+    rt_log("ctl: seq%s", n ? buf : (nnodes ? " (none active)" : " (ORBITALS_SEQ_WATCH off)"));
 }

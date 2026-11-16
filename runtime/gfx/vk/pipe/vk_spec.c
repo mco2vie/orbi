@@ -1,16 +1,16 @@
 // Specialization of the fixed-address constant words. The translator reads each
 // constant word at a fixed address through specialization constants (SCU<k> ? SCV<k> : cb<bank>...; ids 2k, 2k + 1,
 // GfxShader "spec" list). Here, per shader, the values its draws bind are watched:
-// - MKW_CB_CENSUS=<file>: every 120 presents <file> is rewritten with, per shader seen, its draws and how many words
+// - ORBITALS_CB_CENSUS=<file>: every 120 presents <file> is rewritten with, per shader seen, its draws and how many words
 //   kept one value, changed, or could not be read (a binding outside the submission's uniform snapshot). Measure only.
-// - MKW_SPEC=1 (or ab): a shader's words are read in one of every 4 of its draws until it has 32 such draws over at
+// - ORBITALS_SPEC=1 (or ab): a shader's words are read in one of every 4 of its draws until it has 32 such draws over at
 //   least 120 presents; the words that kept one value then make its variant (gfx_shader_variant: the SPIR-V with those
 //   constants' defaults set). From then on each draw reads only the fixed words and takes the variant when all match,
 //   the generic shader otherwise; the caller also takes the generic one while the variant's pipeline is being built,
 //   so no draw is skipped for it (Dolphin's hybrid ubershader mode, docs/research.md), and it is built from the
 //   low queue (vk_pipeline_graphics_async_low). A variant missing in over
 //   a quarter of its first 256 draws goes back to watching, up to 3 times (values set in the menus can change in the
-//   race); the old variant stays alive, as recorded draws may still use it. MKW_SPEC_MAX caps the live variants (512):
+//   race); the old variant stays alive, as recorded draws may still use it. ORBITALS_SPEC_MAX caps the live variants (512):
 //   RADV holds gigabytes building a large pipeline (vk_pipeline.c workers_start). Vertex and fragment stages only:
 //   compute pipelines are built on the calling thread.
 // A value is known only where the GPU reads exactly the bytes looked at: the program's own constants (bank 1) and
@@ -43,7 +43,7 @@ typedef struct SpecEnt {
     uint64_t draws;
     uint32_t *val;
     uint8_t *st;                  // W_*
-    // MKW_SPEC
+    // ORBITALS_SPEC
     int state;                    // E_*
     uint64_t first_frame, watched, hits, misses;
     int rewatched;
@@ -57,7 +57,7 @@ static struct {
     PlatMutex lock;               // the table: replay thread inserts and updates, present thread writes the file
     SpecEnt *b[ENT_BUCKETS];
     uint32_t n;
-    int mode;                     // MKW_SPEC + 1 (rt_knob), 0 unread
+    int mode;                     // ORBITALS_SPEC + 1 (rt_knob), 0 unread
     uint32_t max, variants, dropped;
     uint64_t hits, misses;        // since the last summary
 } S = {.census = -1, .lock = PLAT_MUTEX_INIT};
@@ -65,20 +65,20 @@ static struct {
 int vk_spec_mode(void) {
     if (!S.mode) {
         S.mode = rt_knob("SPEC", "0") + 1;
-        const char *m = cfg_get("MKW_SPEC_MAX");
+        const char *m = cfg_get("ORBITALS_SPEC_MAX");
         S.max = m && *m ? (uint32_t)atoi(m) : 512;
-        if (S.mode > 1) rt_log("vk_spec: MKW_SPEC=%s: up to %u specialized variants", S.mode == 3 ? "ab" : "1", S.max);
+        if (S.mode > 1) rt_log("vk_spec: ORBITALS_SPEC=%s: up to %u specialized variants", S.mode == 3 ? "ab" : "1", S.max);
     }
     return S.mode - 1;
 }
 
 int vk_spec_census_on(void) {
     if (S.census >= 0) return S.census;
-    const char *e = cfg_get("MKW_CB_CENSUS");
+    const char *e = cfg_get("ORBITALS_CB_CENSUS");
     S.census = e && *e && strcmp(e, "0");
     if (S.census) {
         snprintf(S.path, sizeof S.path, "%s", e);
-        rt_log("vk_spec: MKW_CB_CENSUS: constant words per shader to %s every 120 presents", S.path);
+        rt_log("vk_spec: ORBITALS_CB_CENSUS: constant words per shader to %s every 120 presents", S.path);
     }
     return S.census;
 }

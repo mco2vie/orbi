@@ -42,7 +42,7 @@ static void put(Out *o, const char *fmt, ...) {
 }
 
 static void put_setting(const char *key, const char *value, int from_env, void *ctx) {
-    put(ctx, from_env ? "  MKW_%s=%s (environment)\n" : "  %s = %s\n", key, value);
+    put(ctx, from_env ? "  ORBITALS_%s=%s (environment)\n" : "  %s = %s\n", key, value);
 }
 
 int sysinfo_text(char *buf, size_t n) {

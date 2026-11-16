@@ -1,4 +1,4 @@
-// Unlock everything: MKW_UNLOCK_ALL=1 owns every driver and costume, vehicle and sticker and
+// Unlock everything: ORBITALS_UNLOCK_ALL=1 owns every driver and costume, vehicle and sticker and
 // reveals the Special Cup and opens Mirror in the save the game opens (Play/account.sav), as a save editor does. From
 // Ca1nM/mario-kart-world-save-editor (MIT, mkw_core.py unlock_all / set_owned / reveal_special_cup at b12cbe6): each
 // category is a length-prefixed list of owned ids, a parallel per-slot state array and, for drivers, one bit per owned
@@ -124,6 +124,6 @@ int unlock_save(uint8_t *b, uint64_t n) {
             if (!rd(b, e + 4)) wr(b, e + 4, 1), total++;
             break;
         }
-    rt_log("unlock: %s, Special Cup open, mirror %s (MKW_UNLOCK_ALL)", note, mirror ? "open" : "not in this save");
+    rt_log("unlock: %s, Special Cup open, mirror %s (ORBITALS_UNLOCK_ALL)", note, mirror ? "open" : "not in this save");
     return total;
 }

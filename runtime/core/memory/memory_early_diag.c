@@ -1,5 +1,5 @@
-// MKW_EARLY_READ_DRY's events (diagnosis), for memory_early.c: split out of it, which had grown past 350 lines.
-// MKW_EARLY_READ_DRY=1 ("ab"; diagnosis): =3's waits are logged, not made, with the game's call chain; "diff": made,
+// ORBITALS_EARLY_READ_DRY's events (diagnosis), for memory_early.c: split out of it, which had grown past 350 lines.
+// ORBITALS_EARLY_READ_DRY=1 ("ab"; diagnosis): =3's waits are logged, not made, with the game's call chain; "diff": made,
 // and each logs how many bytes of the page it changed and the read bytes without and with it. And with the
 // watch on, the pattern behind them: the GPU's bytes reach guest memory from the live shadow (a read trap's fill,
 // memory.c; a merged write-back, vk_mem_wback.c), so a submission the GPU is running then that writes the same bytes
@@ -51,10 +51,10 @@ uint64_t mem_early_inflight(uint64_t a, uint64_t n, uint64_t after) {
     return 0;
 }
 
-static int census(void) {   // only with MKW_EARLY_READ_DRY set: a diagnosis stays off the default path
+static int census(void) {   // only with ORBITALS_EARLY_READ_DRY set: a diagnosis stays off the default path
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_EARLY_READ_DRY");
+        const char *e = cfg_get("ORBITALS_EARLY_READ_DRY");
         on = e && *e && strcmp(e, "0");
     }
     return on;

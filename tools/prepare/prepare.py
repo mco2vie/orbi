@@ -106,18 +106,18 @@ def ini_set(ini: Path, key: str, value: str) -> None:
     """key = value in orbital.ini (runtime/core/base/cfg.c format), replacing a line with that key."""
     migrate_ini(ini)
     lines = ini.read_text(encoding="utf-8").splitlines() if ini.is_file() else []
-    norm = key.upper().removeprefix("MKW_")
-    keep = [ln for ln in lines if ln.split("=", 1)[0].strip().upper().removeprefix("MKW_") != norm]
+    norm = key.upper().removeprefix("ORBITALS_")
+    keep = [ln for ln in lines if ln.split("=", 1)[0].strip().upper().removeprefix("ORBITALS_") != norm]
     ini.write_text("\n".join([*keep, f"{key} = {value}"]) + "\n", encoding="utf-8")
 
 
 def ini_get(ini: Path, key: str) -> str:
     """key's value in orbital.ini, "" when it has none."""
     migrate_ini(ini)
-    norm = key.upper().removeprefix("MKW_")
+    norm = key.upper().removeprefix("ORBITALS_")
     for ln in ini.read_text(encoding="utf-8").splitlines() if ini.is_file() else []:
         k, sep, v = ln.partition("=")
-        if sep and k.strip().upper().removeprefix("MKW_") == norm:
+        if sep and k.strip().upper().removeprefix("ORBITALS_") == norm:
             return v.strip()
     return ""
 
@@ -208,8 +208,8 @@ def warm(game: Path, work: Path, runtime: Path | None = None) -> None:
     saves go to a scratch profile: the player's first start stays a first start. The window opens without taking focus
     and without sound; the run is ended after WARM_SECONDS."""
     exe = runtime_exe(runtime or game)
-    env = dict(os.environ, MKW_LAUNCHED="1", MKW_ASSUME_FOCUS="1", MKW_AUDIO="none",
-               MKW_GAME_DIR=str(game), MKW_PROFILE_DIR=str(work / "warm-profile"))  # fmt: skip
+    env = dict(os.environ, ORBITALS_LAUNCHED="1", ORBITALS_ASSUME_FOCUS="1", ORBITALS_AUDIO="none",
+               ORBITALS_GAME_DIR=str(game), ORBITALS_PROFILE_DIR=str(work / "warm-profile"))  # fmt: skip
     p = subprocess.Popen([str(exe)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for t in range(WARM_SECONDS):
         if p.poll() is not None:

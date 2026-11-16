@@ -222,7 +222,7 @@ int kern_svc(Cpu *c, uint32_t imm) {
     }
     case 0x10: {   // GetCurrentProcessorNumber: the virtual core held
         RtThread *t = cur(imm);
-        if (t->cur_core < 0) {   // MKW_CORE_NUM_GATE: a core of its own while it uses the number
+        if (t->cur_core < 0) {   // ORBITALS_CORE_NUM_GATE: a core of its own while it uses the number
             lock();
             core_take_num(t);
             unlock();

@@ -1,4 +1,4 @@
-# Four players to a split-screen race (MKW_VIRTUAL_PADS=4, MKW_SEQ_WATCH=1): press-split2.txt with two more RIGHTs on
+# Four players to a split-screen race (ORBITALS_VIRTUAL_PADS=4, ORBITALS_SEQ_WATCH=1): press-split2.txt with two more RIGHTs on
 # the number of players (L_NumBtn_00 is 2; the applet then answers 4) and players 3 and 4 pressing with the others.
 TitleWait+40 A 6
 TitleMenuMain+200 RIGHT 6

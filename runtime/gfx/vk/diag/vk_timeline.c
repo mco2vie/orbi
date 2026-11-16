@@ -1,4 +1,4 @@
-// MKW_TRACE_TL=1 (a measurement; its GPU part needs MKW_TRACE=perf, whose timestamps it reads): the timeline of each
+// ORBITALS_TRACE_TL=1 (a measurement; its GPU part needs ORBITALS_TRACE=perf, whose timestamps it reads): the timeline of each
 // frame's submissions on one clock. Every 600 frames one line gives, in ms from the frame's first submit: when the game
 // submitted its last one, when the replay began and finished recording them, the last vkQueueSubmit, when the GPU began
 // and finished (timestamps moved to CLOCK_MONOTONIC with VK_KHR_calibrated_timestamps), when the completion thread saw
@@ -31,8 +31,8 @@ typedef struct {
 
 static TlRec ring[TL_RING];
 static int on = -1;
-static int every = 600;   // MKW_TRACE_TL=N (N > 1): a line every N frames; race.sh's race is ~600 frames, and with
-                          // MKW_AB a line every 600 split A and B in only one of the two twins (tlab4, tlab5)
+static int every = 600;   // ORBITALS_TRACE_TL=N (N > 1): a line every N frames; race.sh's race is ~600 frames, and with
+                          // ORBITALS_AB a line every 600 split A and B in only one of the two twins (tlab4, tlab5)
 static uint64_t pres[TL_LAG + 2];   // the values of the last presents, newest at pres[0]
 static uint32_t npres;
 static PlatMutex lock = PLAT_MUTEX_INIT;
@@ -41,15 +41,15 @@ static double cal_period;            // ns per GPU tick
 static int64_t cal_off;              // CLOCK_MONOTONIC ns = ticks * cal_period + cal_off
 static uint64_t cal_at;              // frame of the last calibration
 typedef struct { double v[T_N], busy, sub_last, interval, waits, cpu, rt[VK_TL_KINDS]; uint64_t n, g_n, w_n; } TlAcc;
-static TlAcc accs[2];   // with MKW_AB: the A and the B frames apart (rt_ab when the frame is read, TL_LAG presents late)
+static TlAcc accs[2];   // with ORBITALS_AB: the A and the B frames apart (rt_ab when the frame is read, TL_LAG presents late)
 static int64_t prev_s0;
 
 int vk_tl_on(void) {
     if (on < 0) {
-        const char *e = cfg_get("MKW_TRACE_TL");
+        const char *e = cfg_get("ORBITALS_TRACE_TL");
         on = e && atoi(e) ? 1 : 0;
         if (on && atoi(e) > 1) every = atoi(e);
-        if (on) rt_log("vk: timeline trace on (MKW_TRACE_TL): one line every %d frames", every);
+        if (on) rt_log("vk: timeline trace on (ORBITALS_TRACE_TL): one line every %d frames", every);
     }
     return on;
 }

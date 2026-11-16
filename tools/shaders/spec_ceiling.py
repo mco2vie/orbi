@@ -1,6 +1,6 @@
-"""How much of a shader goes away when its stable constant words are fixed: the ceiling of MKW_SPEC without the GPU.
+"""How much of a shader goes away when its stable constant words are fixed: the ceiling of ORBITALS_SPEC without the GPU.
 
-Why: Before any pipeline variant, the census of a run (MKW_CB_CENSUS)
+Why: Before any pipeline variant, the census of a run (ORBITALS_CB_CENSUS)
 says which fixed-address constant words kept one value in every draw of a shader; this sets those specialization
 constants' defaults in its SPIR-V, freezes them and optimises (spirv-opt --set-spec-const-default-value,
 --freeze-spec-const, -O), and counts the instructions and conditional branches left in its functions against the

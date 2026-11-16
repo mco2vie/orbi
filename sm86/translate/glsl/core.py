@@ -37,7 +37,7 @@ from glsl.mem import MemOps
 from glsl.tex import TexOps
 from glsl.thread import ThreadOps
 
-# SM86_SPEC=1: fixed-address constant words read through specialization constants (Builder.const) for MKW_SPEC's
+# SM86_SPEC=1: fixed-address constant words read through specialization constants (Builder.const) for ORBITALS_SPEC's
 # variants. Off by default: on the Radeon 660M the variants left the GPU time as it was (sp-ab2, 01/11/2026) and the
 # constants make the SPIR-V 43 % larger.
 SPEC_ON = os.environ.get("SM86_SPEC", "0") == "1"

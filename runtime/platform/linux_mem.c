@@ -176,7 +176,7 @@ int plat_mem_poke(uint64_t addr, const void *src, size_t n) {
     return fd >= 0 && pwrite(fd, src, n, (off_t)addr) == (ssize_t)n;
 }
 
-// Reads through the page protection, as plat_mem_poke writes: the runtime copying a page MKW_EARLY_READ watches.
+// Reads through the page protection, as plat_mem_poke writes: the runtime copying a page ORBITALS_EARLY_READ watches.
 int plat_mem_peek(void *dst, uint64_t addr, size_t n) {
     int fd = self_mem();
     return fd >= 0 && pread(fd, dst, n, (off_t)addr) == (ssize_t)n;

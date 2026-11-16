@@ -97,9 +97,9 @@ static int create_instance(void) {
         g_vk.has_colorspace = 1, ext[n_ext++] = VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME;
     free(ie);
     const char *layers[] = {"VK_LAYER_KHRONOS_validation"};
-    int validate = cfg_bool("MKW_VK_VALIDATION");
+    int validate = cfg_bool("ORBITALS_VK_VALIDATION");
     if (validate && !layer_present(layers[0])) {
-        rt_log("vk: MKW_VK_VALIDATION set but %s is not installed; continuing without", layers[0]);
+        rt_log("vk: ORBITALS_VK_VALIDATION set but %s is not installed; continuing without", layers[0]);
         validate = 0;
     }
     if (validate) ext[n_ext++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
@@ -160,17 +160,17 @@ static int name_has(const char *s, const char *sub) {
     return 0;
 }
 
-// First discrete GPU with Vulkan 1.3, the required extensions and a graphics+present queue; MKW_GPU_INDEX (index) or
-// MKW_GPU_NAME (case-insensitive part of the name) overrides.
+// First discrete GPU with Vulkan 1.3, the required extensions and a graphics+present queue; ORBITALS_GPU_INDEX (index) or
+// ORBITALS_GPU_NAME (case-insensitive part of the name) overrides.
 static int pick_device(void) {
     uint32_t n = 0;
     vkEnumeratePhysicalDevices(g_vk.instance, &n, NULL);
     if (!n) { rt_log("vk: no Vulkan device"); return 0; }
     VkPhysicalDevice *pd = calloc(n, sizeof *pd);
     vkEnumeratePhysicalDevices(g_vk.instance, &n, pd);
-    const char *e = cfg_get("MKW_GPU_INDEX");   // no fixed default: the best device when unset
+    const char *e = cfg_get("ORBITALS_GPU_INDEX");   // no fixed default: the best device when unset
     int want = e && *e ? atoi(e) : -1;
-    const char *name = cfg_get("MKW_GPU_NAME");
+    const char *name = cfg_get("ORBITALS_GPU_NAME");
     int best = -1, best_score = -1;
     for (uint32_t i = 0; i < n; i++) {
         VkPhysicalDeviceProperties p;
@@ -194,8 +194,8 @@ static int pick_device(void) {
         if (score > best_score) { best_score = score; best = (int)i; }
     }
     if (best < 0) {
-        if (want >= 0) rt_log("vk: MKW_GPU_INDEX=%d is not usable (see above)", want);
-        else if (name && *name) rt_log("vk: no usable gpu matches MKW_GPU_NAME=%s (see above)", name);
+        if (want >= 0) rt_log("vk: ORBITALS_GPU_INDEX=%d is not usable (see above)", want);
+        else if (name && *name) rt_log("vk: no usable gpu matches ORBITALS_GPU_NAME=%s (see above)", name);
         else rt_log("vk: no device with Vulkan 1.3 and the required extensions (see above)");
         free(pd);
         return 0;
@@ -296,12 +296,12 @@ static int create_device(void) {
         CHAIN(fbl, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT);
         CHAIN(lr, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_LOCAL_READ_FEATURES_KHR);
     }
-    // Placed maps (vk_memory.c placed_pool): MKW_VK_PLACED=1 only, an experiment. The write watch (userfaultfd,
+    // Placed maps (vk_memory.c placed_pool): ORBITALS_VK_PLACED=1 only, an experiment. The write watch (userfaultfd,
     // PAGEMAP_SCAN) does not see writes into the driver's mapping, so every page there counts as written and its
     // textures would be uploaded again at every check.
     int has_placed = 0;
     if (has_ext(ep, ne, VK_EXT_MAP_MEMORY_PLACED_EXTENSION_NAME) && has_ext(ep, ne, VK_KHR_MAP_MEMORY_2_EXTENSION_NAME) &&
-        cfg_get("MKW_VK_PLACED") && atoi(cfg_get("MKW_VK_PLACED"))) {
+        cfg_get("ORBITALS_VK_PLACED") && atoi(cfg_get("ORBITALS_VK_PLACED"))) {
         has_placed = 1;
         ext[n_ext++] = VK_EXT_MAP_MEMORY_PLACED_EXTENSION_NAME;
         ext[n_ext++] = VK_KHR_MAP_MEMORY_2_EXTENSION_NAME;
@@ -330,9 +330,9 @@ static int create_device(void) {
         g_vk.has_calibrated = 1;
         ext[n_ext++] = VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME;
     }
-    // MKW_SPEC_STATS=1 (vk_pipeline.c): the driver's statistics of each optimised graphics pipeline. A measurement only.
-    if (has_ext(ep, ne, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME) && cfg_get("MKW_SPEC_STATS") &&
-        atoi(cfg_get("MKW_SPEC_STATS"))) {
+    // ORBITALS_SPEC_STATS=1 (vk_pipeline.c): the driver's statistics of each optimised graphics pipeline. A measurement only.
+    if (has_ext(ep, ne, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME) && cfg_get("ORBITALS_SPEC_STATS") &&
+        atoi(cfg_get("ORBITALS_SPEC_STATS"))) {
         g_vk.has_exec_stats = 1;
         ext[n_ext++] = VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME;
         CHAIN(pexe, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR);
@@ -384,13 +384,13 @@ static int create_device(void) {
     c->placed.memoryMapRangePlaced = VK_FALSE;   // whole allocations only
     g_vk.has_astc_ldr = h->textureCompressionASTC_LDR;
     {
-        const char *e = cfg_get("MKW_FEEDBACK");
+        const char *e = cfg_get("ORBITALS_FEEDBACK");
         int layout_ok = has_fbl && has_lr && c->fbl.attachmentFeedbackLoopLayout && c->lr.dynamicRenderingLocalRead;
         g_vk.feedback = e && !strcmp(e, "0") ? VK_FEEDBACK_OFF
                       : layout_ok && !(e && !strcmp(e, "restart")) ? VK_FEEDBACK_LAYOUT : VK_FEEDBACK_RESTART;
         rt_log("vk: feedback loops: %s (attachmentFeedbackLoopLayout %d, dynamicRenderingLocalRead %d)",
                g_vk.feedback == VK_FEEDBACK_LAYOUT ? "feedback layout + by-region barrier"
-               : g_vk.feedback == VK_FEEDBACK_RESTART ? "pass restart + full barrier" : "off (MKW_FEEDBACK=0)",
+               : g_vk.feedback == VK_FEEDBACK_RESTART ? "pass restart + full barrier" : "off (ORBITALS_FEEDBACK=0)",
                has_fbl && c->fbl.attachmentFeedbackLoopLayout, has_lr && c->lr.dynamicRenderingLocalRead);
     }
 
@@ -429,7 +429,7 @@ static int create_device(void) {
                                  .pDeviceMemoryCallbacks = vk_headroom_callbacks()};
     static const VmaVulkanFunctions vf = {.vkAllocateMemory = timed_alloc};   // the rest from VMA's static imports
     ai.pVulkanFunctions = &vf;
-    // MKW_GPU_MEM_LIMIT=<MiB>: a cap on what VMA allocates, split over the heaps by size. On an integrated GPU this
+    // ORBITALS_GPU_MEM_LIMIT=<MiB>: a cap on what VMA allocates, split over the heaps by size. On an integrated GPU this
     // memory is system RAM outside the process's cgroup (run47: the global OOM killer took other applications), so
     // unset there it is 4096, what every scripted run sets (3072 makes the race black), or more with more RAM, plus the
     // GPU's firmware carve-out (vk_default_mem_limit_mib); a player
@@ -438,7 +438,7 @@ static int create_device(void) {
     VkDeviceSize limits[VK_MAX_MEMORY_HEAPS];
     VkPhysicalDeviceProperties dp;
     vkGetPhysicalDeviceProperties(g_vk.phys, &dp);
-    const char *lim = cfg_get("MKW_GPU_MEM_LIMIT");
+    const char *lim = cfg_get("ORBITALS_GPU_MEM_LIMIT");
     char lim_ram[24];
     if (!lim && dp.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
         float used, total = 0, proc;
@@ -465,23 +465,23 @@ static int create_device(void) {
         for (uint32_t h = 0; h < g_vk.mem_props.memoryHeapCount; h++) {
             VkDeviceSize size = g_vk.mem_props.memoryHeaps[h].size;
             limits[h] = (counted >> h & 1) && total > cap ? (VkDeviceSize)((double)cap * (double)size / (double)total) : size;
-            // MKW_GPU_MEM_LIMIT_HEAP<n>=<MiB> (diagnosis): one heap's cap alone. The split keeps the heaps' ratio, so a
+            // ORBITALS_GPU_MEM_LIMIT_HEAP<n>=<MiB> (diagnosis): one heap's cap alone. The split keeps the heaps' ratio, so a
             // low limit fills them all at once; cap-race1 and cap-race6 died with heap0 at its cap and heap1 with room.
             char name[32];
-            snprintf(name, sizeof name, "MKW_GPU_MEM_LIMIT_HEAP%u", h);
+            snprintf(name, sizeof name, "ORBITALS_GPU_MEM_LIMIT_HEAP%u", h);
             const char *hl = cfg_get(name);
             if (hl && atoll(hl) > 0) limits[h] = (VkDeviceSize)atoll(hl) << 20;
-            rt_log("vk: heap %u limited to %llu MiB (MKW_GPU_MEM_LIMIT)", h, (unsigned long long)(limits[h] >> 20));
+            rt_log("vk: heap %u limited to %llu MiB (ORBITALS_GPU_MEM_LIMIT)", h, (unsigned long long)(limits[h] >> 20));
         }
         ai.pHeapSizeLimit = limits;
     } else if (!lim && dp.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && g_vk.has_memory_budget) {
-        // A discrete GPU with MKW_GPU_MEM_LIMIT unset: each VRAM heap stops MKW_VRAM_MARGIN (MiB) below the driver's
+        // A discrete GPU with ORBITALS_GPU_MEM_LIMIT unset: each VRAM heap stops ORBITALS_VRAM_MARGIN (MiB) below the driver's
         // budget at start. Past the budget the GTX 1050 Ti's driver moved some of it to system memory and the race's
         // GPU went 29-32 -> 42-49 ms in 6 of 15 runs; heap 0 capped below it, 0 of 4 (wtop1-4).
         VkPhysicalDeviceMemoryBudgetPropertiesEXT b = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
         VkPhysicalDeviceMemoryProperties2 p2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, .pNext = &b};
         vkGetPhysicalDeviceMemoryProperties2(g_vk.phys, &p2);
-        const char *mg = cfg_get("MKW_VRAM_MARGIN");
+        const char *mg = cfg_get("ORBITALS_VRAM_MARGIN");
         VkDeviceSize margin = (VkDeviceSize)(mg ? atoll(mg) : 300) << 20;
         int any = 0;
         for (uint32_t h = 0; h < g_vk.mem_props.memoryHeapCount; h++) {
@@ -490,7 +490,7 @@ static int create_device(void) {
             // The small device-local heap of a resizable BAR window (214 MiB on the 1050 Ti) keeps its size
             if (!(g_vk.mem_props.memoryHeaps[h].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) || size < (1ull << 30)) continue;
             if (b.heapBudget[h] > margin && b.heapBudget[h] - margin < size) limits[h] = b.heapBudget[h] - margin, any = 1;
-            rt_log("vk: heap %u limited to %llu MiB: budget %llu MiB less MKW_VRAM_MARGIN (MKW_GPU_MEM_LIMIT=0 lifts it)", h,
+            rt_log("vk: heap %u limited to %llu MiB: budget %llu MiB less ORBITALS_VRAM_MARGIN (ORBITALS_GPU_MEM_LIMIT=0 lifts it)", h,
                    (unsigned long long)(limits[h] >> 20), (unsigned long long)(b.heapBudget[h] >> 20));
         }
         if (any) ai.pHeapSizeLimit = limits;

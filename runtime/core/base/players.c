@@ -148,11 +148,11 @@ int player_remove(const char *base, const char *id) {
 }
 
 void player_active_dir(const char *base, char *out, size_t cap) {
-    const char *id = cfg_get("MKW_PLAYER");
+    const char *id = cfg_get("ORBITALS_PLAYER");
     if (id && player_number(id)) {
         player_dir(base, id, out, cap);
         if (plat_dir_exists(out)) return;
-        rt_log("players: MKW_PLAYER=%s has no folder (%s): the first player plays", id, out);
+        rt_log("players: ORBITALS_PLAYER=%s has no folder (%s): the first player plays", id, out);
     }
     snprintf(out, cap, "%s", base);
 }

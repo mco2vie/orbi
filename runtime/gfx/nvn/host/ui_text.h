@@ -250,7 +250,7 @@ int ui_text_defined(const char *lang, UiTextId id);
 // The catalog language for a Switch language code ("en-GB" -> "en", "zh-CN" -> "zh-Hans", ...).
 const char *ui_text_lang(const char *switch_code);
 
-// Menu text: ui_text_in(menu_lang(), id). The menu language is MKW_MENU_LANG (a catalog language); unset, the system
+// Menu text: ui_text_in(menu_lang(), id). The menu language is ORBITALS_MENU_LANG (a catalog language); unset, the system
 // UI language when the catalog has it, else English. Follows a live change of the setting.
 const char *menu_text(UiTextId id);
 const char *menu_lang(void);

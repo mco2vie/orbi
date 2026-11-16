@@ -16,7 +16,7 @@
 #include "vk_tex_internal.h"
 #include "platform/platform.h"
 
-// ---------------------------------------------------------------- aliases (MKW_TEX_ALIAS)
+// ---------------------------------------------------------------- aliases (ORBITALS_TEX_ALIAS)
 // Bytes per block and block size of the image's VkFormat (ASTC decodes to RGBA8, RGB expands to RGBA); 0 when the
 // VkFormat substitutes another one of unknown size.
 static int img_block(const Tex *e, int *bw, int *bh) {
@@ -112,7 +112,7 @@ Tex *entry_of(const tex_t *t) {
     Tex *e = nvn_hm_get(&by_key, &k);
     if (!e) {
         if (tex_alias < 0) {
-            tex_alias = cfg_bool("MKW_TEX_ALIAS");
+            tex_alias = cfg_bool("ORBITALS_TEX_ALIAS");
             rt_log("vk: texture aliases: %s", tex_alias ? "a new image takes the live image's content" : "a new image starts empty");
         }
         if (!(e = create_tex(t, &k, tex_alias))) return NULL;

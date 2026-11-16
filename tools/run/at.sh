@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Runs ctl commands on a live run when the game enters one of its own phases (sequence nodes, MKW_SEQ_WATCH=1 in the
+# Runs ctl commands on a live run when the game enters one of its own phases (sequence nodes, ORBITALS_SEQ_WATCH=1 in the
 # run: runtime/core/diag/seqwatch.c), instead of at a frame number that moves with every change of pacing.
 # Usage: tools/run/at.sh [--past] NAME [PREV,]NODE [+FRAMES[,FRAMES...]] COMMAND [ARG...] [-- COMMAND [ARG...]]...
 #   tools/run/at.sh live30 WaitIntroMovie +150 shot scratchpad/tmp/video.png -- dump scratchpad/dump-video
 #   tools/run/at.sh vis8 -WaitIntroMovie,IsSequenceFlag +140,160,200 shot scratchpad/tmp/vis8/r{k}.png
 # Waits for the next "seq: enter NODE" line of build/run/NAME.log after now (or one already there with --past), then
 # FRAMES presents more, then each command through tools/run/ctl.sh. PREV,NODE: the first NODE after PREV entered
-# (-PREV: after PREV left), as MKW_SEQ_UNTIL: IsSequenceFlag also enters in the menus, the race's comes after the cup
+# (-PREV: after PREV left), as ORBITALS_SEQ_UNTIL: IsSequenceFlag also enters in the menus, the race's comes after the cup
 # movie. A list of FRAMES runs the commands at each, {k} in an argument becoming that offset (one live run, a capture
 # every few frames: the 01/11/2026 sessions wrote that loop by hand eight times). Node names: build/seq_nodes.tsv
 # (third column), the order of a run: grep 'seq: enter' build/run/NAME.log.
@@ -42,7 +42,7 @@ if [ -n "$prev" ]; then
     if [[ $prev == -* ]]; then start=$(wait_line "$start" leave "${prev#-}"); else start=$(wait_line "$start" enter "$prev"); fi
 fi
 l=$(wait_line "$start" enter "$node")
-[ -p "build/run/$n.ctl" ] || { echo "at.sh: $n has no control FIFO (build/run/$n.ctl): started without MKW_CTL" >&2; exit 1; }
+[ -p "build/run/$n.ctl" ] || { echo "at.sh: $n has no control FIFO (build/run/$n.ctl): started without ORBITALS_CTL" >&2; exit 1; }
 f0=$(sed -n "${l}p" "$log" | grep -o 'frame [0-9]*' | grep -o '[0-9]*')
 echo "at.sh: $node entered at frame $f0"
 for k in "${offsets[@]}"; do

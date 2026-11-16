@@ -101,19 +101,19 @@ static int run(int argc, char **argv) {
     // Discovery happens before mem_init/cfg_init in a player's build.
     printf("ready=%d\n", rt_game_present());
     printf("dir=%s\n", cfg_game_dir());
-    printf("romfs=%s\n", cfg_get("MKW_ROMFS") ? cfg_get("MKW_ROMFS") : "");
-    printf("volume=%s\n", cfg_value("MKW_VOLUME"));
+    printf("romfs=%s\n", cfg_get("ORBITALS_ROMFS") ? cfg_get("ORBITALS_ROMFS") : "");
+    printf("volume=%s\n", cfg_value("ORBITALS_VOLUME"));
     if (argc > 2 && !strcmp(argv[1], "save")) {
-        cfg_set("MKW_VOLUME", argv[2]);
+        cfg_set("ORBITALS_VOLUME", argv[2]);
         return cfg_save() ? 0 : 1;
     }
     if (argc > 2) {
         fail_selector = !strcmp(argv[1], "fail");
         printf("selected=%d\n", cfg_select_game_dir(argv[2]));
         printf("invalid=%d\n", cfg_game_dir_invalid());
-        printf("value=%s\n", cfg_get("MKW_GAME_DIR") ? cfg_get("MKW_GAME_DIR") : "");
+        printf("value=%s\n", cfg_get("ORBITALS_GAME_DIR") ? cfg_get("ORBITALS_GAME_DIR") : "");
         if (fail_selector) {
-            cfg_set("MKW_VOLUME", "37");
+            cfg_set("ORBITALS_VOLUME", "37");
             return cfg_save() ? 0 : 1;
         }
     }

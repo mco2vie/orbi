@@ -17,7 +17,7 @@ Exit codes: 0 done, 1 failed.
 Usage: python -I update.py check --version VER [--os linux|windows]
        python -I update.py fetch --tag TAG --dest DIR [--os linux|windows]
        python -I update.py clean --game DIR
-MKW_UPDATE_REPO=owner/name (default adriadam10/mkw-recomp) and MKW_UPDATE_AS=<version> (compare as that version: a
+ORBITALS_UPDATE_REPO=owner/name (default adriadam10/mkw-recomp) and ORBITALS_UPDATE_AS=<version> (compare as that version: a
 test) change what is asked.
 """
 
@@ -37,7 +37,7 @@ import zipfile
 from pathlib import Path
 
 # orbitals-port: never offer MKW's releases as an update of this package
-REPO = os.environ.get("MKW_UPDATE_REPO") or "sinedgiveaways/orbitals-recomp"
+REPO = os.environ.get("ORBITALS_UPDATE_REPO") or "sinedgiveaways/orbitals-recomp"
 CHECK_TIMEOUT = 5  # s: the start screen waits for nothing, but a hung request should not linger
 FETCH_TIMEOUT = 30
 ASSET_SUFFIX = {  # tools/build/release.py's names
@@ -98,7 +98,7 @@ def latest_asset(os_name: str) -> tuple[str, dict]:
 
 
 def check(args: argparse.Namespace) -> None:
-    current = version_key(os.environ.get("MKW_UPDATE_AS") or args.version)
+    current = version_key(os.environ.get("ORBITALS_UPDATE_AS") or args.version)
     tag, asset = latest_asset(args.os)
     latest = version_key(tag)
     if current is None or latest is None or latest <= current:

@@ -47,7 +47,7 @@ Tex *rel_head, *rel_tail;   // released entries in release order (sweep_released
 uint64_t n_uploads, n_reuploads;
 // Re-uploads since the last perf line (tex_lock): all, and those of textures a WriteTexels wrote since their last upload.
 uint64_t ru_n, ru_bytes, ru_ns, ru_wt_n, ru_wt_bytes, ru_wt_ns;
-// MKW_TEX_ALIAS (default on; =0: a new image over live storage starts empty): a new descriptor over the storage of a
+// ORBITALS_TEX_ALIAS (default on; =0: a new image over live storage starts empty): a new descriptor over the storage of a
 // live image that the GPU wrote gets that image's content (alias_copy). Counts since the last log line.
 int tex_alias = -1;
 uint64_t n_alias_copied, n_alias_upload, n_alias_uninit;

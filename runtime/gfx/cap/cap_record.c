@@ -1,9 +1,9 @@
-// MKW_CAPTURE=1: the back end is wrapped from the boot so the state a capture starts from is known (live pools in init
+// ORBITALS_CAPTURE=1: the back end is wrapped from the boot so the state a capture starts from is known (live pools in init
 // order, the MapVirtual requests of the live virtual pools, the texture and sampler slots). A capture starts at a
-// present asked for with MKW_CAPTURE_AT=<present> or the control channel (`capture DIR [FRAMES]`, ctl.c); it drains the
+// present asked for with ORBITALS_CAPTURE_AT=<present> or the control channel (`capture DIR [FRAMES]`, ctl.c); it drains the
 // queue, writes the guest memory and that state, then every back end call that changes what the GPU sees until FRAMES
-// presents later (MKW_CAPTURE_FRAMES, default 2), each submit and present preceded by the guest pages written since the
-// last record. The run then ends (MKW_CAPTURE_EXIT=0 keeps it going). Without MKW_CAPTURE nothing is wrapped.
+// presents later (ORBITALS_CAPTURE_FRAMES, default 2), each submit and present preceded by the guest pages written since the
+// last record. The run then ends (ORBITALS_CAPTURE_EXIT=0 keeps it going). Without ORBITALS_CAPTURE nothing is wrapped.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +48,7 @@ static char want_dir[400];
 static int want_frames;
 static uint64_t want_at = UINT64_MAX, presents, first, frames_left;
 
-// Without the lock: the control commands of MKW_SEQ_CTL run inside the back end's present (perf_present), while
+// Without the lock: the control commands of ORBITALS_SEQ_CTL run inside the back end's present (perf_present), while
 // w_present holds it. The present after the next one picks the request up (maybe_start).
 static char req_dir[400];
 static volatile int req_frames;
@@ -121,7 +121,7 @@ static uint64_t write_gpu_textures(int *count) {
             wd = wd ? wd : 1, ht = ht ? ht : 1, dp = dp ? dp : 1;
             uint32_t bx = (wd + (uint32_t)bw - 1) / (uint32_t)bw, by = (ht + (uint32_t)bh - 1) / (uint32_t)bh;   // blocks
             // Slices of at most SLICE bytes (layers, then block rows): ReadTexels stages the whole region at once, and a
-            // 256x256x401 array took 288 MiB of staging at the title (cap-race4) and failed under MKW_GPU_MEM_LIMIT.
+            // 256x256x401 array took 288 MiB of staging at the title (cap-race4) and failed under ORBITALS_GPU_MEM_LIMIT.
             const uint64_t SLICE = 16ull << 20, row = (uint64_t)bpb * bx, layer = row * by;
             uint32_t nz = layer >= SLICE ? 1 : (uint32_t)(SLICE / layer),
                      ny = (layer >= SLICE ? (uint32_t)(SLICE / row) : by) * (uint32_t)bh;   // in texels, whole blocks
@@ -428,10 +428,10 @@ static void w_present(const tex_t *t, const int crop[4], uint64_t at_ns) {
             out = NULL;
             rt_log("cap: capture done at present %llu: %.0f MiB of records", (unsigned long long)presents,
                    (double)bytes / (1 << 20));
-            const char *e = cfg_get("MKW_CAPTURE_EXIT");
+            const char *e = cfg_get("ORBITALS_CAPTURE_EXIT");
             if (!e || strcmp(e, "0")) {
                 plat_mutex_unlock(&lock);
-                rt_log("cap: run ends (MKW_CAPTURE_EXIT=0 keeps it going)");
+                rt_log("cap: run ends (ORBITALS_CAPTURE_EXIT=0 keeps it going)");
                 vk_pipeline_save();
                 plat_exit(0);
             }
@@ -473,7 +473,7 @@ static void w_guest_written(uint64_t addr, uint64_t size) {
 static GfxBackend wrapped;
 
 const GfxBackend *cap_wrap(const GfxBackend *b) {
-    const char *e = cfg_get("MKW_CAPTURE");
+    const char *e = cfg_get("ORBITALS_CAPTURE");
     if (!e || !strcmp(e, "0") || b != &gfx_vulkan_backend) return b;
     in = b;
     wrapped = *b;
@@ -484,10 +484,10 @@ const GfxBackend *cap_wrap(const GfxBackend *b) {
     wrapped.submit = w_submit, wrapped.present = w_present, wrapped.finish = w_finish;
     if (b->held_fill) wrapped.held_fill = w_held_fill;
     wrapped.write_texels = w_write_texels, wrapped.guest_written = w_guest_written;
-    const char *at = cfg_get("MKW_CAPTURE_AT"), *dir = cfg_get("MKW_CAPTURE_DIR"), *fr = cfg_get("MKW_CAPTURE_FRAMES");
+    const char *at = cfg_get("ORBITALS_CAPTURE_AT"), *dir = cfg_get("ORBITALS_CAPTURE_DIR"), *fr = cfg_get("ORBITALS_CAPTURE_FRAMES");
     snprintf(want_dir, sizeof want_dir, "%s", dir && *dir ? dir : "build/cap/capture");
     want_frames = fr && atoi(fr) > 0 ? atoi(fr) : 2;
     if (at && *at) want_at = strtoull(at, NULL, 0);
-    rt_log("cap: back end wrapped for a capture (MKW_CAPTURE); %s", at && *at ? "starts at MKW_CAPTURE_AT" : "waits for ctl capture");
+    rt_log("cap: back end wrapped for a capture (ORBITALS_CAPTURE); %s", at && *at ? "starts at ORBITALS_CAPTURE_AT" : "waits for ctl capture");
     return &wrapped;
 }

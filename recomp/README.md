@@ -12,7 +12,7 @@ Changes against the original:
 
 - `lifter.py`: `RETAA`/`RETAB` as `ret`, `LDAPR*` as a load-acquire, `PAC*`/`AUT*`/`XPAC*` as identity (Switch 2's
   ARMv8.3).
-- `gen.py`: the `GENERATED_MARKER` (`MKW_RECOMP_…`) lives in the file itself instead of `tools/check_content.py`;
+- `gen.py`: the `GENERATED_MARKER` (`ORBITALS_RECOMP_…`) lives in the file itself instead of `tools/check_content.py`;
   `tools/git/pre-commit` watches for it. Every back edge of a loop without calls carries a compiler barrier
   (`__asm__ volatile("" ::: "memory")`): without it clang hoists out of the loop the loads another thread changes and
   leaves a `jmp` to itself (`main+0x27ebb20`, which `spin_waits.py` does not recognise). Function discovery also takes

@@ -1,6 +1,6 @@
 // mkw --probe-nvn: the NVN front end and the null back end, called the way the
 // game calls them: through the real nvnp_* procs with a synthetic Cpu (AAPCS64 arguments in x0..x7 and v0..v7), on the
-// guest main thread, on the null back end whatever MKW_GPU says. Checks, in order:
+// guest main thread, on the null back end whatever ORBITALS_GPU says. Checks, in order:
 //   - pool, buffer, texture, sampler, sync and event objects against MacNativeGames' semantics (hle_nvn.c), the
 //     texture storage sizes against the original-SDK goldens of MNG tests/texture_auto_layout/probe.c;
 //   - every op kind recorded through the CommandBuffer procs and parsed back with nvn_op_first/next/payload, and
@@ -8,7 +8,7 @@
 //   - the null back end's CPU-visible side effects (event write and add, counter report, buffer copy, uniform update,
 //     in stream order across handles) landing in guest memory at submit, and not before;
 //   - the proc table: every name of nvn_procs.inc resolves to its own synthetic address, an unknown name to NULL;
-//   - named fatal stubs stop with their name, each in a child process (this executable again, MKW_PROBE_NVN_CHILD).
+//   - named fatal stubs stop with their name, each in a child process (this executable again, ORBITALS_PROBE_NVN_CHILD).
 // The 40 layout goldens themselves are run by --probe-nvn-tex against nvn_tex.c; here four of them go through the procs.
 // Ported in part from MacNativeGames games/totk/tests/texture_auto_layout/probe.c @ b75be8cf (MIT, Copyright (c) 2026
 // jhaizhou; origin d2r-mobile): the golden metadata, which holds no game bytes.
@@ -22,7 +22,7 @@
 #include "nvn_api.h"
 #include "platform/platform.h"
 
-#define CHILD_ENV "MKW_PROBE_NVN_CHILD"
+#define CHILD_ENV "ORBITALS_PROBE_NVN_CHILD"
 
 #define NVN_PROC(n) void nvnp_##n(Cpu *c);
 #include "nvn_procs.inc"
@@ -837,7 +837,7 @@ static void probe_queue_order(void) {
     enum { OFF_E = 0x600, OFF_F = 0x640, OFF_Z = 0x700, OFF_R1 = 0x710, OFF_R2 = 0x720, OFF_C = 0x730 };
     static const uint8_t bb[8] = {0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}, cc[8] = {0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc};
     uint64_t base = U(pmem);
-    plat_setenv("MKW_QUEUE_WAITS", "1");   // (off by default; read on first use, which is here)
+    plat_setenv("ORBITALS_QUEUE_WAITS", "1");   // (off by default; read on first use, which is here)
     memset(pmem + OFF_E, 0, 0x140);
     CALL(nvnEventBuilderSetStorage, U(&evb), U(&pool), OFF_E);
     CHECK((uint8_t)CALL(nvnEventInitialize, U(&evE), U(&evb)) == 1, "EventInitialize E");
@@ -952,7 +952,7 @@ static void probe_children(void) {
 int probe_nvn(void) {
     const char *child = getenv(CHILD_ENV);
     if (child && *child) return run_as_child(child);
-    // The probe checks the null back end whatever MKW_GPU says; the choice is made once, at the first object call.
+    // The probe checks the null back end whatever ORBITALS_GPU says; the choice is made once, at the first object call.
     ((RtConfig *)rt_config())->gpu = "null";
     nvn_procs_register();
     hostfn_seal();

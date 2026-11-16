@@ -3,7 +3,7 @@
 # ///
 """Two folders of screenshots of the same frames (two runs, a switch on and off) compared frame by frame.
 
-Why: a change that must not alter the image (MKW_REPLAY_PAR records the frame on several threads) is judged on a wide
+Why: a change that must not alter the image (ORBITALS_REPLAY_PAR records the frame on several threads) is judged on a wide
 range of frames, not one (CONTRIBUTING.md, rendering fixes); a fault of a few frames shows as a peak among neighbours that match.
 vsref.py compares one shot with its reference; this runs the same mean error over every name the two folders share.
 

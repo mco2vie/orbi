@@ -9,7 +9,7 @@
 | `gen_nvn2_procs.py` | Writes `runtime/gfx/nvn/procs/nvn2_procs.inc`: the NVN2 procs NVN1 lacks, so each has a stub that stops with its name | `uv run tools/gpu/gen_nvn2_procs.py` |
 | `gen_nvn2_devinfo.py` | Writes `runtime/gfx/nvn/procs/nvn2_devinfo.inc`: the 170 answers of the NVN2 driver's `nvnDeviceGetInteger` (version 231.16); the device object's fields keep the NVN1 value (`nvn1_devinfo.txt`) | `uv run tools/gpu/gen_nvn2_devinfo.py` |
 | `nvn1_devinfo.txt` | The NVN1 (Tegra X1) table of totk-pc-recomp's front end, as a reference for the previous one | — |
-| `sparse_fit.py` | Where the game maps the 64 KiB pages of each sparse texture, against the assumed layout (layer = levels with whole tiles, tiles in rows; tails apart). The layout of `runtime/gfx/vk/tex/vk_sparse.c` came from it | `uv run tools/gpu/sparse_fit.py build/run/NAME.log [--tex ADDR]` on a run with `MKW_SPARSE_TRACE=1` |
+| `sparse_fit.py` | Where the game maps the 64 KiB pages of each sparse texture, against the assumed layout (layer = levels with whole tiles, tiles in rows; tails apart). The layout of `runtime/gfx/vk/tex/vk_sparse.c` came from it | `uv run tools/gpu/sparse_fit.py build/run/NAME.log [--tex ADDR]` on a run with `ORBITALS_SPARSE_TRACE=1` |
 
 Reference sources are cloned into `scratchpad/ext/` (`git clone https://github.com/valentderah/totk-pc-recomp
 scratchpad/ext/totk`).

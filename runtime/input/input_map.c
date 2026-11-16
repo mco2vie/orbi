@@ -168,7 +168,7 @@ void input_map_configure(void) {
     input_map_reset();
     for (int a = 0; a < ACTION_COUNT; a++) {
         char var[32];
-        snprintf(var, sizeof var, "MKW_BIND_%s", action_names[a]);
+        snprintf(var, sizeof var, "ORBITALS_BIND_%s", action_names[a]);
         const char *v = cfg_get(var);
         if (v && *v && input_map_bind(action_names[a], v)) rt_log("input: %s = %s", var + 5, v);
     }

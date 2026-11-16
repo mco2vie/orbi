@@ -41,7 +41,7 @@ enum {
     PAD_COUNT
 };
 
-// Gamepad layouts (MKW_PAD_LAYOUT): which face button is Switch A. Nintendo: by position, east A, south B, west Y,
+// Gamepad layouts (ORBITALS_PAD_LAYOUT): which face button is Switch A. Nintendo: by position, east A, south B, west Y,
 // north X. Xbox: south A, east B, west X, north Y, as an Xbox pad labels them (cross A, circle B on a PlayStation pad).
 enum { PAD_LAYOUT_NINTENDO, PAD_LAYOUT_XBOX, PAD_LAYOUT_COUNT };
 
@@ -72,10 +72,10 @@ const char *input_key_name(int key);
 // layout; pad:default keeps each layout's own button. Stick directions take keys only. Invalid entries are logged and
 // skipped; when none is valid the action keeps its bindings. 1 when applied.
 int input_map_bind(const char *button, const char *list);
-// Applies the MKW_BIND_<action> settings (cfg_get) over the defaults: at start, and again when one of them changes.
+// Applies the ORBITALS_BIND_<action> settings (cfg_get) over the defaults: at start, and again when one of them changes.
 void input_map_configure(void);
 
-// The layout for a MKW_PAD_LAYOUT value: "nintendo" or "xbox" (any case); anything else ("auto", NULL) picks Nintendo
+// The layout for a ORBITALS_PAD_LAYOUT value: "nintendo" or "xbox" (any case); anything else ("auto", NULL) picks Nintendo
 // when the pad's east button is labelled A (a Switch Pro Controller, a GuliKit) and Xbox otherwise.
 int input_pad_layout_pick(const char *setting, int east_labelled_a);
 // down[pad] != 0 for the gamepad inputs held. Returns the Switch button bits (0..15) the layout's pad table presses.

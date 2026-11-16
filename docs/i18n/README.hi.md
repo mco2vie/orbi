@@ -179,7 +179,7 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 
 Linux, `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, Vulkan हेडर और VMA 3.4.0 के साथ (विवरण
 [tools/build/README.md](../../tools/build/README.md) में)। अपना डंप `game/` (`game/exefs`, `game/romfs`) में रखें या
-`MKW_GAME=<dir>` सेट करें, फिर रिपॉज़िटरी की जड़ से:
+`ORBITALS_GAME=<dir>` सेट करें, फिर रिपॉज़िटरी की जड़ से:
 
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt

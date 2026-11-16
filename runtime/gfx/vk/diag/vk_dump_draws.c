@@ -1,10 +1,10 @@
-// Part of the frame dump (vk_dump.c): MKW_DUMP_DRAWS, a copy of the first colour target after each draw of a selected
-// run of passes. MKW_DUMP_DRAWS=<from>-<to> or =<16 hex chars of an fs hash> (diagnosis, with MKW_DUMP or an MKW_CTL
+// Part of the frame dump (vk_dump.c): ORBITALS_DUMP_DRAWS, a copy of the first colour target after each draw of a selected
+// run of passes. ORBITALS_DUMP_DRAWS=<from>-<to> or =<16 hex chars of an fs hash> (diagnosis, with ORBITALS_DUMP or an ORBITALS_CTL
 // dump): from the first draw of a pass in that range, or the first draw with that fragment shader, every draw until the
 // targets change also copies the first colour target (draw_<n>_t0_....png, one line per draw in passes.txt). A range or
 // a shader, because pass numbers move between frames (an fs that draws once a frame just before the race's particles,
 // drift7). Copies split and resume rendering with LOAD, so they observe the just-recorded draw; the passes those splits
-// end copy no targets (the snapshots stand for them). MKW_DUMP_DRAWS_RECT=x,y,w,h copies only that rectangle of the
+// end copy no targets (the snapshots stand for them). ORBITALS_DUMP_DRAWS_RECT=x,y,w,h copies only that rectangle of the
 // target, so the DRAW_CAP snapshots of a long run (the race's particles, ~120 draws) fit in INFLIGHT_CAP.
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,8 +17,8 @@
 #include "vk_dump_internal.h"
 
 #define DRAW_CAP 256                   // draw snapshots per dump
-static int draw_lo = -1, draw_hi = -1; // MKW_DUMP_DRAWS=<from>-<to>: passes copied after every draw (-1: none)
-static uint32_t draw_rect[4];          // MKW_DUMP_DRAWS_RECT: x, y, w, h of the snapshots (w 0: the whole target)
+static int draw_lo = -1, draw_hi = -1; // ORBITALS_DUMP_DRAWS=<from>-<to>: passes copied after every draw (-1: none)
+static uint32_t draw_rect[4];          // ORBITALS_DUMP_DRAWS_RECT: x, y, w, h of the snapshots (w 0: the whole target)
 static int draw_n;                     // snapshots in the selected run
 static uint64_t draw_fs;               // or the pass that draws with this fragment shader (0: none)
 static int draw_run_on;                // latched through replay's splits of the selected pass
@@ -26,10 +26,10 @@ static uint64_t draw_targets;          // targets of that pass, to stop at the n
 static _Thread_local int draw_pending; // this thread recorded a draw selected for a snapshot
 
 void draws_init(void) {
-    const char *dp = cfg_get("MKW_DUMP_DRAWS");
+    const char *dp = cfg_get("ORBITALS_DUMP_DRAWS");
     if (dp && strlen(dp) == 16) draw_fs = strtoull(dp, NULL, 16);   // one fragment shader, not a pass range
     else if (dp && sscanf(dp, "%d-%d", &draw_lo, &draw_hi) == 2 && draw_hi - draw_lo > 64) draw_lo = draw_hi = -1;
-    const char *dr = cfg_get("MKW_DUMP_DRAWS_RECT");
+    const char *dr = cfg_get("ORBITALS_DUMP_DRAWS_RECT");
     if (dr && sscanf(dr, "%u,%u,%u,%u", &draw_rect[0], &draw_rect[1], &draw_rect[2], &draw_rect[3]) != 4) draw_rect[2] = 0;
     if (!draw_rect[3]) draw_rect[2] = 0;
 }

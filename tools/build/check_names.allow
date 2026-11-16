@@ -6,6 +6,8 @@ THIRD_PARTY_NOTICES*
 docs/mkw-removal.md
 docs/mkw-removal-plan.md
 docs/mkw-inventory.tsv
+# The former names, as a historical reference (tools/run/envs.py --markdown).
+docs/environment-variables.md
 docs/audit-current-state.md
 tools/migrate/*
 tools/migrate_config.py

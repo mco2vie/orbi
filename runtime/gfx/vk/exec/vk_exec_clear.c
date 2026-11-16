@@ -1,5 +1,5 @@
 // Clears of the op-stream replay (vk_exec_internal.h): colour and depth-stencil clears, as image clears outside a
-// pass when they cover the whole target, else as attachment clears in one; MKW_DEPTH_CLEAR_ALL's layers cleared ahead.
+// pass when they cover the whole target, else as attachment clears in one; ORBITALS_DEPTH_CLEAR_ALL's layers cleared ahead.
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,12 +33,12 @@ static int whole_target(const VkExec *ex, const VkExecTarget *t) {
 // The barrier before a whole-image clear, except inside a run of clears: right after another image clear with nothing
 // recorded between, and of a subresource no clear of the run touched, it orders nothing the run's first barrier did
 // not. The race clears the 5 layers of a 128x128 target one by one and 19 targets a frame, each behind a barrier that
-// drains the GPU (cc1); RADV's own clears need none between them. MKW_CLEAR_RUN=0 puts each barrier back; =ab.
+// drains the GPU (cc1); RADV's own clears need none between them. ORBITALS_CLEAR_RUN=0 puts each barrier back; =ab.
 static void clear_barrier(VkExec *ex, VkImage img, uint32_t level, uint32_t layer0, uint32_t layers) {
     static int mode = -1;
     if (mode < 0) {
         mode = rt_knob("CLEAR_RUN", "1");
-        if (mode != 1) rt_log("vk: a barrier before every image clear%s (MKW_CLEAR_RUN)", mode == 2 ? " in the A blocks" : "");
+        if (mode != 1) rt_log("vk: a barrier before every image clear%s (ORBITALS_CLEAR_RUN)", mode == 2 ? " in the A blocks" : "");
     }
     int run = RT_KNOB_ON(mode) && ex->barrier_at >= 0 && ex->clear_run_at == ex->recorded && ex->nclr > 0 &&
               ex->nclr < (int)(sizeof ex->clr / sizeof ex->clr[0]);
@@ -60,12 +60,12 @@ static void clear_attachment(VkExec *ex, const VkClearAttachment *a) {
     ex->fb_dirty |= a->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT ? 1u << a->colorAttachment : 0x100u;
 }
 
-// MKW_CLEAR_CENSUS=1 (a measurement, frame-carrera paso 5): one line per colour clear (the first 2000), with what decides
+// ORBITALS_CLEAR_CENSUS=1 (a measurement, frame-carrera paso 5): one line per colour clear (the first 2000), with what decides
 // whether RADV fast-clears it: size (no DCC at 512x512 or less), format, layers against the image's, whole or partial.
-// The 0.7 ms of colour clears a race frame (rt-y2) come from some of these; MKW_PASS_TIMING says which passes.
+// The 0.7 ms of colour clears a race frame (rt-y2) come from some of these; ORBITALS_PASS_TIMING says which passes.
 static void clear_census(const VkExec *ex, const VkExecTarget *t, int whole) {
     static int on = -1, n;
-    if (on < 0) on = cfg_get("MKW_CLEAR_CENSUS") && atoi(cfg_get("MKW_CLEAR_CENSUS"));
+    if (on < 0) on = cfg_get("ORBITALS_CLEAR_CENSUS") && atoi(cfg_get("ORBITALS_CLEAR_CENSUS"));
     if (!on || n++ >= 2000) return;
     VkRect2D r = vk_exec_scissor(ex);
     rt_log("clear: f%llu %ux%u level %u layers %u+%u vk fmt %d nvn %#x %s, rect %ux%u%s",
@@ -112,14 +112,14 @@ void clear_color(VkExec *ex, const p_clear_color *c) {
     clear_attachment(ex, &a);
 }
 
-// Layered depth clears (MKW_DEPTH_CLEAR_ALL, default 1; "ab" in the B blocks): race GPU 22.71 -> 19.91 ms, frame
+// Layered depth clears (ORBITALS_DEPTH_CLEAR_ALL, default 1; "ab" in the B blocks): race GPU 22.71 -> 19.91 ms, frame
 // -4.9 %, no sampling of a layer cleared ahead (rt-z5). MKW clears its 3-layer 3072x3072 D16 shadow
 // target one layer at a time, to 1.0, before rendering each (rt-z4); RADV fast-clears depth (HTILE only) only when the
 // clear covers every layer of the image (radv_meta_clear.c radv_is_clear_rect_full), so each took ~0.8 ms of GPU,
 // 2.4 per frame (rt-z1). The first such clear clears every layer; a later clear of another layer to the same value
 // is skipped while nothing wrote that layer since (a pass on it, or any copy or transfer op, or a new submission).
 // The cost: a read of such a layer between the two clears sees the cleared value, not the old contents; DC.reads
-// counts the samplings of the image while layers are pending, logged with MKW_PASS_TIMING's line.
+// counts the samplings of the image while layers are pending, logged with ORBITALS_PASS_TIMING's line.
 // Every layer is cleared only where a sequence starts: at a layer whose clear already came since the image's last
 // clear of every layer (DC.seq), or the image's first. Pending layers are dropped at each new submission, copy, report
 // or queue switch, and the clear of the next layer then cleared every layer again, wiping the ones drawn before it:
@@ -155,7 +155,7 @@ void vk_exec_dc_stats(uint64_t *reads, uint64_t *skipped, uint64_t *ahead, uint6
 static int dc_layered(VkExec *ex, const VkExecTarget *t, VkImageAspectFlags asp, const VkClearDepthStencilValue *v) {
     if (dc_mode < 0) {
         dc_mode = rt_knob("DEPTH_CLEAR_ALL", "1");
-        if (dc_mode != 1) rt_log("vk: layered depth clears clear every layer at once %s (MKW_DEPTH_CLEAR_ALL)",
+        if (dc_mode != 1) rt_log("vk: layered depth clears clear every layer at once %s (ORBITALS_DEPTH_CLEAR_ALL)",
                                  dc_mode == 2 ? "in the B blocks" : "off");
     }
     if (!dc_mode || !RT_KNOB_ON(dc_mode) || !t->img || asp != VK_IMAGE_ASPECT_DEPTH_BIT || t->layers != 1 ||
@@ -210,12 +210,12 @@ void clear_ds(VkExec *ex, const p_clear_ds *c) {
     if (!asp) return;
     float d = c->depth < 0.0f ? 0.0f : c->depth > 1.0f ? 1.0f : c->depth;
     VkClearDepthStencilValue v = {d, (uint32_t)c->stencil & 0xff};
-    static int n_dslog;   // MKW_PASS_TIMING: the first depth clears of large targets, for the fast-clear conditions
+    static int n_dslog;   // ORBITALS_PASS_TIMING: the first depth clears of large targets, for the fast-clear conditions
     if (pt_on > 0 && t->width >= 2048 && n_dslog < 12 && t->img)
         n_dslog++, rt_log("vk: depth clear %ux%u layers %u+%u of %u, level %u of %u, depth %g, stencil %s, whole %d",
                           t->width, t->height, t->base_layer, t->layers, t->img->layers, t->level, t->img->levels, d,
                           asp & VK_IMAGE_ASPECT_STENCIL_BIT ? "yes" : "no", whole_target(ex, t));
-    if (pt_on > 0 && !ex->in_pass)   // MKW_PASS_TIMING: by path (bit 28: the whole image) and target size
+    if (pt_on > 0 && !ex->in_pass)   // ORBITALS_PASS_TIMING: by path (bit 28: the whole image) and target size
         vk_pt_mark(ex->cb, 1u << 29 | (uint32_t)whole_target(ex, t) << 28 | (t->width >> 4 & 0x3fff) << 14 |
                                (t->height >> 4 & 0x3fff));
     if (whole_target(ex, t)) {

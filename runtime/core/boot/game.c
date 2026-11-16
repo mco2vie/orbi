@@ -1,5 +1,5 @@
 // The game clock the shared runtime reads (host.h frame_step_*): counted from presents, and for the A/B blocks from
-// the phase MKW_SEQ_UNTIL waits for. totk-pc-recomp's resolution.c and frame_rate.c (patch sites and fixed addresses
+// the phase ORBITALS_SEQ_UNTIL waits for. totk-pc-recomp's resolution.c and frame_rate.c (patch sites and fixed addresses
 // of TotK) have no counterpart here yet: a frame-rate setting needs the game's own frame object, not found for
 // Orbitals (runtime/core/boot/version.c).
 #include <stdatomic.h>
@@ -8,7 +8,7 @@
 
 static _Atomic uint64_t ticks;   // 60 Hz ticks since the first present
 
-// No save-load point: the A/B blocks (MKW_AB, perf.c rt_ab) count from the phase MKW_SEQ_UNTIL waits for, so both
+// No save-load point: the A/B blocks (ORBITALS_AB, perf.c rt_ab) count from the phase ORBITALS_SEQ_UNTIL waits for, so both
 // halves measure the same scene.
 int64_t frame_step_world_us(void) { return seqwatch_since_us(); }
 

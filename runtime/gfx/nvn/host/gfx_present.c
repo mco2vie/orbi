@@ -11,7 +11,7 @@
 // dirty (gfx_window_mark_dirty), the next present (or gfx_window_resize) rebuilds it.
 //
 // The in-game menu (ui/menu/menu.h) draws over the game image in the present's command buffer, after the blit. The window's
-// size and fullscreen state are the settings MKW_WINDOW_SIZE and MKW_FULLSCREEN, which the back end applies at start
+// size and fullscreen state are the settings ORBITALS_WINDOW_SIZE and ORBITALS_FULLSCREEN, which the back end applies at start
 // and whenever a cfg_set changes them (window_settings_live -> gfx_window_apply_settings).
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@
 #define VSYNC_HZ 60
 
 // ---- queue lock
-// Taking it sends the parts waiting for the submit thread first (vk_sync.c, MKW_SUBMIT_THREAD): what the taker submits
+// Taking it sends the parts waiting for the submit thread first (vk_sync.c, ORBITALS_SUBMIT_THREAD): what the taker submits
 // comes after them in queue order.
 static PlatRMutex g_ql;
 void vk_queue_lock(void) {
@@ -59,7 +59,7 @@ void gfx_window_mark_dirty(void) { plat_xchg32(&g_dirty, 1); }
 // its startup logo's end on (ov_system.c oe_set_focus).
 void gfx_window_focus_changed(int in) {
     plat_xchg32(&g_focused, in);
-    oe_set_focus(in);                          // pinned to 1 by MKW_ASSUME_FOCUS inside
+    oe_set_focus(in);                          // pinned to 1 by ORBITALS_ASSUME_FOCUS inside
     plat_inc32(&g_focus_msgs);
 }
 
@@ -73,13 +73,13 @@ void gfx_window_closed(void) {
     plat_exit(0);
 }
 
-// MKW_FULLSCREEN=1: borderless window over the monitor. MKW_WINDOW_SIZE=<w>x<h>: client area of the window (the
+// ORBITALS_FULLSCREEN=1: borderless window over the monitor. ORBITALS_WINDOW_SIZE=<w>x<h>: client area of the window (the
 // swapchain follows the window; the game image is scaled to it).
-int gfx_cfg_fullscreen(void) { return cfg_bool("MKW_FULLSCREEN"); }
+int gfx_cfg_fullscreen(void) { return cfg_bool("ORBITALS_FULLSCREEN"); }
 
 void gfx_cfg_window_size(int *w, int *h) {
     int x = 0, y = 0;
-    if (sscanf(cfg_value("MKW_WINDOW_SIZE"), "%dx%d", &x, &y) != 2 || x < 640 || y < 360 || x > 7680 || y > 4320)
+    if (sscanf(cfg_value("ORBITALS_WINDOW_SIZE"), "%dx%d", &x, &y) != 2 || x < 640 || y < 360 || x > 7680 || y > 4320)
         sscanf(cfg_meta("WINDOW_SIZE")->def, "%dx%d", &x, &y);   // unparsable or out of range: the default
     *w = x;
     *h = y;
@@ -126,12 +126,12 @@ static int g_cap_w, g_cap_h, g_cap_valid;
 // oldest. More than one only with frame generation (vk_present_blit_ahead).
 static uint32_t g_flip_q[MAX_IMAGES];
 static int g_flip_n;
-static float g_aspect;           // gfx_aspect_set: the ultrawide output's aspect (MKW_ASPECT), 0 at 16:9
+static float g_aspect;           // gfx_aspect_set: the ultrawide output's aspect (ORBITALS_ASPECT), 0 at 16:9
 void gfx_aspect_set(float a) { g_aspect = a; }
 static int g_frames = 2;         // slots in use (create_swapchain): 2, FRAMES with frame generation
 static int g_ahead = 1;          // presents that may wait at once: the swapchain's images past its minimum
 
-// ---- MKW_FLIGHT thumbnails (flight.c; g_pl): each present also blits the swapchain image down into slot frame % g_th_n
+// ---- ORBITALS_FLIGHT thumbnails (flight.c; g_pl): each present also blits the swapchain image down into slot frame % g_th_n
 // of a host-visible ring. A slot's tag names the frame it holds complete; recording a new frame clears the tag first,
 // and the tag is set once the fence of that present has signalled.
 #define TH_BYTES ((VkDeviceSize)FLIGHT_THUMB_W * FLIGHT_THUMB_H * 4)
@@ -220,16 +220,16 @@ int gfx_window_focused(void) { return g_focused; }
 unsigned gfx_window_focus_messages(void) { return (unsigned)g_focus_msgs; }
 
 // Present path (g_pl held): a settings change (cfg_version) reaches the window thread, which applies a changed size or
-// fullscreen; a changed MKW_VK_PRESENT, or frame generation turned on or off (its spare images), rebuilds the
+// fullscreen; a changed ORBITALS_VK_PRESENT, or frame generation turned on or off (its spare images), rebuilds the
 // swapchain at this present.
 static void window_settings_live(void) {
     static unsigned seen;
     static int started, fg;
-    static char present[16];   // the MKW_VK_PRESENT the swapchain was made with
+    static char present[16];   // the ORBITALS_VK_PRESENT the swapchain was made with
     unsigned v = cfg_version();
     if (started && v == seen) return;
     seen = v;
-    const char *e = cfg_value("MKW_VK_PRESENT");
+    const char *e = cfg_value("ORBITALS_VK_PRESENT");
     if (!started || strncmp(e, present, sizeof present - 1) || fg != vk_fg_wanted()) {
         snprintf(present, sizeof present, "%s", e);
         fg = vk_fg_wanted();
@@ -240,10 +240,10 @@ static void window_settings_live(void) {
 }
 
 // ---- swapchain
-static const char *g_present_got = "";   // the MKW_VK_PRESENT value of the mode the swapchain got; "" before one
+static const char *g_present_got = "";   // the ORBITALS_VK_PRESENT value of the mode the swapchain got; "" before one
 
 static VkPresentModeKHR pick_present_mode(VkPhysicalDevice pd) {
-    const char *e = cfg_value("MKW_VK_PRESENT");
+    const char *e = cfg_value("ORBITALS_VK_PRESENT");
     VkPresentModeKHR want = !strcmp(e, "mailbox") ? VK_PRESENT_MODE_MAILBOX_KHR
                           : !strcmp(e, "immediate") ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
     uint32_t n = 0;
@@ -262,7 +262,7 @@ static VkPresentModeKHR pick_present_mode(VkPhysicalDevice pd) {
     static int logged = -1;   // the mode last logged: a change from the menu shows in the log
     if ((int)got != logged) {
         logged = (int)got;
-        rt_log("gfx: present mode %s%s (MKW_VK_PRESENT=%s)", name, got == VK_PRESENT_MODE_FIFO_RELAXED_KHR ? " relaxed" : "", e);
+        rt_log("gfx: present mode %s%s (ORBITALS_VK_PRESENT=%s)", name, got == VK_PRESENT_MODE_FIFO_RELAXED_KHR ? " relaxed" : "", e);
     }
     return got;
 }
@@ -579,11 +579,11 @@ static void save_capture(const char *path) {
 }
 
 // The rectangle {x, y, w, h} of a dw x dh swapchain image the cw x ch picture goes into: the whole image with
-// MKW_PICTURE_FIT=stretch, else the largest one of the picture's own aspect ratio, centred (a 16:9 picture on the Steam
+// ORBITALS_PICTURE_FIT=stretch, else the largest one of the picture's own aspect ratio, centred (a 16:9 picture on the Steam
 // Deck's 1280x800 screen gets bars of 40 rows above and below; a wider window, bars at the sides).
 void gfx_fit_rect(int cw, int ch, int dw, int dh, int out[4]) {
     out[0] = out[1] = 0, out[2] = dw, out[3] = dh;
-    if (cw <= 0 || ch <= 0 || !strcmp(cfg_value("MKW_PICTURE_FIT"), "stretch")) return;
+    if (cw <= 0 || ch <= 0 || !strcmp(cfg_value("ORBITALS_PICTURE_FIT"), "stretch")) return;
     if ((int64_t)dw * ch > (int64_t)dh * cw) out[2] = (int)(((int64_t)dh * cw + ch / 2) / ch);   // window wider: pillarbox
     else out[3] = (int)(((int64_t)dw * ch + cw / 2) / cw);                                        // taller: letterbox
     out[2] += out[2] & 1, out[3] += out[3] & 1;   // even sizes keep the bars equal
@@ -600,7 +600,7 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
     VkCtx *c = vk_ctx();
     plat_rmutex_lock(&g_pl);
     if (defer != 2 || g_flip_n >= g_ahead) flip_locked();   // (no more acquired images than the swapchain spares)
-    if (gfx_hdr_cfg_changed()) plat_xchg32(&g_dirty, 1);   // MKW_HDR switched in the menu: HDR10 or SDR from now on
+    if (gfx_hdr_cfg_changed()) plat_xchg32(&g_dirty, 1);   // ORBITALS_HDR switched in the menu: HDR10 or SDR from now on
     if (!g_sc || plat_cas32(&g_dirty, 0, 0)) {
         if (!wsys_minimized() && !create_swapchain() && !g_sc) goto out;
     }
@@ -641,7 +641,7 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
     if (cy < 0) cy = 0;
     if (cx + cw > w) cw = w - cx;
     if (cy + ch > h) ch = h - cy;
-    // A full-screen movie (the cups') on an ultrawide output (MKW_ASPECT): its middle 16:9 between black bars, as the
+    // A full-screen movie (the cups') on an ultrawide output (ORBITALS_ASPECT): its middle 16:9 between black bars, as the
     // console shows it; the 2D keeps the movie there (patches.c host_ui_proj)
     if (g_aspect && ov_movie_playing() && ch * 16 / 9 < cw) cx += (cw - ch * 16 / 9) / 2, cw = ch * 16 / 9;
     window_settings_live();
@@ -679,7 +679,7 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
                      VK_ACCESS_2_TRANSFER_WRITE_BIT);
     }
     vk_crumb_end(cb, VK_CRUMB_OP, prep);
-    // FSR (MKW_UPSCALER) when the picture's rectangle is larger than the crop; else the bilinear blit
+    // FSR (ORBITALS_UPSCALER) when the picture's rectangle is larger than the crop; else the bilinear blit
     uint32_t crumb = src ? vk_crumb_op(cb, "present scaling", (uint32_t)to[2], (uint32_t)to[3]) : 0;
     int fsr = src && general && vk_fsr_record(cb, slot, src, fmt, w, h, rect, dst, to[0], to[1], (uint32_t)to[2], (uint32_t)to[3]);
     g_scaler = fsr ? 2 : cw != to[2] || ch != to[3];
@@ -789,9 +789,9 @@ out:
 }
 
 // The window at boot, black until the game's first image: a first frame that waits for its pipelines left players with
-// no window at all, only mkw.exe in the Task Manager (issue #36). Not with MKW_GPU=null.
+// no window at all, only mkw.exe in the Task Manager (issue #36). Not with ORBITALS_GPU=null.
 void gfx_window_early(void) {
-    const char *gpu = cfg_get("MKW_GPU");
+    const char *gpu = cfg_get("ORBITALS_GPU");
     if (gpu && !strcmp(gpu, "null")) return;
     present_image(VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED, VK_FORMAT_UNDEFINED, 0, 0, NULL, 0);
 }

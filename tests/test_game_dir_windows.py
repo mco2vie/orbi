@@ -44,7 +44,7 @@ class WindowsProbe:
 
 @pytest.fixture(scope="module")
 def windows_build(tmp_path_factory: pytest.TempPathFactory) -> WindowsProbe:
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("MKW_", "TEST_LOG_", "TEST_STDERR_"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("ORBITALS_", "TEST_LOG_", "TEST_STDERR_"))}
     if os.name == "nt":
         mingw = shutil.which("gcc")
         for location in ("C:/msys64/mingw64/bin/gcc.exe", "C:/msys64/ucrt64/bin/gcc.exe"):

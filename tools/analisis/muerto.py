@@ -4,9 +4,9 @@ Why: the runtime is totk-pc-recomp's, adapted. Four sweeps found ~5,600 dead lin
 on 05/11/2026; this repeats them after more code is brought over. Each prints a table; nothing is changed.
 - funcs: global functions of build/obj/rt that no object of the binary asks for (nm: defined T, never U) and whose
   name appears once in the runtime's .c/.cpp/.inc (its definition).
-- keys: names of cfg.c's known[] list that no call outside the probes takes as a literal ("MKW_X", "X" or
+- keys: names of cfg.c's known[] list that no call outside the probes takes as a literal ("ORBITALS_X", "X" or
   PREFIX "X"), writers and descriptions aside (opt_*, row_*, cfg_set, cfg_meta, plat_setenv), that no file but cfg.c
-  and the menu names as "MKW_X" (helpers such as portable_path take the name), nor a "BIND_%s"-style
+  and the menu names as "ORBITALS_X" (helpers such as portable_path take the name), nor a "BIND_%s"-style
   name built from a prefix, nor the generated patches.h's switches: a menu option among them does nothing. A menu row
   that reads its own key to show it counts as a read (not caught).
 - ifdefs: #if/#ifdef/#ifndef in the runtime on a macro tools/build/build.py fixes (-D flags, #define in its texts).
@@ -64,18 +64,18 @@ def keys() -> None:
     if not known:
         sys.exit("muerto: no known[] list in runtime/core/base/cfg.c")
     src = text_of([p for p in SOURCES if "probes" not in p.parts])
-    calls = re.findall(r'\b(\w+)\(\s*(?:PREFIX\s*)?"(?:MKW_)?(\w+)"', src)
+    calls = re.findall(r'\b(\w+)\(\s*(?:PREFIX\s*)?"(?:ORBITALS_)?(\w+)"', src)
     read = {key for fn, key in calls if not re.match(r"opt_|row_|cfg_set$|cfg_meta$|plat_setenv$", fn)}
     rest = [p for p in SOURCES if "probes" not in p.parts and p.name not in ("cfg.c", "menu.cpp")]
-    read |= set(re.findall(r'"MKW_(\w+)"', text_of(rest)))  # a name handed to a helper (portable_path, env_u...)
-    prefixes = tuple(re.findall(r'"(?:MKW_)?([A-Z0-9_]+_)%s', src))
+    read |= set(re.findall(r'"ORBITALS_(\w+)"', text_of(rest)))  # a name handed to a helper (portable_path, env_u...)
+    prefixes = tuple(re.findall(r'"(?:ORBITALS_)?([A-Z0-9_]+_)%s', src))
     patches = ROOT / "build/generated/patches.h"
-    switches = set(re.findall(r'"MKW_(\w+)"', patches.read_text())) if patches.exists() else set()
+    switches = set(re.findall(r'"ORBITALS_(\w+)"', patches.read_text())) if patches.exists() else set()
     in_menu = (RT / "ui/menu/menu.cpp").read_text()
     print("| Key | In the menu |\n|---|---|")
     for key in re.findall(r'"([A-Z0-9_]+)"', known.group(1)):
         if key not in read and key not in switches and not key.startswith(prefixes):
-            print(f"| `MKW_{key}` | {'yes' if f'MKW_{key}' in in_menu else 'no'} |")
+            print(f"| `ORBITALS_{key}` | {'yes' if f'ORBITALS_{key}' in in_menu else 'no'} |")
 
 
 def build_module():

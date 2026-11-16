@@ -1,5 +1,5 @@
 // Every destruction of the objects a descriptor set refers to (buffers, image and buffer views, samplers) goes through
-// vk_destroy_note, for MKW_DRAW_CACHE (vk_exec_dcache.c): sets are kept across frames by their contents, which name
+// vk_destroy_note, for ORBITALS_DRAW_CACHE (vk_exec_dcache.c): sets are kept across frames by their contents, which name
 // objects by handle, and a destroyed handle's value can come back for a new object. A kept set naming the handle
 // empties the cache (vk_destroy_gen moves). Included by vk.h and by vk_vma.cpp before vk_mem_alloc.h, so VMA's own
 // vkDestroyBuffer calls go through it too.

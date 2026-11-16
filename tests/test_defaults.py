@@ -74,7 +74,7 @@ def test_caps_follow_the_gpu(defaults: Path, name: str, discrete: int, vram: int
         if vram >= 7900:
             assert sparse >= 1472, name  # what the title binds uncapped (run-sp3): nothing left non-resident
     else:
-        assert sparse == 768, name  # 1024 hung the 660M with MKW_ASTC_BC1 (run-race41)
+        assert sparse == 768, name  # 1024 hung the 660M with ORBITALS_ASTC_BC1 (run-race41)
         assert pool == 0, name  # the pool is a discrete-GPU path (vk_tex_image.c)
         assert limit <= max(4096, ram * 2 // 5), name  # system RAM, outside the process's cgroup
 

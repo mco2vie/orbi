@@ -3,28 +3,28 @@
 
 #include "vk_mem_internal.h"
 
-// ---------------------------------------------------------------- shadow merge by bytes (MKW_SHADOW_MERGE)
+// ---------------------------------------------------------------- shadow merge by bytes (ORBITALS_SHADOW_MERGE)
 // A range a submission binds writable is the whole binding, not the bytes the GPU writes: the CPU keeps writing other
 // bytes of it (each frame's indirect arguments around the instance counts a culling dispatch adds to). On the console
 // both write one memory; here the sync skipped the whole range while it was pending and the write-back copied all of
-// it, so the CPU's bytes never reached the GPU and were reverted in guest memory (MKW_SHADOW_LOST, lf1 06/11/2026:
+// it, so the CPU's bytes never reached the GPU and were reverted in guest memory (ORBITALS_SHADOW_LOST, lf1 06/11/2026:
 // in a third of the race frames; things drawn by indirect draws appeared or vanished for one frame).
 // With a base, the shadow's bytes when the part that writes the range was submitted:
 // - sync (merge_in): a CPU-written byte the GPU has not changed (shadow == base) goes into the shadow and the base;
 // - write-back (merge_back): only the bytes the GPU changed (shadow != base) go to guest memory.
 // Ranges recorded in the part being synced are not skipped at all: the GPU has not run it.
-// MKW_SHADOW_CPU_WINS (default 1 when MKW_EARLY_READ waits, as on Linux, else 0; "ab"): a byte both changed goes to the later writer, as on the console, where the GPU
+// ORBITALS_SHADOW_CPU_WINS (default 1 when ORBITALS_EARLY_READ waits, as on Linux, else 0; "ab"): a byte both changed goes to the later writer, as on the console, where the GPU
 // runs a submission right after it and the CPU then writes the next frame's values: guest memory away from the base
 // means the CPU wrote after the part was recorded, so the sync takes it and the write-back leaves it. Without it the
 // GPU wins: its write-back reaches guest memory at the fence, late, over the CPU's next values. Measured in the race
-// without MKW_SUBMIT_CATCHUP; on build/cap/race it was not measurable, the black
+// without ORBITALS_SUBMIT_CATCHUP; on build/cap/race it was not measurable, the black
 // bush there came from the replay's memory restore.
 
 static int cpu_wins(void) {
     static int m = -1;
     if (m < 0) {
         m = rt_knob("SHADOW_CPU_WINS", mem_early_waits() ? "1" : "0");
-        if (m) rt_log("mem: a byte the CPU and the GPU both wrote goes to the later writer%s (MKW_SHADOW_CPU_WINS)",
+        if (m) rt_log("mem: a byte the CPU and the GPU both wrote goes to the later writer%s (ORBITALS_SHADOW_CPU_WINS)",
                       m == 2 ? " in the B blocks" : "");
     }
     return RT_KNOB_ON(m);
@@ -70,7 +70,7 @@ uint64_t merge_in(PoolRec *r, uint64_t a, uint64_t b, uint8_t *const *bases, con
     return copied;
 }
 
-// MKW_WB_CENSUS=1 (diagnosis, with MKW_TRACE=perf): merged write-backs by range size, with the span the GPU changed
+// ORBITALS_WB_CENSUS=1 (diagnosis, with ORBITALS_TRACE=perf): merged write-backs by range size, with the span the GPU changed
 // (first to last changed byte), the bytes the CPU had changed since the base, the time, and how many were the same
 // range as an earlier one of the window: whether bases of whole bindings are needed (sombra-replay 4 and 5).
 enum { WBC_BUCKETS = 5, WBC_HASH = 4096 };
@@ -113,7 +113,7 @@ void merge_census_log(void) {
 }
 
 // Write-back of [addr, addr+size) from shadow s: the runs the GPU changed against base. Returns the bytes copied.
-// With MKW_SHADOW_CPU_WINS a byte the CPU changed since the base (guest memory away from it) stays.
+// With ORBITALS_SHADOW_CPU_WINS a byte the CPU changed since the base (guest memory away from it) stays.
 // Guest memory is read only over the runs the GPU changed (watched pages through their protection), a chunk at a time:
 // a copy of the whole range for each of ~200 ranges a frame (~44 KiB each, ~100 KiB of them changed) held the fence's
 // waiters on the race frame's critical path (tl-cb1: ~1 ms a value in cb_done).

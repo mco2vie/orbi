@@ -1,7 +1,7 @@
 # docs/images
 
 Screenshots for the main README, taken from the start screen itself with its test hooks (`runtime/ui/launcher`):
-`MKW_LAUNCHER_SHOT=<frame>:<page>` saves the window at that frame to `MKW_LAUNCHER_SHOT_OUT`, and `MKW_MENU_LANG=en`
+`ORBITALS_LAUNCHER_SHOT=<frame>:<page>` saves the window at that frame to `ORBITALS_LAUNCHER_SHOT_OUT`, and `ORBITALS_MENU_LANG=en`
 sets the language. At 1280 x 720, compressed with `pngquant` and `oxipng`; the game folder shown is a neutral path
 (`/mnt/MarioKartWorld`, a bind mount), not a personal one.
 

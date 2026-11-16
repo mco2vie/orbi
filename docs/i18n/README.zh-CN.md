@@ -169,7 +169,7 @@ Podman 容器中，需要在其 seccomp 配置中允许 `userfaultfd`（Docker �
 
 Linux，需要 `uv`、`clang`、`lld`、`ninja`、SDL3、Opus、libvpx、zstd、xxHash、Vulkan 头文件和 VMA 3.4.0（详见
 [tools/build/README.md](../../tools/build/README.md)）。把你的导出放在 `game/`（`game/exefs`、`game/romfs`），或设置
-`MKW_GAME=<dir>`，然后在仓库根目录执行：
+`ORBITALS_GAME=<dir>`，然后在仓库根目录执行：
 
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt

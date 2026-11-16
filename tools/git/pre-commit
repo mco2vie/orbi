@@ -4,7 +4,7 @@
 # Installed by: git config core.hooksPath tools/git
 set -euo pipefail
 
-marker='MKW_RECOMP_'"GENERATED_FROM_GAME_CODE"
+marker='ORBITALS_RECOMP_'"GENERATED_FROM_GAME_CODE"
 bad=$(git diff --cached --name-only -z --diff-filter=ACM | xargs -0 -r grep -l --binary-files=text -F "$marker" -- || true)
 if [[ -n $bad ]]; then
     echo "pre-commit: game-derived generated code staged:" >&2

@@ -82,7 +82,7 @@ struct S2Link {
     struct S2Link *next;
 };
 static S2Link *busy;   // the link whose handshake is running (its replies come through pump)
-static int trace;      // MKW_SWITCH2=2
+static int trace;      // ORBITALS_SWITCH2=2
 static S2Link *links;
 
 // Devices seen advertising for us and not yet tried, and those that failed (not tried again for 10 s)
@@ -223,7 +223,7 @@ static void drop(S2Link *l) {
     free(l);
 }
 
-// MKW_SWITCH2=2 logs each device once: BlueZ repeats an advertisement every time it hears it (DuplicateData)
+// ORBITALS_SWITCH2=2 logs each device once: BlueZ repeats an advertisement every time it hears it (DuplicateData)
 static int first_seen(const char *path) {
     static char seen[64][160];
     static int n;
@@ -261,7 +261,7 @@ static void device_props(const char *path, DBusMessageIter *props) {
             D.get_basic(&me, &company);
             D.next(&me);
             if (!variant(&me, &mv) || !bytes(&mv, &d, &n)) continue;
-            if (trace && first_seen(path))   // MKW_SWITCH2=2: each device with manufacturer data once, for a report
+            if (trace && first_seen(path))   // ORBITALS_SWITCH2=2: each device with manufacturer data once, for a report
                 rt_log("input: Switch 2 trace: %s company 0x%04x, %d bytes%s", path, company, n,
                        company == S2_COMPANY_ID ? (s2_advert_parse(d, (size_t)n, &a) ? ", a Switch 2 controller" : ", Nintendo, not a Switch 2 controller") : "");
             if (company != S2_COMPANY_ID || !s2_advert_parse(d, (size_t)n, &a)) continue;
@@ -487,7 +487,7 @@ static void bt_main(void *arg) {
 }
 
 void switch2_start(void) {
-    trace = cfg_int("MKW_SWITCH2") >= 2;
-    if (cfg_int("MKW_SWITCH2") && !plat_thread_spawn(bt_main, NULL, "switch2", 0))
+    trace = cfg_int("ORBITALS_SWITCH2") >= 2;
+    if (cfg_int("ORBITALS_SWITCH2") && !plat_thread_spawn(bt_main, NULL, "switch2", 0))
         rt_log("input: Switch 2 controllers off: no thread");
 }

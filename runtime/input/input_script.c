@@ -1,5 +1,5 @@
-// Scripted and recorded input (input.c merges it): MKW_INPUT_SCRIPT and MKW_QUICK_RACE presses, MKW_CTL injections and
-// MKW_INPUT_RECORD. Split from input.c; every function here runs on the input thread or ctl.c's, under script_lock.
+// Scripted and recorded input (input.c merges it): ORBITALS_INPUT_SCRIPT and ORBITALS_QUICK_RACE presses, ORBITALS_CTL injections and
+// ORBITALS_INPUT_RECORD. Split from input.c; every function here runs on the input thread or ctl.c's, under script_lock.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@
 #include "vk.h"
 #include "platform/platform.h"
 
-// MKW_INPUT_SCRIPT=<file>: lines "<frame> <button> [hold]" or "<frame> LSTICK|RSTICK <x> <y> [hold]", ORed into the real input.
+// ORBITALS_INPUT_SCRIPT=<file>: lines "<frame> <button> [hold]" or "<frame> LSTICK|RSTICK <x> <y> [hold]", ORed into the real input.
 // <frame> and its hold are 60 Hz ticks of game time since the first present (frame_step_ticks: presents at 60 fps), so
 // the title menus get the presses at the same game time at any frame limit. A line "@<ms> ..." is timed instead: <ms>
 // and its hold are milliseconds of the world clock (frame_step_world_us, game time since the loaded save's first
@@ -23,7 +23,7 @@
 // applied once. In a script with timed lines (a recording) the untimed ones belong before the world clock: they stop
 // when it starts, as the load ends at another tick in each run.
 // at, hold: ticks, or microseconds of the world clock when timed.
-// A line "<node>+<ticks> ..." waits for a phase of the game instead (MKW_SEQ_WATCH=1, seqwatch.c): it lands <ticks>
+// A line "<node>+<ticks> ..." waits for a phase of the game instead (ORBITALS_SEQ_WATCH=1, seqwatch.c): it lands <ticks>
 // after the node's first start, so a press in a menu does not depend on how long the menus before it took (turbo, loads).
 // A line that starts with "p<N> " (N 1-8) presses for player N (input_poll_player); without it, for player 1.
 typedef struct {
@@ -101,8 +101,8 @@ static void script_add(const ScriptEv *e) {
     script_ev[script_n++] = *e;
 }
 
-// MKW_QUICK_RACE (Hacks tab): the menus pressed through by phase (seqwatch.c turns the watch on
-// for it). tt: a time trial, Mario, standard kart, the course the map offers (the title's; fixed with MKW_SEED, tt6a/b),
+// ORBITALS_QUICK_RACE (Hacks tab): the menus pressed through by phase (seqwatch.c turns the watch on
+// for it). tt: a time trial, Mario, standard kart, the course the map offers (the title's; fixed with ORBITALS_SEED, tt6a/b),
 // alone (tt2: race 29,6 s after boot); free:
 // free roam, the main menu's Plus (Tab on the keyboard).
 static const char *const quick_tt[] = {
@@ -122,19 +122,19 @@ static void script_load_quick(const char *mode) {
         snprintf(line, sizeof line, "%s", lines[i]);
         if (script_parse(line, i + 1, &e) > 0) script_add(&e);
     }
-    rt_log("input: MKW_QUICK_RACE=%s, %d presses by phase", mode, script_n);
+    rt_log("input: ORBITALS_QUICK_RACE=%s, %d presses by phase", mode, script_n);
 }
 
 static void script_load(void) {
     script_state = 1;
-    const char *path = cfg_get("MKW_INPUT_SCRIPT"), *quick = cfg_value("MKW_QUICK_RACE");
+    const char *path = cfg_get("ORBITALS_INPUT_SCRIPT"), *quick = cfg_value("ORBITALS_QUICK_RACE");
     if ((!path || !*path) && strcmp(quick, "off")) {
         script_load_quick(quick);
         return;
     }
     if (!path || !*path) return;
     FILE *f = fopen(path, "r");
-    if (!f) { rt_log("input: cannot open MKW_INPUT_SCRIPT %s", path); return; }
+    if (!f) { rt_log("input: cannot open ORBITALS_INPUT_SCRIPT %s", path); return; }
     char line[256];
     int ln = 0;
     ScriptEv e;
@@ -149,7 +149,7 @@ static void script_load(void) {
 
 static void script_apply_locked(uint64_t *b, int32_t sl[2], int32_t sr[2], int player);
 
-// MKW_CTL (ctl.c): a line "<ticks from now> <button> [hold]" or "... LSTICK|RSTICK x y [hold]" applied from the next
+// ORBITALS_CTL (ctl.c): a line "<ticks from now> <button> [hold]" or "... LSTICK|RSTICK x y [hold]" applied from the next
 // tick, beside the script's own events.
 int input_script_inject(const char *text) {
     char line[256];
@@ -172,7 +172,7 @@ void script_apply(uint64_t *b, int32_t sl[2], int32_t sr[2], int player) {
 }
 
 static void script_apply_locked(uint64_t *b, int32_t sl[2], int32_t sr[2], int player) {
-    if (!script_n || seqwatch_hold()) return;   // MKW_SEQ_HOLD: e.g. no presses during the cup movie
+    if (!script_n || seqwatch_hold()) return;   // ORBITALS_SEQ_HOLD: e.g. no presses during the cup movie
     uint64_t fr = __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED), tick = frame_step_ticks();
     int64_t w = frame_step_world_us();
     for (int i = 0; i < script_n; i++) {
@@ -190,7 +190,7 @@ static void script_apply_locked(uint64_t *b, int32_t sl[2], int32_t sr[2], int p
     }
 }
 
-// MKW_INPUT_RECORD=<file>: writes the merged input as MKW_INPUT_SCRIPT lines, one per button press and per stick
+// ORBITALS_INPUT_RECORD=<file>: writes the merged input as ORBITALS_INPUT_SCRIPT lines, one per button press and per stick
 // segment, so a played session replays as a script. A stick segment ends when an axis moves by more than REC_STICK_STEP.
 // An event that begins on the world clock is written timed ("@<ms>", hold in ms), one before it in ticks
 // (frame_step_ticks). When the world clock starts, held buttons and sticks are cut there and go on as timed events.
@@ -233,11 +233,11 @@ static void rec_flush_all(void) {
 
 void rec_apply(uint64_t b, const int32_t sl[2], const int32_t sr[2]) {
     if (!rec_state) {
-        const char *path = cfg_get("MKW_INPUT_RECORD");   // no default: not recording when unset
+        const char *path = cfg_get("ORBITALS_INPUT_RECORD");   // no default: not recording when unset
         rec = path && *path ? fopen(path, "w") : NULL;
         rec_state = rec ? 1 : -1;
-        if (path && *path && !rec) rt_log("input: cannot open MKW_INPUT_RECORD %s", path);
-        if (rec) { fprintf(rec, "# Recorded input (MKW_INPUT_RECORD); frame = 60 Hz ticks of game time, @ms = world clock.\n"); atexit(rec_flush_all);
+        if (path && *path && !rec) rt_log("input: cannot open ORBITALS_INPUT_RECORD %s", path);
+        if (rec) { fprintf(rec, "# Recorded input (ORBITALS_INPUT_RECORD); frame = 60 Hz ticks of game time, @ms = world clock.\n"); atexit(rec_flush_all);
                    rt_log("input: recording to %s", path); }
     }
     if (rec_state != 1) return;

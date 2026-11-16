@@ -19,7 +19,7 @@ def fields_of(data):
         if t == 0xD2: v = round(struct.unpack_from("<f", s, off)[0], 4)
         out[k] = (t, v)
     return out
-ROMFS = Path(os.environ.get("MKW_GAME", "game")) / "romfs"
+ROMFS = Path(os.environ.get("ORBITALS_GAME", "game")) / "romfs"
 a = fields_of(romfs_read(ROMFS, archive(ROMFS)))
 b = fields_of((Path("build/romfs-res") / archive(ROMFS)).read_bytes())
 for k in sorted(a): print(f"{k:60s} {a[k][0]:#x} {a[k][1]!s:>10} {'-> ' + str(b[k][1]) if b[k] != a[k] else ''}")

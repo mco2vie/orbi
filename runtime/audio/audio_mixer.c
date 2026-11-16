@@ -7,8 +7,8 @@
 // DSP-ADPCM) along the sample path the voice clock consumes, resamples it linearly, runs the voice biquads, scales it
 // into its destination mix, folds the submixes, runs the mix effects and writes the device sink's stereo mix into a
 // single-producer single-consumer ring. The SDL audio thread drains that ring without taking any lock: an empty ring
-// plays silence and never blocks the render thread or the guest. MKW_AUDIO=none (or MKW_AUDIO_OFF) mixes without a
-// device; MKW_AUDIO_PREFILL_MS (0..500, default 20) is the queued audio the output waits for after start or underrun.
+// plays silence and never blocks the render thread or the guest. ORBITALS_AUDIO=none (or ORBITALS_AUDIO_OFF) mixes without a
+// device; ORBITALS_AUDIO_PREFILL_MS (0..500, default 20) is the queued audio the output waits for after start or underrun.
 #include <math.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -58,7 +58,7 @@ typedef struct Mixer {
 
 static _Atomic float device_volume = 1.0f;
 
-// MKW_VOLUME: the player's volume in percent (0..100) on top of the game's own; a live setting (the
+// ORBITALS_VOLUME: the player's volume in percent (0..100) on top of the game's own; a live setting (the
 // menu), parsed again when cfg_version changes. Render thread only.
 static float host_volume(void) {
     static float v = 1.0f;
@@ -66,11 +66,11 @@ static float host_volume(void) {
     unsigned ver = cfg_version();
     if (ver == seen) return v;
     seen = ver;
-    double pct = cfg_double("MKW_VOLUME");
+    double pct = cfg_double("ORBITALS_VOLUME");
     v = (float)((pct < 0 ? 0 : pct > 100 ? 100 : pct) / 100);
     return v;
 }
-// MKW_BACKGROUND_MUTE=1: silent while the window is not in front (gfx_present.c's focus, what the game hears as
+// ORBITALS_BACKGROUND_MUTE=1: silent while the window is not in front (gfx_present.c's focus, what the game hears as
 // nn::oe's focus state); the voices keep running, only the output is zeroed. Off by default.
 static float background_gain(void) {
     static int on;
@@ -78,7 +78,7 @@ static float background_gain(void) {
     unsigned ver = cfg_version();
     if (ver != seen) {
         seen = ver;
-        on = cfg_int("MKW_BACKGROUND_MUTE") != 0;
+        on = cfg_int("ORBITALS_BACKGROUND_MUTE") != 0;
     }
     return on && !gfx_window_focused() ? 0.0f : 1.0f;
 }
@@ -90,7 +90,7 @@ static void report_once(Mixer *m, unsigned bit, const char *msg, int value) {
 }
 
 // ---- output: SDL3 audio stream fed from the ring
-// How much audio the output waits for before it starts, and again after an underrun: MKW_AUDIO_PREFILL_MS rounded up
+// How much audio the output waits for before it starts, and again after an underrun: ORBITALS_AUDIO_PREFILL_MS rounded up
 // to whole 5 ms render blocks. Returns -1 for a value outside 0..500 ms.
 static int prefill_blocks_for(const char *e) {
     if (!e || !*e) return 4;
@@ -164,7 +164,7 @@ static void SDLCALL sdl_pull(void *user, SDL_AudioStream *stream, int additional
     }
 }
 
-// MKW_AUDIO_CHANNELS: auto (default: 5.1 when the default output device has 6 channels or more), 2 or 6. The game
+// ORBITALS_AUDIO_CHANNELS: auto (default: 5.1 when the default output device has 6 channels or more), 2 or 6. The game
 // asks it (IAudioDevice GetActiveChannelCount, audren_sf.c) and mixes its device sink to that many, as the console
 // does with a 5.1 TV or receiver; the output opens with the same count (SDL's 5.1 order FL FR FC LFE BL BR is the
 // sink's). Decided once: the game asks before and after the renderer opens its output.
@@ -172,7 +172,7 @@ int audio_output_channels(void) {
     static _Atomic int ch;
     int n = atomic_load(&ch);
     if (n) return n;
-    const char *e = cfg_value("MKW_AUDIO_CHANNELS"), *mode = cfg_get("MKW_AUDIO");
+    const char *e = cfg_value("ORBITALS_AUDIO_CHANNELS"), *mode = cfg_get("ORBITALS_AUDIO");
     SDL_AudioSpec dev = {0};
     int have = 0;
     if (!strcmp(e, "auto") && !(mode && !strcmp(mode, "none")) && SDL_InitSubSystem(SDL_INIT_AUDIO)) {
@@ -182,15 +182,15 @@ int audio_output_channels(void) {
     n = !strcmp(e, "6") || have >= 6 ? 6 : 2;
     int was = 0;
     if (atomic_compare_exchange_strong(&ch, &was, n))
-        rt_log("audio: %s output (MKW_AUDIO_CHANNELS=%s, default device %d channels)", n == 6 ? "5.1" : "stereo", e, have);
+        rt_log("audio: %s output (ORBITALS_AUDIO_CHANNELS=%s, default device %d channels)", n == 6 ? "5.1" : "stereo", e, have);
     return atomic_load(&ch);
 }
 
 static void output_open(Mixer *m, int rate) {
     m->ch = audio_output_channels();
-    const char *mode = cfg_get("MKW_AUDIO");
-    if ((mode && !strcmp(mode, "none")) || cfg_get("MKW_AUDIO_OFF")) {
-        rt_log("audio: MKW_AUDIO=none: mixing without a device");
+    const char *mode = cfg_get("ORBITALS_AUDIO");
+    if ((mode && !strcmp(mode, "none")) || cfg_get("ORBITALS_AUDIO_OFF")) {
+        rt_log("audio: ORBITALS_AUDIO=none: mixing without a device");
         return;
     }
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
@@ -230,21 +230,21 @@ static void output_push(Mixer *m, const float *lr, int frames) {
     if (!m->device_ok) atomic_store(&m->rd, wr + (uint64_t)frames);   // no device: the ring only keeps the latest frames
 }
 
-// MKW_AUDIO_RAW=<path>: every rendered block (n samples) appended as float32 at the output rate and channels (stereo or
+// ORBITALS_AUDIO_RAW=<path>: every rendered block (n samples) appended as float32 at the output rate and channels (stereo or
 // 5.1, the log says which), to look for gaps and jumps
 // inside the game's own mix (Adrià: cup movie audio cuts with no underrun and no voice run dry, live26 01/11/2026).
 static void raw_note(const float *lr, int n) {
     static FILE *f;
     static int state;   // 0 not opened yet, 1 writing, -1 off
     if (!state) {
-        const char *e = cfg_get("MKW_AUDIO_RAW");
+        const char *e = cfg_get("ORBITALS_AUDIO_RAW");
         state = e && *e && (f = fopen(e, "wb")) ? 1 : -1;
         if (state > 0) rt_log("audio: raw output to %s (float32, the output's channels)", e);
     }
     if (state > 0) fwrite(lr, sizeof *lr, (size_t)n, f), fflush(f);
 }
 
-// Level meter (MKW_TRACE=audio): one line per 5 s of output, and the first nonzero frame.
+// Level meter (ORBITALS_TRACE=audio): one line per 5 s of output, and the first nonzero frame.
 static void level_note(AudioRenderer *r, Mixer *m, const float *lr, int n) {   // n samples, m->ch per frame
     if (!(rt_trace & RT_TRACE_AUDIO)) return;
     int sound = 0, frames = n / m->ch;
@@ -312,10 +312,10 @@ void audio_mixer_open(AudioRenderer *r) {
     m->sink_written = calloc(sinks, sizeof(uint32_t));
     if (!m->sink_address || !m->sink_size || !m->sink_offset || !m->sink_old || !m->sink_written)
         rt_fatal("audio sink state allocation");
-    const char *pe = cfg_get("MKW_AUDIO_PREFILL_MS");
+    const char *pe = cfg_get("ORBITALS_AUDIO_PREFILL_MS");
     m->prefill = prefill_blocks_for(pe);
     if (m->prefill < 0) {
-        rt_log("audio: MKW_AUDIO_PREFILL_MS=%s is not 0..500 ms: using 20", pe);
+        rt_log("audio: ORBITALS_AUDIO_PREFILL_MS=%s is not 0..500 ms: using 20", pe);
         m->prefill = 4;
     }
     r->mixer = m;

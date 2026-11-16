@@ -36,7 +36,7 @@ import catalog  # noqa: E402  (tools/i18n: the text catalogs from i18n/*.po)
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
 ORBITALS_ICO = ROOT / "assets/icon/orbitals.ico"   # made by tools/build/make_ico.py
-GAME = Path(os.environ.get("MKW_GAME", ROOT / "game"))
+GAME = Path(os.environ.get("ORBITALS_GAME", ROOT / "game"))
 WIN = ROOT / "build/win"  # tools/build/windeps.py
 # The CPU the game and runtime are built for. x86-64: AVX2 (x86-64-v3). AArch64: ARMv8.2 with the extensions of every
 # Cortex-A76-class core or newer (Snapdragon 8cx/8 Gen 1+, Raspberry Pi 5, Apple M): LSE atomics, FP16, RCpc, dot
@@ -240,10 +240,10 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         (out / "mkw.def").write_text("EXPORTS\n" + "".join(f"    {s}\n" for s in RT_EXPORTS))
         # GUI subsystem: started from Explorer or a shortcut, no console window opens (main() stays the entry)
         link_flags += [str(out / "mkw.def"), f"-Wl,--out-implib,{out / 'libmkw.dll.a'}", "-Wl,--subsystem,windows"]
-    # ccache before the C compilers (MKW_CCACHE=0 leaves it out): a folder move changes every runtime command's -I list
+    # ccache before the C compilers (ORBITALS_CCACHE=0 leaves it out): a folder move changes every runtime command's -I list
     # and a comment in runtime/cpu recompiles all the game code; ninja rebuilds both, ccache hands back the objects
     # (07/11/2026: ~12 min per step of a bisection). Not for C++: menu_look.cpp #embeds a file ccache may not track.
-    cc = f"ccache {target.cc}" if os.environ.get("MKW_CCACHE", "1") != "0" and shutil.which("ccache") else target.cc
+    cc = f"ccache {target.cc}" if os.environ.get("ORBITALS_CCACHE", "1") != "0" and shutil.which("ccache") else target.cc
     lines = [
         f"builddir = {out}",
         f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",

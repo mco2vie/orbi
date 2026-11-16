@@ -1,9 +1,9 @@
 """Compares two NVN recordings op by op: how much of a frame repeats in the next one.
 
 Why: the replay turns each submission's ops into Vulkan anew every frame (7-8 us a draw). The game sends a race frame
-as one ~2 MB recording whose bytes differ every frame (MKW_CAP_SUBLIST); whether the ops and their state repeat with
+as one ~2 MB recording whose bytes differ every frame (ORBITALS_CAP_SUBLIST); whether the ops and their state repeat with
 only a few fields changing decides whether the replay's work can be kept from one frame to the next.
-The recordings come from mkw --replay with MKW_CAP_RECS=<dir> (runtime/gfx/cap/cap_replay.c). Ops are aligned by type
+The recordings come from mkw --replay with ORBITALS_CAP_RECS=<dir> (runtime/gfx/cap/cap_replay.c). Ops are aligned by type
 (difflib); of the aligned pairs it counts the identical ones and, for the others, which 8-byte words of the payload
 changed, per op type.
 

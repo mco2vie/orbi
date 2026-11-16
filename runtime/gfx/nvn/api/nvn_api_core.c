@@ -295,7 +295,7 @@ static void own_storage_give_back(const void *mem) {
 
 // NVNboolean nvnMemoryPoolInitialize(NVNmemoryPool *p, const NVNmemoryPoolBuilder *b)
 // Pool setup imports, mirrors and maps memory in the back end (the driver, VirtualAlloc): up to 20 ms on the game's
-// loader threads, which held a virtual core through it while job workers waited (MKW_CORE_DIAG). The thread gives
+// loader threads, which held a virtual core through it while job workers waited (ORBITALS_CORE_DIAG). The thread gives
 // the core up, as for any blocking host call.
 NVN_API(nvnMemoryPoolInitialize) {
     NVN_BLOCKING();
@@ -508,7 +508,7 @@ NVN_API(nvnQueueFenceSync) {
 }
 // NVNsyncWaitResult nvnSyncWait(const NVNsync *s, uint64_t timeout_ns): a sync never fenced reports a timeout at once;
 // a fenced one is released only after the back end completed that fence value
-// MKW_TRACE=perf: the waits that blocked, by the frame of the waited fence: 0 the frame not presented yet (the game
+// ORBITALS_TRACE=perf: the waits that blocked, by the frame of the waited fence: 0 the frame not presented yet (the game
 // waits for the GPU to finish what it is still building, so its next frame cannot overlap that frame's replay and GPU
 // work), 1 the frame presented last, and so on. Logged every 600 such waits. present_fence: the newest fence at each of
 // the last 4 presents (nvn_present_fence_note, QueuePresentTexture).
@@ -540,7 +540,7 @@ static void sync_wait_note(uint64_t fence, uint64_t ns, uint64_t issued_at_start
     memset(n, 0, sizeof n), memset(t, 0, sizeof t);
 }
 
-void nvn_sync_wait_window(void) {   // from the present, MKW_TRACE=perf
+void nvn_sync_wait_window(void) {   // from the present, ORBITALS_TRACE=perf
     if (++sw_presents % 60) return;
     uint64_t rn = __atomic_exchange_n(&sw_rep_n, 0, __ATOMIC_RELAXED), rt = __atomic_exchange_n(&sw_rep_ns, 0, __ATOMIC_RELAXED);
     uint64_t gn = __atomic_exchange_n(&sw_gpu_n, 0, __ATOMIC_RELAXED), gt = __atomic_exchange_n(&sw_gpu_ns, 0, __ATOMIC_RELAXED);
@@ -553,7 +553,7 @@ void nvn_sync_wait_window(void) {   // from the present, MKW_TRACE=perf
 
 // A poll (timeout under 1 ms) of a fence not done: on the console the GPU is done with a submit within the frame, here
 // the replay records ~3 submits behind (lf6), so a game that polls and goes on without the result sees it a frame late
-// (hypothesis for the dark trees, 06/11/2026). MKW_SYNC_POLL_WAIT (a measurement, default 0; "ab") waits for the fence
+// (hypothesis for the dark trees, 06/11/2026). ORBITALS_SYNC_POLL_WAIT (a measurement, default 0; "ab") waits for the fence
 // instead. One line every 3,000 polls: how many found the fence not done, by stride.
 static uint64_t poll_n, poll_late, poll_waited;
 
@@ -561,7 +561,7 @@ static int poll_wait(uint64_t fence) {
     static int mode = -1;
     if (mode < 0) {
         mode = rt_knob("SYNC_POLL_WAIT", "0");
-        if (mode) rt_log("nvn: polls of a fence not done wait for it%s (MKW_SYNC_POLL_WAIT, a measurement)",
+        if (mode) rt_log("nvn: polls of a fence not done wait for it%s (ORBITALS_SYNC_POLL_WAIT, a measurement)",
                          mode == 2 ? " in the B blocks" : "");
     }
     __atomic_fetch_add(&poll_late, 1, __ATOMIC_RELAXED);
@@ -573,12 +573,12 @@ static int poll_wait(uint64_t fence) {
 
 static void poll_note(void) {
     if (__atomic_add_fetch(&poll_n, 1, __ATOMIC_RELAXED) % 3000) return;
-    rt_log("nvn: SyncWait polls: 3000, %llu found the fence not done, %llu waited for it (MKW_SYNC_POLL_WAIT)",
+    rt_log("nvn: SyncWait polls: 3000, %llu found the fence not done, %llu waited for it (ORBITALS_SYNC_POLL_WAIT)",
            (unsigned long long)__atomic_exchange_n(&poll_late, 0, __ATOMIC_RELAXED),
            (unsigned long long)__atomic_exchange_n(&poll_waited, 0, __ATOMIC_RELAXED));
 }
 
-// MKW_FENCE_EARLY (default 0; "ab"; Linux with MKW_EARLY_READ waits only): a fence is done for the game once its submit
+// ORBITALS_FENCE_EARLY (default 0; "ab"; Linux with ORBITALS_EARLY_READ waits only): a fence is done for the game once its submit
 // is recorded and handed to the GPU, not when the GPU finishes it. The race's
 // game waits for the last presented frame's fence 599 of 600 times, ~15-22 ms a frame (tlp1, lpc1), and the next frame's
 // recording only starts after it: the frame is the game, the recording and the GPU's tail in a row. What the game may
@@ -588,7 +588,7 @@ static int fence_early(const GfxBackend *b) {
     static int mode = -1;
     if (mode < 0) {
         mode = b->fence_wait_issued && mem_early_waits() ? rt_knob("FENCE_EARLY", "0") : 0;
-        if (mode) rt_log("nvn: fence waits end once the submit is recorded%s (MKW_FENCE_EARLY)", mode == 2 ? " in the B blocks" : "");
+        if (mode) rt_log("nvn: fence waits end once the submit is recorded%s (ORBITALS_FENCE_EARLY)", mode == 2 ? " in the B blocks" : "");
     }
     int on = RT_KNOB_ON(mode);
     if (on != mem_fence_early) __atomic_store_n(&mem_fence_early, on, __ATOMIC_RELEASE);
@@ -649,7 +649,7 @@ NVN_API(nvnEventFinalize) { ((ev_t *)arg_p(c, 0))->magic = 0; }
 // The fence of the newest submit that signals each event (open addressing by value address), set at the submit. On the
 // console the GPU writes an event soon after the submit; here at the fence, about a frame later, so a game that reads
 // an event to learn how far the GPU got sees it behind (hypothesis for the dark trees, 06/11/2026).
-// MKW_EVENT_WAIT (a measurement, default 0): EventGetValue waits for that fence. One census line every 3,000 reads.
+// ORBITALS_EVENT_WAIT (a measurement, default 0): EventGetValue waits for that fence. One census line every 3,000 reads.
 #define EV_SLOTS 1024
 static struct { volatile uint32_t *val; uint64_t fence; } ev_fence[EV_SLOTS];
 static PlatMutex ev_lock = PLAT_MUTEX_INIT;
@@ -679,7 +679,7 @@ NVN_API(nvnEventGetValue) {
     static int wait = -1;
     if (wait < 0) {
         wait = rt_knob("EVENT_WAIT", "0");
-        if (wait) rt_log("nvn: EventGetValue waits for the submit that signals it (MKW_EVENT_WAIT, a measurement)");
+        if (wait) rt_log("nvn: EventGetValue waits for the submit that signals it (ORBITALS_EVENT_WAIT, a measurement)");
     }
     plat_mutex_lock(&ev_lock);
     uint32_t k = ev_slot(e->val);
@@ -696,7 +696,7 @@ NVN_API(nvnEventGetValue) {
         }
     }
     if (r % 3000 == 0)
-        rt_log("nvn: EventGetValue: 3000 reads, %llu of an event whose submit was not done, %llu waited (MKW_EVENT_WAIT)",
+        rt_log("nvn: EventGetValue: 3000 reads, %llu of an event whose submit was not done, %llu waited (ORBITALS_EVENT_WAIT)",
                (unsigned long long)__atomic_exchange_n(&ev_pending, 0, __ATOMIC_RELAXED),
                (unsigned long long)__atomic_exchange_n(&ev_waited, 0, __ATOMIC_RELAXED));
     ret_x(c, *e->val);
@@ -768,9 +768,9 @@ NVN_API(nvnQueueFinish) {
     }
     gfx_backend()->cpu_synced(gfx_backend()->fence_done());
 }
-static uint64_t early_done(void) { return gfx_backend()->fence_done(); }   // MKW_EARLY_READ: the GPU's progress
+static uint64_t early_done(void) { return gfx_backend()->fence_done(); }   // ORBITALS_EARLY_READ: the GPU's progress
 
-// MKW_EARLY_READ: what this submit's GPU work writes, watched from now with its fence; under the submit's lock, as the
+// ORBITALS_EARLY_READ: what this submit's GPU work writes, watched from now with its fence; under the submit's lock, as the
 // list nvn_submit_prepare filled.
 static void early_watch_submit(uint64_t f) {
     if (!nvn_sub_ndst) return;
@@ -780,7 +780,7 @@ static void early_watch_submit(uint64_t f) {
 }
 
 // void nvnQueueSubmitCommands(NVNqueue *q, int n, const NVNcommandHandle *handles): replayed on this thread with its
-// core given up (section 2.2), or queued for the replay thread (MKW_REPLAY_ASYNC, vk_backend.c); the newest fence
+// core given up (section 2.2), or queued for the replay thread (ORBITALS_REPLAY_ASYNC, vk_backend.c); the newest fence
 // value is what QueueFenceSync records; with the queue the fence covers replay and GPU.
 NVN_API(nvnQueueSubmitCommands) {
     queue_t *q = arg_p(c, 0);
@@ -819,12 +819,12 @@ NVN_API(nvnQueueSubmitCommands) {
         nvn_sub_sync[i]->fence = f;
         __atomic_store_n(&nvn_sub_sync[i]->fenced, 1, __ATOMIC_RELEASE);
     }
-    // MKW_SUBMIT_CATCHUP (default 1, 0 when MKW_EARLY_READ waits: Linux; "ab"): the submit returns once its replay and GPU work are done, as on the console,
+    // ORBITALS_SUBMIT_CATCHUP (default 1, 0 when ORBITALS_EARLY_READ waits: Linux; "ab"): the submit returns once its replay and GPU work are done, as on the console,
     // where the GPU runs a submit right after it and what it writes (timestamps the game decides what to draw with,
     // among others) is there when the CPU reads it. With the replay ~3 submits behind, trees and cacti flickered dark for
     // one frame (lf9: 1 such frame with it, ~32 without in the same stretch). It costs ~6 ms a frame (37 against 31 in
     // the race, lf8-lf9); Adrià chose it over the flicker (06/11/2026). 0: the replay runs behind, as before.
-    // MKW_SUBMIT_CATCHUP=report: only submits that report a samples-passed count wait (occlusion queries, whose results
+    // ORBITALS_SUBMIT_CATCHUP=report: only submits that report a samples-passed count wait (occlusion queries, whose results
     // the CPU reads back: here they reach memory at the fence, a frame later than on the console). One census line every
     // 1,500 submits.
     static int catchup = -1, last = -1, only_reports;
@@ -837,10 +837,10 @@ NVN_API(nvnQueueSubmitCommands) {
         cs_n = cs_sp = cs_rep = cs_ev = cs_sp_n = 0;
     }
     if (catchup < 0) {
-        const char *e = cfg_get("MKW_SUBMIT_CATCHUP");
+        const char *e = cfg_get("ORBITALS_SUBMIT_CATCHUP");
         only_reports = e && !strcmp(e, "report");
         catchup = only_reports ? 1 : rt_knob("SUBMIT_CATCHUP", mem_early_waits() ? "0" : "1");
-        rt_log("nvn: submits wait for their replay and GPU work%s (MKW_SUBMIT_CATCHUP)",
+        rt_log("nvn: submits wait for their replay and GPU work%s (ORBITALS_SUBMIT_CATCHUP)",
                !catchup ? ": off" : catchup == 2 ? " in the B blocks" : only_reports ? " when they report samples passed" : "");
     }
     if (catchup == 2 && RT_KNOB_ON(catchup) != last)

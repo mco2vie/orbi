@@ -21,7 +21,7 @@
 
 static int lan_only(struct in_addr a) { return ov_lan_only(ntohl(a.s_addr)); }
 
-// ---- the LAN address nifm reports (ov_net.c): MKW_LAN_IP, else the best interface that is up with a local network
+// ---- the LAN address nifm reports (ov_net.c): ORBITALS_LAN_IP, else the best interface that is up with a local network
 // address (lan_only, not loopback), read from the system's interface list (nothing is sent), with its mask. Pia
 // builds its broadcast from both. Best first (a tie keeps the first in the system's order):
 //   3  a network with the default route: the one the PC reaches its router and the other PCs through
@@ -80,8 +80,8 @@ static int linux_default_route(const char *ifname) {
 int ov_lan_address(uint8_t ip[4], uint8_t mask[4]) {
     struct in_addr want = {0}, a = {0}, m = {0};
     LanBest best = {0};
-    const char *e = cfg_get("MKW_LAN_IP");
-    if (e && *e && inet_pton(AF_INET, e, &want) != 1) rt_log("nifm: MKW_LAN_IP %s is not an IPv4 address", e);
+    const char *e = cfg_get("ORBITALS_LAN_IP");
+    if (e && *e && inet_pton(AF_INET, e, &want) != 1) rt_log("nifm: ORBITALS_LAN_IP %s is not an IPv4 address", e);
 #ifdef _WIN32
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa)) return -1;
@@ -120,7 +120,7 @@ int ov_lan_address(uint8_t ip[4], uint8_t mask[4]) {
     }
 #endif
     if (best.seen) a = best.a, m = best.m;
-    if (!a.s_addr && want.s_addr) a = want, m.s_addr = htonl(0xffffff00u);   // MKW_LAN_IP not on an interface: /24
+    if (!a.s_addr && want.s_addr) a = want, m.s_addr = htonl(0xffffff00u);   // ORBITALS_LAN_IP not on an interface: /24
     if (!a.s_addr) {
         rt_log("nifm: no network interface with a local network address: no LAN");
         return -1;

@@ -1,6 +1,6 @@
 """The driver's statistics of each specialized pipeline next to its generic pipeline, from a run's log.
 
-Why: With MKW_SPEC_STATS=1 the runtime logs, for every optimised graphics
+Why: With ORBITALS_SPEC_STATS=1 the runtime logs, for every optimised graphics
 pipeline, one line per executable with RADV's statistics (instructions, VGPRs, ...) and the stage keys, a variant's key
 followed by its generic shader's ("vs=<k>(of <g>)"). This pairs each variant pipeline with the generic pipeline of the
 same shaders and compares them per executable.

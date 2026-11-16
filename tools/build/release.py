@@ -46,7 +46,7 @@ SYSTEM_LIBS = {"libc.so.6", "libm.so.6", "libdl.so.2", "libpthread.so.0", "librt
 # The licence files of the libraries bundled (the sysroot's, Debian's copyright files) and of the static zstd.
 LICENSES = {"SDL3": "usr/local/share/doc/SDL3/LICENSE.txt", "libopus": "usr/share/doc/libopus0/copyright",
             "libvpx": "usr/share/doc/libvpx6/copyright", "zstd": "usr/local/share/doc/zstd/LICENSE"}  # fmt: skip
-GAME_MARKER = "MKW_RECOMP_" + "GENERATED_FROM_GAME_CODE"
+GAME_MARKER = "ORBITALS_RECOMP_" + "GENERATED_FROM_GAME_CODE"
 
 APPRUN = """#!/bin/sh
 # The AppImage's entry (tools/build/release.py): the runtime runs from a copy in the player's data folder, which holds

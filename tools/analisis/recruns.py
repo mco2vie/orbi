@@ -6,7 +6,7 @@ the ops up to a draw or dispatch, keyed by their bytes with BIND_UBO's address z
 come from a linear allocator and move every frame); a pass is the ops from one SET_RT to the next. For B against A it
 prints the share of B's draws in passes identical to one of A's, and in runs of consecutive identical segments
 (difflib) by run length.
-The recordings come from mkw --replay with MKW_CAP_RECS=<dir> (runtime/gfx/cap/cap_replay.c).
+The recordings come from mkw --replay with ORBITALS_CAP_RECS=<dir> (runtime/gfx/cap/cap_replay.c).
 
 Usage: uv run tools/analisis/recruns.py A.bin B.bin
 """

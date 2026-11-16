@@ -7,7 +7,7 @@ README; the same was wanted here (05/11/2026). Three measures, each "done" count
 - SDK: of the imports of main, those replaced by name (HOST_OVERRIDE) plus those that are pure library code and run
   right as the SDK's recompiled code (tools/analisis/sdk_class.py); apart, those on the runtime's kernel and those
   that go to a console service without a replacement, with how many of these the game called in a race
-  (MKW_IMPORT_CENSUS). Counting only the replaced ones read as 1 100 missing functions.
+  (ORBITALS_IMPORT_CENSUS). Counting only the replaced ones read as 1 100 missing functions.
 - Shaders: of the SM86 opcodes in MKW's programs, those translated in every form they take; an opcode with a form the
   translator rejects (build/spirv/failed.tsv) is partial.
 What comes from the game and its measurements (names, imports, census, failures) is kept in tools/docs/progress.json,
@@ -15,7 +15,7 @@ because a checkout without build/ has none of it; --update refreshes it from bui
 
 Usage: uv run tools/docs/progress.py --update --census build/run/NAME.imports   (needs build/bindb.sqlite with its
        svc table, build/nvn_usage.csv, build/shader_census, build/spirv and build/sm86/instructions.json; the census
-       is the file of a race run with MKW_IMPORT_CENSUS)
+       is the file of a race run with ORBITALS_IMPORT_CENSUS)
        uv run cog -r -I tools/docs README.md      regenerates the bars; tools/docs/check.py checks them
 """
 
@@ -225,7 +225,7 @@ def emit(cog) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--update", action="store_true", help="refresh tools/docs/progress.json from build/")
-    ap.add_argument("--census", type=Path, help="MKW_IMPORT_CENSUS file of a race run (needed by --update)")
+    ap.add_argument("--census", type=Path, help="ORBITALS_IMPORT_CENSUS file of a race run (needed by --update)")
     args = ap.parse_args()
     if not args.update or not args.census:
         ap.error("nothing to do: --update --census FILE refreshes the measurements; cog renders the README block")

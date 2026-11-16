@@ -11,7 +11,7 @@
 // The icons follow the bindings (input_map.h): the cell of Switch A shows the controller button or the key that presses
 // A now. Nothing of Nintendo's ships: Xbox and PlayStation buttons, keycaps and mice are drawn, labels set in Roboto.
 //
-// MKW_GLYPH_DUMP=<dir>: every RGBA8 1024x1024 upload is saved as <dir>/glyph_<addr>.rgba (raw rows, as uploaded) with
+// ORBITALS_GLYPH_DUMP=<dir>: every RGBA8 1024x1024 upload is saved as <dir>/glyph_<addr>.rgba (raw rows, as uploaded) with
 // its hash in the log, and the redrawn sheet beside it as glyph_<addr>_<kind>.rgba.
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,7 +56,7 @@ static const Meaning k_cells[40] = {
 
 // ---- which icons
 int glyphs_kind(void) {
-    const char *s = cfg_value("MKW_BUTTON_ICONS");
+    const char *s = cfg_value("ORBITALS_BUTTON_ICONS");
     if (!strcmp(s, "nintendo")) return GLYPHS_NINTENDO;
     if (!strcmp(s, "xbox")) return GLYPHS_XBOX;
     if (!strcmp(s, "playstation")) return GLYPHS_PLAYSTATION;
@@ -73,7 +73,7 @@ static InputMap g_map;   // the bindings the sheet was drawn with (glyphs_apply)
 // The gamepad button bound to action, PAD_NONE when none; and the first key
 static int pad_of(const InputMap *m, int action) {
     int layout = input_pad_layout();
-    if (layout < 0) layout = !strcmp(cfg_value("MKW_PAD_LAYOUT"), "nintendo") ? PAD_LAYOUT_NINTENDO : PAD_LAYOUT_XBOX;
+    if (layout < 0) layout = !strcmp(cfg_value("ORBITALS_PAD_LAYOUT"), "nintendo") ? PAD_LAYOUT_NINTENDO : PAD_LAYOUT_XBOX;
     for (int i = 0; i < m->npads[layout]; i++)
         if (m->pads[layout][i].action == action) return m->pads[layout][i].pad;
     return PAD_NONE;
@@ -234,7 +234,7 @@ static uint64_t fnv1a(const uint8_t *p, uint64_t n, uint64_t h) {
 }
 
 static void dump(const char *name, uint64_t addr, const uint8_t *lin, uint32_t row) {
-    const char *dir = cfg_get("MKW_GLYPH_DUMP");
+    const char *dir = cfg_get("ORBITALS_GLYPH_DUMP");
     if (!dir || !*dir) return;
     char path[1024];
     snprintf(path, sizeof path, "%s/glyph_%llx%s.rgba", dir, (unsigned long long)addr, name);

@@ -139,7 +139,7 @@ def convert(exefs: Path, name: str, files: list[Path]) -> tuple[dict, dict]:
     """The mod.json "patches" and "switches" for the exefs files of mod name (.ips named by build id, .pchtxt)."""
     mods = module_words(exefs)
     key = re.sub(r"[^A-Z0-9]+", "_", name.upper()).strip("_") or "MOD"
-    set_name, env = key.lower(), f"MKW_{key}"
+    set_name, env = key.lower(), f"ORBITALS_{key}"
     by_build: dict[str, list] = {}
     ips_builds = {f.stem.lower()[:16] for f in files if f.suffix.lower() == ".ips"}
     for f in sorted(files):

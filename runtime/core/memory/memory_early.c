@@ -1,7 +1,7 @@
-// MKW_EARLY_READ=1 (diagnosis): does the game read memory the GPU has yet to write? With the replay ~3 submits behind
+// ORBITALS_EARLY_READ=1 (diagnosis): does the game read memory the GPU has yet to write? With the replay ~3 submits behind
 // the game, what the GPU writes (copies into buffers, counters, cleared buffers, storage buffers a shader may write)
 // reaches memory later than on the console, and the game decides what it draws with some of it (menus:
-// trees and cacti dark for a frame). MKW_SUBMIT_CATCHUP makes every submit wait for its GPU work instead, at ~10 ms a
+// trees and cacti dark for a frame). ORBITALS_SUBMIT_CATCHUP makes every submit wait for its GPU work instead, at ~10 ms a
 // frame. Here the destinations a submit lists (nvn_api_cmd.c resolve_deferred) are made inaccessible at the submit, with
 // that submit's fence; the first access to such a page puts its protection back and is counted: early when the GPU has
 // not finished the submit, late when it has, by a game thread or by the runtime. Nothing waits: it only measures where a
@@ -22,7 +22,7 @@
 static const char *const kind_name[EW_KINDS] = {"counter", "copy", "texture to buffer", "clear", "storage buffer", "uniform update"};
 int64_t mem_early_pages;
 static uint64_t *meta;   // per guest page: fence << 8 | kind << 4 | protection before the watch; mapped lazily
-// MKW_EARLY_READ=3: per guest page, the last submit listed as writing it and the one before. On the console a read
+// ORBITALS_EARLY_READ=3: per guest page, the last submit listed as writing it and the one before. On the console a read
 // right after submit N finds N-1's results (the GPU has only begun N): the console-like wait is for the previous writer
 // when it has not finished, not for N (=2 waited for N: ~1 wait a frame of 7-16 ms, ews5).
 uint64_t *mem_lastf, *mem_prevf;
@@ -35,7 +35,7 @@ static WMask *wmask;
 static PlatMutex wm_lock = PLAT_MUTEX_INIT;
 uint64_t (*mem_fence_done)(void), (*mem_fence_queued)(void);
 static int (*fence_wait)(uint64_t value, uint64_t timeout_ns);
-static int wait_mode;                 // MKW_EARLY_READ=2: an early read of bytes the GPU writes waits for its submit
+static int wait_mode;                 // ORBITALS_EARLY_READ=2: an early read of bytes the GPU writes waits for its submit
 static int64_t waits, wait_ns;        // since the last log line
 static int64_t range_skips;           // frz_lock: watches released by mem_early_invalidate since the last log line
 // The wait the fault on this thread asked for, logged once it ends when it was long: which page, who read it and how
@@ -56,10 +56,10 @@ static struct { uint64_t addr, pc; } ring[EW_RING];   // the byte read: told aga
 static uint32_t nring;
 static struct { uint64_t pc, n; } rt_pc[8];   // frz_lock: where the runtime's own touches come from (a fault each)
 
-// MKW_EARLY_READ: 3 by default on Linux, where with MKW_SHADOW_CPU_WINS it stands for MKW_SUBMIT_CATCHUP (mc1:
+// ORBITALS_EARLY_READ: 3 by default on Linux, where with ORBITALS_SHADOW_CPU_WINS it stands for ORBITALS_SUBMIT_CATCHUP (mc1:
 // as few cacti and cheaper); off on Windows, which has no read traps (win32.c).
 static int early_cfg(void) {
-    const char *e = cfg_get("MKW_EARLY_READ");
+    const char *e = cfg_get("ORBITALS_EARLY_READ");
 #ifndef _WIN32
     if (!e) e = "3";
 #endif
@@ -78,7 +78,7 @@ int mem_early_on(void) {
                    !(mem_prevf = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *mem_prevf)) ||
                    !(wmask = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *wmask))))
             on = 0;
-        if (on) rt_log("mem: early-read watch on (MKW_EARLY_READ=%d): what a submit's GPU work writes is watched until touched%s",
+        if (on) rt_log("mem: early-read watch on (ORBITALS_EARLY_READ=%d): what a submit's GPU work writes is watched until touched%s",
                        wait_mode + 1, wait_mode == 1 ? "; an early read of bytes the GPU writes waits for that submit"
                                       : wait_mode == 2 ? "; an early read waits for the previous submit writing them" : "");
     }
@@ -110,7 +110,7 @@ void mem_early_set_done(uint64_t (*done)(void), int (*wait)(uint64_t, uint64_t),
 // The fault's wait, after frz_lock is released (the GPU's bytes come back under it, on the completion thread, before
 // the fence counts as done): the read is then retried and finds them, or a read trap that fills it.
 void mem_early_wait(uint64_t fence) {
-    static uint8_t before[PAGE], after[PAGE];   // MKW_EARLY_READ_DRY=3: the page without and with the wait
+    static uint8_t before[PAGE], after[PAGE];   // ORBITALS_EARLY_READ_DRY=3: the page without and with the wait
     static PlatMutex diff_lock = PLAT_MUTEX_INIT;
     int diff = wq.diff && plat_mutex_trylock(&diff_lock);
     if (diff) plat_mem_peek(before, wq.page, PAGE);
@@ -175,11 +175,11 @@ void mem_early_gpu_wrote(uint64_t a, uint64_t n, uint64_t fence) {
 // reads nothing else of it before the next invalidate). A watched page whose pending writer (the one =3 would wait
 // for) writes none of those bytes is released without a wait: the wait was for other bytes sharing the page (tdiff1:
 // the counters at 0x2a9bdcf00 made the reads of 0x2a9bdc200, written a submission earlier and done, wait 6-13 ms every
-// 68 frames). An unknown mask (that writer not recorded yet) keeps the watch. MKW_EARLY_READ_RANGE (default 1; "ab").
+// 68 frames). An unknown mask (that writer not recorded yet) keeps the watch. ORBITALS_EARLY_READ_RANGE (default 1; "ab").
 void mem_early_invalidate(uint64_t a, uint64_t n) {
     static int on = -1;
     if (on < 0) on = rt_knob("EARLY_READ_RANGE", "1");
-    // (MKW_FENCE_EARLY: the writer a read waits for may be the newest one, whose bytes this rule does not look at)
+    // (ORBITALS_FENCE_EARLY: the writer a read waits for may be the newest one, whose bytes this rule does not look at)
     if (!n || wait_mode != 2 || !wmask || !RT_KNOB_ON(on) || !watched(a, n) || !mem_fence_done || mem_fence_early) return;
     uint64_t done = mem_fence_done();
     plat_mutex_lock(&frz_lock);
@@ -202,7 +202,7 @@ void mem_early_invalidate(uint64_t a, uint64_t n) {
 
 void mem_early_watch(uint64_t a, uint64_t n, uint64_t fence, int kind) {
     if (!n || !mem_early_on() || !watched(a, n)) return;
-    static int skip = -1;   // MKW_EARLY_READ_SKIP (default 1; "ab"): the rule below
+    static int skip = -1;   // ORBITALS_EARLY_READ_SKIP (default 1; "ab"): the rule below
     if (skip < 0) skip = rt_knob("EARLY_READ_SKIP", "1");
     uint64_t done = wait_mode == 2 && mem_fence_done && RT_KNOB_ON(skip) ? mem_fence_done() : 0;
     plat_mutex_lock(&frz_lock);
@@ -211,7 +211,7 @@ void mem_early_watch(uint64_t a, uint64_t n, uint64_t fence, int kind) {
         // =3 waits only for the previous writer: with it finished, no read of the page can wait, and a watch would only
         // cost faults (cwb3: ~37,000 touches and 12 waits every 600 frames; the kernel went from 13 to 16-19 % of the
         // game thread).
-        // (MKW_FENCE_EARLY: this fence's own bytes may be read after its early release)
+        // (ORBITALS_FENCE_EARLY: this fence's own bytes may be read after its early release)
         if (done && mem_prevf[p / PAGE] <= done && !mem_fence_early) continue;
         uint8_t t = trapped[p / PAGE];
         if (t == 1) continue;   // the GPU's bytes of an earlier fence are still pending: a read trap already
@@ -267,12 +267,12 @@ uint64_t mem_early_release_locked(uint64_t a, int access) {
     if (wait_mode && early && tcur && !plat_fault_write && (gpu_wrote[p / PAGE] >> (a % PAGE / 64) & 1)) {
         wq.page = p, wq.pc = at, wq.done = done, wq.last = mem_lastf[p / PAGE], wq.frame = mem_early_frame;
         uint64_t w = wait_mode == 1 ? fence : mem_prevf[p / PAGE] > done ? mem_prevf[p / PAGE] : 0;
-        uint64_t last = mem_lastf[p / PAGE];   // MKW_FENCE_EARLY: a writer whose fence the game was told is done
+        uint64_t last = mem_lastf[p / PAGE];   // ORBITALS_FENCE_EARLY: a writer whose fence the game was told is done
         if (wait_mode == 2 && mem_fence_early && last > done && last <= __atomic_load_n(&mem_early_rel, __ATOMIC_ACQUIRE))
             w = last;
         static int dry = -1;   // 1 skip (2 in the B blocks), 3 ("diff") wait and log what the wait changed
         if (dry < 0) {
-            const char *e = cfg_get("MKW_EARLY_READ_DRY");
+            const char *e = cfg_get("ORBITALS_EARLY_READ_DRY");
             dry = e && !strcmp(e, "diff") ? 3 : rt_knob("EARLY_READ_DRY", "0");
         }
         if (w && dry < 3 && RT_KNOB_ON(dry)) {

@@ -36,7 +36,7 @@ It is off by default and changes nothing until you set it up.
    steam_appid = 1118310
    ```
 
-   or set the environment variable `MKW_STEAM_APPID=1118310`. The menu has the same choice (Game > Steam
+   or set the environment variable `ORBITALS_STEAM_APPID=1118310`. The menu has the same choice (Game > Steam
    Remote Play Together > Steam App ID; it takes effect at the next start).
 
    **Your own App ID in the menu.** Under that row, select **Enter a Steam App ID**, type the number with the

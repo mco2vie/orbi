@@ -1,4 +1,4 @@
-// MKW_REC_DIFF=1 (vk_rec_diff.c): how much of each submission's resolved Vulkan commands repeats the previous frame's.
+// ORBITALS_REC_DIFF=1 (vk_rec_diff.c): how much of each submission's resolved Vulkan commands repeats the previous frame's.
 #pragma once
 #include <stdint.h>
 

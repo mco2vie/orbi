@@ -32,10 +32,10 @@
 #include "vk_rec_diff.h"
 #include "vk_reuse.h"
 // Task/mesh draws (VK_EXT_mesh_shader): drawn by default since mesh1 (01/11/2026: 40 s of race without a hang; with
-// them the grid's racers show and the cars stop flickering, live23/24). MKW_MESH=0 counts them without drawing.
+// them the grid's racers show and the cars stop flickering, live23/24). ORBITALS_MESH=0 counts them without drawing.
 static int mesh_on(void) {
     static int on = -1;
-    if (on < 0) on = (vk_ctx()->has_mesh || vk_mesh_cs_on()) && !(cfg_get("MKW_MESH") && !atoi(cfg_get("MKW_MESH")));
+    if (on < 0) on = (vk_ctx()->has_mesh || vk_mesh_cs_on()) && !(cfg_get("ORBITALS_MESH") && !atoi(cfg_get("ORBITALS_MESH")));
     return on;
 }
 
@@ -44,7 +44,7 @@ static int mesh_on(void) {
 
 static VkExec X;
 static int x_ready;
-// The replay state this thread records with: X inside vk_exec_record, a chunk's copy on MKW_REPLAY_PAR's threads
+// The replay state this thread records with: X inside vk_exec_record, a chunk's copy on ORBITALS_REPLAY_PAR's threads
 // (vk_exec_inline_begin, vk_exec_recording_fence); NULL elsewhere.
 static _Thread_local VkExec *x_cur;
 static _Thread_local VkExec *x_here_ex;   // X while this thread is in vk_exec_record
@@ -53,7 +53,7 @@ static _Thread_local uint64_t x_pos;      // ops handed to vk_exec_op in this su
 uint64_t vk_exec_op_pos(void) { return x_pos; }
 void vk_exec_op_pos_set(uint64_t pos) { x_pos = pos; }
 
-// ---- MKW_TRACE=gfx frame counters
+// ---- ORBITALS_TRACE=gfx frame counters
 
 VkExecFrame vk_exec_frame_all;
 _Thread_local VkExecFrame *vk_exec_frame_cur = &vk_exec_frame_all;
@@ -158,11 +158,11 @@ static VkImageMemoryBarrier2 layout_barrier(VkImage img, VkImageAspectFlags aspe
 
 // Full barrier. The images in the feedback layout become want[] (pass begin) or none (every other barrier): the others
 // go back to GENERAL and the new ones leave it, in the same command.
-// MKW_PASS_NOBARRIER (default 0; "ab": in the B blocks): no memory barrier before a pass. A measurement only, of what
+// ORBITALS_PASS_NOBARRIER (default 0; "ab": in the B blocks): no memory barrier before a pass. A measurement only, of what
 // that barrier costs the GPU (~137 passes a race frame, rt-y2); without it passes may read stale results.
 static int pass_nobarrier = -1;
-int pt_on = -1;   // MKW_PASS_TIMING (vk_passtime.c)
-_Thread_local ExecDC DC;   // MKW_DEPTH_CLEAR_ALL (vk_exec_clear.c dc_layered); per recording thread
+int pt_on = -1;   // ORBITALS_PASS_TIMING (vk_passtime.c)
+_Thread_local ExecDC DC;   // ORBITALS_DEPTH_CLEAR_ALL (vk_exec_clear.c dc_layered); per recording thread
 uint64_t dc_cnt[4];
 
 static void barrier_to(VkExec *ex, const VkImage *want, const VkImageAspectFlags *wasp, int nwant, int pass) {
@@ -181,7 +181,7 @@ static void barrier_to(VkExec *ex, const VkImage *want, const VkImageAspectFlags
     if (ex->barrier_at == ex->recorded && !n) return;
     if (pass && pass_nobarrier < 0) {
         pass_nobarrier = rt_knob("PASS_NOBARRIER", "0");
-        if (pass_nobarrier) rt_log("vk: no memory barrier before passes%s (MKW_PASS_NOBARRIER, a measurement)",
+        if (pass_nobarrier) rt_log("vk: no memory barrier before passes%s (ORBITALS_PASS_NOBARRIER, a measurement)",
                                    pass_nobarrier == 2 ? " in the B blocks" : "");
     }
     if (pass && !n && pass_nobarrier && RT_KNOB_ON(pass_nobarrier)) return;
@@ -251,8 +251,8 @@ void vk_exec_pass_begin(VkExec *ex) {
     ex->in_pass = 1;
 }
 
-// Set while a pass ends only to resume (maybe_split's new command buffer, an inline command such as MKW_DUMP_DRAWS's
-// snapshots or MKW_TEX_ALIAS's copies): the targets are half drawn, MKW_RTSTATS leaves them for the real end of the pass.
+// Set while a pass ends only to resume (maybe_split's new command buffer, an inline command such as ORBITALS_DUMP_DRAWS's
+// snapshots or ORBITALS_TEX_ALIAS's copies): the targets are half drawn, ORBITALS_RTSTATS leaves them for the real end of the pass.
 static _Thread_local int split_ending;
 
 void vk_exec_pass_end(VkExec *ex) {
@@ -338,36 +338,36 @@ static void set_rt(VkExec *ex, const p_set_rt *r) {
 
 // ---- command buffer parts
 // NVN starts the GPU as soon as commands are submitted; one Vulkan command buffer per submission starts it only after
-// the whole replay. Between passes, once MKW_SPLIT_DRAWS (64; 0 off) draws and dispatches were recorded since the
+// the whole replay. Between passes, once ORBITALS_SPLIT_DRAWS (64; 0 off) draws and dispatches were recorded since the
 // last part, the part goes to the queue (vk_sync_split) and the replay continues in a new command buffer. Only
 // command-buffer state is lost there (bindings and dynamic state: vk_exec_draw_new_cb, ex->dirty); barriers, layouts and
 // queries are not: a barrier's first scope is everything earlier in submission order, image layouts belong to the image,
 // and occlusion queries end with their pass. Fences, completion callbacks and reports stay per submission: only the last
 // part signals the value. nxnative commits every 64 draws between passes; MacNativeGames after 30, then every 40.
-// A part also spans at least MKW_SPLIT_US (2000) of replay time: a split costs about 40 us of the render thread
+// A part also spans at least ORBITALS_SPLIT_US (2000) of replay time: a split costs about 40 us of the render thread
 // (vkQueueSubmit2, a command buffer, the mirror prologue), and a fight frame of 2,000 draws made 15 parts on the 7900X;
 // a millisecond of recording is a fraction of a millisecond of GPU work, so the GPU still starts early. On the Radeon
 // 660M each split also syncs the shadow pools (~0.2 ms), ~17 splits a race frame on the replay thread, the frame's
 // critical path: 2000 against 1000, -2.8 ms a frame with the scene balanced (sp2/sp2i, 07/11/2026; on 01/11, with
 // the per-submit wait, 1000 was best: rt-w1, rt-w2).
-// Inside a pass too with MKW_SPLIT_IN_PASS=1: MKW draws a race frame in long passes, and splitting only
+// Inside a pass too with ORBITALS_SPLIT_IN_PASS=1: MKW draws a race frame in long passes, and splitting only
 // between them leaves ~1-2 parts per submission. Passes load and store every attachment (clears are separate
 // commands), so the pass ends before the split and begins again after it, as the feedback restart does; an occlusion
 // query open there closes into a segment of its own. Default on with the asynchronous replay, whose thread pays for
 // the splits while the game builds its next frame: race 40.0 -> 32.1 and 45.4 -> 35.3 ms with both (rt-t*). Off on the
 // submitting thread, where it did not help (rt-l2, rt-r2).
-static int split_in_pass, split_on;   // split_on: MKW_SPLIT (default 1; "ab" splits in the B blocks only)
+static int split_in_pass, split_on;   // split_on: ORBITALS_SPLIT (default 1; "ab" splits in the B blocks only)
 static int split_n = -1, split_draws, part_start;
-static uint64_t split_ns, split_ns_b, part_t0;   // split_ns_b: MKW_SPLIT_US_B, the B blocks' (MKW_AB)
+static uint64_t split_ns, split_ns_b, part_t0;   // split_ns_b: ORBITALS_SPLIT_US_B, the B blocks' (ORBITALS_AB)
 static uint64_t n_parts, n_subs, n_in_pass;
 
 static void maybe_split(VkExec *ex) {
     if (split_n < 0) {
-        split_n = cfg_int("MKW_SPLIT_DRAWS");
+        split_n = cfg_int("ORBITALS_SPLIT_DRAWS");
         if (split_n < 0) split_n = 0;
-        int us = cfg_int("MKW_SPLIT_US");
+        int us = cfg_int("ORBITALS_SPLIT_US");
         split_ns = us > 0 ? (uint64_t)us * 1000 : 0;
-        int ub = cfg_get("MKW_SPLIT_US_B") ? atoi(cfg_get("MKW_SPLIT_US_B")) : us;
+        int ub = cfg_get("ORBITALS_SPLIT_US_B") ? atoi(cfg_get("ORBITALS_SPLIT_US_B")) : us;
         split_ns_b = ub > 0 ? (uint64_t)ub * 1000 : 0;
         split_in_pass = rt_knob("SPLIT_IN_PASS", gfx_replay_async() ? "1" : "0");
         split_on = rt_knob("SPLIT", "1");
@@ -391,14 +391,14 @@ static void maybe_split(VkExec *ex) {
     if (reopen) vk_exec_pass_begin(ex);
 }
 
-// MKW_TRACE=draw: the replay's time per op (TSC ticks, the call's own handler only), logged with the parts line of
-// MKW_TRACE=perf: where the recording's CPU goes (rt-h2: ~730 ms per s of wall clock in a race). Not part of perf: its
+// ORBITALS_TRACE=draw: the replay's time per op (TSC ticks, the call's own handler only), logged with the parts line of
+// ORBITALS_TRACE=perf: where the recording's CPU goes (rt-h2: ~730 ms per s of wall clock in a race). Not part of perf: its
 // clock reads were a third of bind_resources' own samples (rt-x2, perf record).
 static int op_timing = -1;
 enum { OPX_BEGIN = OP_COUNT_, OPX_SPLIT, OPX_END, OPX_HIT, OPX_CAP, OPX_N };   // the submission's start and end, the
-                                                                              // splits, draws MKW_REUSE served, captured
+                                                                              // splits, draws ORBITALS_REUSE served, captured
 static uint64_t op_tsc[OPX_N], op_cnt[OPX_N], op_t0, op_ns0;
-static _Thread_local int op_hit;   // the op being walked was a draw MKW_REUSE served (OPX_HIT) or captured (OPX_CAP)
+static _Thread_local int op_hit;   // the op being walked was a draw ORBITALS_REUSE served (OPX_HIT) or captured (OPX_CAP)
 static const char *opx_name(int i) {
     return i == OPX_BEGIN ? "(start: mirrors, usnap)" : i == OPX_SPLIT ? "(splits)" : i == OPX_END ? "(end of the walk)"
            : i == OPX_HIT ? "(draws reused)" : i == OPX_CAP ? "(draws captured)" : nvn_op_name((uint32_t)i);
@@ -490,12 +490,12 @@ static struct { uint64_t id; VkExec st; } qs[QS_MAX];
 static int nqs;
 static uint64_t qs_cur;
 
-// MKW_QORDER_LOG=N (diagnosis): the first N queue switches, each with what the queue before it ran since its turn
+// ORBITALS_QORDER_LOG=N (diagnosis): the first N queue switches, each with what the queue before it ran since its turn
 // began (draws, dispatches, ops), to tell which stages the queues pass each other.
 static void queue_switch_log(uint64_t id) {
     static int left = -1;
     static uint64_t d0, c0, o0;
-    if (left < 0) left = cfg_get("MKW_QORDER_LOG") ? atoi(cfg_get("MKW_QORDER_LOG")) : 0;
+    if (left < 0) left = cfg_get("ORBITALS_QORDER_LOG") ? atoi(cfg_get("ORBITALS_QORDER_LOG")) : 0;
     if (!left) return;
     left--;
     if (!qs_cur) o0 = 0;   // (op positions count from the submission's start)
@@ -539,7 +539,7 @@ static void queue_switch(VkExec *ex, uint64_t id) {
 int vk_exec_op(VkExec *ex, const op_hdr *h) {
     const void *a = nvn_op_payload(h);
     x_pos++;
-    int ptm = pt_on > 0 && !ex->in_pass;   // MKW_PASS_TIMING: the op's GPU time, outside passes
+    int ptm = pt_on > 0 && !ex->in_pass;   // ORBITALS_PASS_TIMING: the op's GPU time, outside passes
     if (ptm) vk_pt_mark(ex->cb, 1u << 30 | h->op);
     int drew = 0;
     switch (h->op) {
@@ -552,12 +552,12 @@ int vk_exec_op(VkExec *ex, const op_hdr *h) {
         vk_crumb_end(ex->cb, VK_CRUMB_OP, crumb);
         break;
     }
-    case OP_DRAW_MESH:   // task/mesh pipelines (VK_EXT_mesh_shader) with MKW_MESH=1; else counted, not drawn
+    case OP_DRAW_MESH:   // task/mesh pipelines (VK_EXT_mesh_shader) with ORBITALS_MESH=1; else counted, not drawn
         vk_exec_frame.draws_seen++;
         if (mesh_on()) vk_exec_op_draw(ex, h->op, a);
         else vk_exec_frame.skip[VK_SKIP_MESH]++;
         break;
-    case OP_DRAW: case OP_DRAW_IDX:   // MKW_REUSE: from the cache when an earlier submission recorded the same draw
+    case OP_DRAW: case OP_DRAW_IDX:   // ORBITALS_REUSE: from the cache when an earlier submission recorded the same draw
         vk_exec_frame.draws_seen++, drew = 1;
         if (ru_on > 0 && ru_draw(ex, h->op, a)) { op_hit = OPX_HIT; break; }
         if (ru_cap) op_hit = OPX_CAP;
@@ -588,16 +588,16 @@ int vk_exec_op(VkExec *ex, const op_hdr *h) {
     return drew;
 }
 
-// MKW_OP_DUMP=FILE (diagnosis, with MKW_TRACE=draw): per draw or dispatch, a line "submission op-position kind ticks"
-// (kind: the op, or OPX_HIT / OPX_CAP for MKW_REUSE), to match draws between two serial replays of one capture.
+// ORBITALS_OP_DUMP=FILE (diagnosis, with ORBITALS_TRACE=draw): per draw or dispatch, a line "submission op-position kind ticks"
+// (kind: the op, or OPX_HIT / OPX_CAP for ORBITALS_REUSE), to match draws between two serial replays of one capture.
 static FILE *op_dump;
 static uint64_t op_sub;   // submissions recorded
 
 static void walk(VkExec *ex, const op_hdr *h, int depth) {
     if (op_timing < 0) {
         op_timing = (rt_trace & RT_TRACE_DRAW) != 0;
-        const char *f = cfg_get("MKW_OP_DUMP");
-        if (op_timing && f && *f && !(op_dump = fopen(f, "w"))) rt_log("vk_exec: MKW_OP_DUMP: cannot write %s", f);
+        const char *f = cfg_get("ORBITALS_OP_DUMP");
+        if (op_timing && f && *f && !(op_dump = fopen(f, "w"))) rt_log("vk_exec: ORBITALS_OP_DUMP: cannot write %s", f);
     }
     for (;;) {
         if (h->size < sizeof *h || (h->size & 7) || h->op >= OP_COUNT_)
@@ -633,7 +633,7 @@ static void walk(VkExec *ex, const op_hdr *h, int depth) {
     }
 }
 
-// ---- MKW_REPLAY_PAR chunks (vk_exec_par.c)
+// ---- ORBITALS_REPLAY_PAR chunks (vk_exec_par.c)
 // A chunk records on its thread into ex->cb from the state the light walk handed it (ex is the chunk's own copy). Its
 // command buffer starts with nothing bound, as after a split; its views are its own; feedback layouts and layers cleared
 // ahead do not carry over from the chunk before (each chunk ends with a full barrier, every image back in GENERAL).
@@ -658,7 +658,7 @@ void vk_exec_chunk_end(VkExec *ex) {
     DC.seen = NULL, DC.nseen = 0, dc_drop("a chunk");
 }
 
-// MKW_TRACE=perf: the submissions of one frame in 120, logged at its present: when each began recording after the
+// ORBITALS_TRACE=perf: the submissions of one frame in 120, logged at its present: when each began recording after the
 // previous present, how long it took and how many draws it held. Whether the GPU gets its work late because the game
 // submits the scene at the end of the frame, or because the replay holds it back (rt-s0: the game waits ~20 ms for
 // the previous frame's GPU work).
@@ -734,7 +734,7 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
     if ((rt_trace & RT_TRACE_PERF) && n_subs >= 240 && dc_mode > 0) {
         uint64_t rd, sk, ah, bl;
         vk_exec_dc_stats(&rd, &sk, &ah, &bl);
-        rt_log("perf: layered depth clears (MKW_DEPTH_CLEAR_ALL): %llu clears of every layer, %llu skipped, %llu "
+        rt_log("perf: layered depth clears (ORBITALS_DEPTH_CLEAR_ALL): %llu clears of every layer, %llu skipped, %llu "
                "samplings of a layer cleared ahead, %llu layer by layer in a chunk", (unsigned long long)ah,
                (unsigned long long)sk, (unsigned long long)rd, (unsigned long long)bl);
     }

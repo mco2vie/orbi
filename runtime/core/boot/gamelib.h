@@ -25,7 +25,7 @@ typedef struct {
 typedef struct { const char *file, *sha256; } RtFileHash;
 
 typedef struct {
-    const char *name, *env;  // the set (recomp/patches-*.txt) and its MKW_ switch
+    const char *name, *env;  // the set (recomp/patches-*.txt) and its ORBITALS_ switch
     int on;                  // generated default, for a set without a row in cfg.c
 } RtPatchSet;
 

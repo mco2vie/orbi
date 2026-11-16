@@ -13,7 +13,7 @@ runs in (docked: 720 -> For3D 1108 -> a 1280x720 scene; handheld: For3D 720), as
 
 Usage: uv run tools/romfs/resolution.py [--3d LINES | --3d-internal LINES [--mode docked|handheld]] [--screen LINES]
        [--upscale 0|1] [--out build/romfs-res]
-Then run with MKW_ROMFS_PATCHES=<out>. Only the values given change.
+Then run with ORBITALS_ROMFS_PATCHES=<out>. Only the values given change.
 """
 
 import argparse
@@ -76,7 +76,7 @@ def byml_root_fields(b: bytes, at: int) -> dict[str, tuple[int, int]]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--romfs", type=Path, default=Path(os.environ.get("MKW_GAME", "game")) / "romfs")
+    ap.add_argument("--romfs", type=Path, default=Path(os.environ.get("ORBITALS_GAME", "game")) / "romfs")
     ap.add_argument("--3d", dest="r3d", type=int, help="lines of the 3D render (every *For3D* field)")
     ap.add_argument(
         "--3d-internal",
@@ -87,8 +87,8 @@ def main() -> None:
     ap.add_argument(
         "--mode",
         choices=SCENE_SCALE,
-        default=os.environ.get("MKW_OPERATION_MODE") or "docked",
-        help="the operation mode the game runs in, for --3d-internal (default: MKW_OPERATION_MODE, else docked)",
+        default=os.environ.get("ORBITALS_OPERATION_MODE") or "docked",
+        help="the operation mode the game runs in, for --3d-internal (default: ORBITALS_OPERATION_MODE, else docked)",
     )
     ap.add_argument("--screen", type=int, help="lines of the screen (2D) render (every *Screen* field)")
     ap.add_argument("--upscale", type=int, choices=(0, 1), help="PostProcess.IsEnableUpscale")
@@ -118,7 +118,7 @@ def main() -> None:
     dest.write_bytes(data)
     line = f"{arc}\t{len(data)}\t{hashlib.sha256(data).hexdigest()}\t{hashlib.sha256(orig).hexdigest()}\n"
     (args.out / "manifest.tsv").write_text(line)
-    print(f"{dest} ({len(data)} bytes); run with MKW_ROMFS_PATCHES={args.out}")
+    print(f"{dest} ({len(data)} bytes); run with ORBITALS_ROMFS_PATCHES={args.out}")
 
 
 if __name__ == "__main__":

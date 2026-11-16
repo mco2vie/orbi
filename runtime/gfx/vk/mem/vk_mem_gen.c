@@ -34,7 +34,7 @@ uint32_t reg_max[RT_ADDRESS_LIMIT >> REG_SHIFT];
 uint64_t ww_bytes, ww_pages;
 static uint64_t ww_calls, ww_ticks, ww_dirty_calls, ww_dirty_ticks;
 
-int ww_peek;   // gen_lock: ww_query leaves the written pages unprotected (a hot shadow pool, MKW_SHADOW_HOT)
+int ww_peek;   // gen_lock: ww_query leaves the written pages unprotected (a hot shadow pool, ORBITALS_SHADOW_HOT)
 
 static uint64_t ww_query(uint64_t addr, uint64_t size) {
     uint64_t t0 = qpc();
@@ -95,7 +95,7 @@ static void stamp_range(uint64_t lo, uint64_t hi, uint32_t g, int cpu) {
 
 // Stamps that found gen_lock taken wait here (gstamp_lock) and go in before anyone reads stamps: every taker of gen_lock
 // goes through gen_lock_x or gen_lock_s. The completion thread stamped each GPU write under gen_lock at the fence and
-// waited ~1.3 ms there while a shadow sync queried the write watch, 1.47 s in a 12 s race (rt-n3, MKW_LOCK_PROF), so
+// waited ~1.3 ms there while a shadow sync queried the write watch, 1.47 s in a 12 s race (rt-n3, ORBITALS_LOCK_PROF), so
 // the fence was done that much later. A stamp applied later is one made after the wait the lock would have cost.
 typedef struct { uint64_t lo, hi; int cpu; } GStamp;
 static GStamp *gstamp;
@@ -278,7 +278,7 @@ void freeze_pass(void) {
     }
 }
 
-// With MKW_TRACE=perf, beside the mirror summary (vk_mem_census): what every write-watch consumer cost since the last.
+// With ORBITALS_TRACE=perf, beside the mirror summary (vk_mem_census): what every write-watch consumer cost since the last.
 void ww_log(uint64_t frame) {
     static uint64_t ww_last;
     gen_lock_x();

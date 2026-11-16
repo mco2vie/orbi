@@ -15,7 +15,7 @@
 // The design follows MacNativeGames' uniform-buffer snapshot (games/totk/third_party/d2r_gfx/gfx/nvn/nvn_mtl.m usnap_take,
 // usnap_drop; MIT, Copyright (c) 2026 jhaizhou); the code is ours.
 // The copy is taken where vk_exec_record starts: at the submit call when the replay runs on the submitting thread, later
-// with MKW_REPLAY_ASYNC. MKW_UBO_SNAPSHOT=0 binds live memory as before; =ab alternates (MKW_AB).
+// with ORBITALS_REPLAY_ASYNC. ORBITALS_UBO_SNAPSHOT=0 binds live memory as before; =ab alternates (ORBITALS_AB).
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +28,7 @@
 
 #define ARENA_MIN (4u << 20)
 
-int vk_usnap_host_wanted;   // a reader of the host copy besides MKW_SPEC: ubo_ptr, MKW_IND_CHECK_SETS
+int vk_usnap_host_wanted;   // a reader of the host copy besides ORBITALS_SPEC: ubo_ptr, ORBITALS_IND_CHECK_SETS
 
 typedef struct Arena {
     struct Arena *next;
@@ -39,7 +39,7 @@ typedef struct Arena {
 } Arena;
 
 // drop_at: the replay position (vk_exec_op_pos) of the first GPU write into the region in this submission, UINT64_MAX
-// none: a binding at a later position takes guest memory. Positions, not a flag: MKW_REPLAY_PAR records a submission's
+// none: a binding at a later position takes guest memory. Positions, not a flag: ORBITALS_REPLAY_PAR records a submission's
 // chunks out of order, and a chunk that records first must still bind the copy where the serial replay would have.
 typedef struct { uint64_t lo, hi, off, drop_at; } Reg;
 typedef struct { uint64_t lo, hi, fence; } Wrote;
@@ -49,7 +49,7 @@ static struct {
     int on;                     // this submission has a snapshot
     uint64_t fence, gen;
     Arena *arena;
-    uint8_t *host;              // the same bytes in cached host memory (vk_usnap_peek), with MKW_SPEC or MKW_CB_CENSUS
+    uint8_t *host;              // the same bytes in cached host memory (vk_usnap_peek), with ORBITALS_SPEC or ORBITALS_CB_CENSUS
     uint64_t chost;
     int host_on;                // this submission filled host
     RngVec col;                 // collected ranges
@@ -61,7 +61,7 @@ static struct {
     uint64_t subs, regions, bytes, copy_ns, hits, drops, inflight, refused, off_subs, from_take;
     uint64_t walk_ns;           // of copy_ns, collecting, sorting and merging the ranges (the rest: the bytes)
 } U;
-static _Thread_local VkUsnapLog *ulog;   // MKW_REPLAY_PAR: this thread's snapshot hits and drops (vk_usnap_log)
+static _Thread_local VkUsnapLog *ulog;   // ORBITALS_REPLAY_PAR: this thread's snapshot hits and drops (vk_usnap_log)
 static void log_add(int **a, int *n, int *cap, int v);
 
 static Arena *free_arenas;
@@ -152,7 +152,7 @@ static int wr_by_lo(const void *a, const void *b) {
 // passes of 11 bits; qsort is left for a span that does not fit in 33 bits (2 TiB).
 #define RADIX_BITS 11
 void usnap_sort(RngVec *v) {
-    static _Thread_local Rng *tmp;   // the replay thread and, with MKW_USNAP_AT_SUBMIT, the submitting one
+    static _Thread_local Rng *tmp;   // the replay thread and, with ORBITALS_USNAP_AT_SUBMIT, the submitting one
     static _Thread_local int ctmp;
     int n = v->n;
     if (n < 2) return;
@@ -220,7 +220,7 @@ static void summary(int force) {
     rt_log("vk_usnap: %llu submissions with a snapshot, %llu without; per submission %.0f ranges, %.1f KiB copied in "
            "%.3f ms (%.3f of it collecting and merging the ranges), %.0f uniform bindings from the copy, %.1f dropped "
            "by GPU writes, %.1f left out (GPU writes in flight), %.1f refused (not an imported pool), %.1f regions "
-           "from the submit's copy (MKW_USNAP_AT_SUBMIT)",
+           "from the submit's copy (ORBITALS_USNAP_AT_SUBMIT)",
            (unsigned long long)U.subs, (unsigned long long)U.off_subs, U.regions / s, U.bytes / s / 1024.0,
            U.copy_ns / s / 1e6, U.walk_ns / s / 1e6, U.hits / s, U.drops / s, U.inflight / s, U.refused / s,
            U.from_take / s);
@@ -228,7 +228,7 @@ static void summary(int force) {
         U.from_take = 0;
 }
 
-// MKW_USNAP_AT_SUBMIT=3: per frame, the ranges whose bytes the game rewrote between its submit and the recording, with
+// ORBITALS_USNAP_AT_SUBMIT=3: per frame, the ranges whose bytes the game rewrote between its submit and the recording, with
 // the first few; logged at the next frame's first range.
 static struct { uint64_t frame; uint32_t ranges, changed; uint64_t bytes; char first[200]; int k; } C;
 
@@ -259,7 +259,7 @@ void vk_usnap_begin(const uint64_t *handles, int n, uint64_t fence) {
     if (!U.mode) U.mode = rt_knob("UBO_SNAPSHOT", "1") + 1;   // stored +1: 0 is "not read yet"
     U.on = 0, U.fence = fence, U.gen++;
     summary(0);
-    UsnapTake *take = usnap_take_pop(handles, n);   // MKW_USNAP_AT_SUBMIT: the bytes as the submit found them
+    UsnapTake *take = usnap_take_pop(handles, n);   // ORBITALS_USNAP_AT_SUBMIT: the bytes as the submit found them
     if (!RT_KNOB_ON(U.mode - 1)) {
         usnap_take_free(take);
         U.off_subs++;
@@ -301,7 +301,7 @@ void vk_usnap_begin(const uint64_t *handles, int n, uint64_t fence) {
     // draw for the constant words vk_spec.c looks at (01/11/2026, race at 95 ms a frame). The readers get a cached copy.
     if (ubo_ptr_snap < 0) {
         ubo_ptr_snap = rt_knob("UBO_PTR_SNAP", "1");
-        rt_log("vk_usnap: storage addresses in uniform blocks from the snapshot %s (MKW_UBO_PTR_SNAP)",
+        rt_log("vk_usnap: storage addresses in uniform blocks from the snapshot %s (ORBITALS_UBO_PTR_SNAP)",
                ubo_ptr_snap == 2 ? "in the B blocks" : ubo_ptr_snap ? "on" : "off");
     }
     U.host_on = vk_spec_mode() || vk_spec_census_on() || vk_usnap_host_wanted;
@@ -352,7 +352,7 @@ static int first_above(uint64_t a) {
 int vk_usnap_find(uint64_t addr, uint64_t n, uint64_t align, VkDescriptorBufferInfo *out) {
     if (!U.on || !n) return 0;
     // Consecutive bindings mostly fall in the region found last (2.5 % of the replay went to the search, rt-z6).
-    static _Thread_local int last;   // per thread: MKW_REPLAY_PAR
+    static _Thread_local int last;   // per thread: ORBITALS_REPLAY_PAR
     int i = last < U.nreg && addr >= U.reg[last].lo && addr < U.reg[last].hi ? last : first_above(addr);
     last = i;
     if (i >= U.nreg) return 0;
@@ -367,7 +367,7 @@ int vk_usnap_find(uint64_t addr, uint64_t n, uint64_t align, VkDescriptorBufferI
 }
 
 // As vk_usnap_find, uncounted: the cached host copy of addr when a binding of [addr, addr+n) would use the snapshot
-// (NULL without MKW_SPEC or MKW_CB_CENSUS: no such copy).
+// (NULL without ORBITALS_SPEC or ORBITALS_CB_CENSUS: no such copy).
 const uint8_t *vk_usnap_peek(uint64_t addr, uint64_t n, uint64_t align) {
     if (!U.on || !n) return NULL;
     int i = first_above(addr);
@@ -378,7 +378,7 @@ const uint8_t *vk_usnap_peek(uint64_t addr, uint64_t n, uint64_t align) {
     return off % align || !U.host_on ? NULL : U.host + off;
 }
 
-// Chunks of one submission record on several threads (MKW_REPLAY_PAR): drops go under drop_lock; vk_usnap_find reads
+// Chunks of one submission record on several threads (ORBITALS_REPLAY_PAR): drops go under drop_lock; vk_usnap_find reads
 // a region's drop position without it.
 static PlatMutex drop_lock = PLAT_MUTEX_INIT;
 static _Thread_local uint64_t drops_here;

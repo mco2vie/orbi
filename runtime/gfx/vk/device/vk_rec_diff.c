@@ -1,4 +1,4 @@
-// MKW_REC_DIFF=1 (a measurement for MKW_REUSE): how much of a submission's resolved Vulkan
+// ORBITALS_REC_DIFF=1 (a measurement for ORBITALS_REUSE): how much of a submission's resolved Vulkan
 // commands repeat the previous frame's. Every packet the replay puts in the recorder's ring (vk_rec.c) is hashed with
 // the pointers into the packet made relative to it; a "segment" is the packets from one draw or dispatch to the next.
 // At the end of each submission its packets and segments are matched against the most similar submission of the ones

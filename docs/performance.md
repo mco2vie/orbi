@@ -25,5 +25,5 @@ it is added here with the issue's date and a link to it.
 
 Players' rows come from the log attached to each report, not from the times written in it (they were often better
 than the log): the median of its 60-second frame-time windows, or of its race windows where the run had
-`MKW_TRACE=perf`. Left out: reports without a log, runs with frame generation on, and crash reports (those through
+`ORBITALS_TRACE=perf`. Left out: reports without a log, runs with frame generation on, and crash reports (those through
 RecompLauncher carry only the end of the log).

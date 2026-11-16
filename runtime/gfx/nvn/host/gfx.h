@@ -7,7 +7,7 @@
 // ---- moved from ov.h
 enum { OE_MSG_FOCUS_STATE_CHANGED = 15, OE_MSG_OPERATION_MODE_CHANGED = 30, OE_MSG_PERFORMANCE_MODE_CHANGED = 31 };
 void oe_push_message(uint32_t message);                   // ov_system.c
-void oe_set_focus(int in_focus);                          // ov_system.c: GetCurrentFocusState; MKW_ASSUME_FOCUS pins 1
+void oe_set_focus(int in_focus);                          // ov_system.c: GetCurrentFocusState; ORBITALS_ASSUME_FOCUS pins 1
 typedef struct { uint64_t alloc, free, realloc, user; } OvNvAllocator;
 typedef struct { OvNvAllocator graphics, devtools; uint64_t memory, memory_size; int initialized; } OvNvState;
 const OvNvState *ov_nv_state(void);                        // ov_gfx.c
@@ -52,7 +52,7 @@ uint32_t *spirv_int_io(const uint32_t *w, uint64_t n, uint32_t umask, uint32_t s
 // gfx_spirv_img.c: w with the image bindings in umask / smask retyped to uint / int images (int_image_variant); NULL
 // when it cannot (logged by the caller). The words are malloc'd.
 uint32_t *spirv_int_images(const uint32_t *w, uint64_t n, uint64_t umask, uint64_t smask, uint64_t *out_n);
-uint64_t gfx_shader_count(void);                           // shaders in memory (MKW_TRACE=perf, flight recorder)
+uint64_t gfx_shader_count(void);                           // shaders in memory (ORBITALS_TRACE=perf, flight recorder)
 const uint8_t *gfx_shader_key(const GfxShader *s);          // the 32-byte cache key (program key; variants their own)
 const uint8_t *gfx_shader_input_id(const GfxShader *s);     // the 32-byte id in pipeline key records: the program key
 // By program key from memory or the prepared directory. NULL if absent.
@@ -112,7 +112,7 @@ typedef struct {
     int  (*fence_wait)(uint64_t value, uint64_t timeout_ns);   // 1 reached; caller has given its core up
     uint64_t (*fence_done)(void);                          // highest value whose side effects are written
     uint64_t (*fence_queued)(void);                        // newest value the GPU may be running (a part queued)
-    // 1 once every part of value is recorded and handed to the GPU queue (MKW_FENCE_EARLY); NULL: no such point
+    // 1 once every part of value is recorded and handed to the GPU queue (ORBITALS_FENCE_EARLY); NULL: no such point
     int  (*fence_wait_issued)(uint64_t value, uint64_t timeout_ns);
     // Queues the present and returns at once; the host present goes out at at_ns (kern_now_ns clock), at once when that
     // has passed or at_ns is 0.
@@ -128,10 +128,10 @@ typedef struct {
 } GfxBackend;
 extern const GfxBackend gfx_null_backend, gfx_vulkan_backend;
 // The front end fills every held submission now (nvn_qorder.c), as they stand: the back end's replay reached one still
-// empty and waited MKW_QUEUE_HOLD_MS, a present or a drain is queued behind them. Not under a back-end lock: it fills
+// empty and waited ORBITALS_QUEUE_HOLD_MS, a present or a drain is queued behind them. Not under a back-end lock: it fills
 // through held_fill. Returns the waits it let go.
 int gfx_held_force(void);
-const GfxBackend *gfx_backend(void);                       // MKW_GPU=null|vulkan (default vulkan)
+const GfxBackend *gfx_backend(void);                       // ORBITALS_GPU=null|vulkan (default vulkan)
 
 // ---- NVN front end (nvn_procs.c)
 void nvn_procs_register(void);                             // hostfn_register every proc; before hostfn_seal (ov_gfx.c)

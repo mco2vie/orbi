@@ -1,8 +1,8 @@
 """GPU of the race in several runs side by side: per run, the median of the 60-frame windows' «gpu avg» and frame
-interval after the race start (the first window left out), the MKW_PASS_TIMING windows wholly in the race (busy = all
+interval after the race start (the first window left out), the ORBITALS_PASS_TIMING windows wholly in the race (busy = all
 minus outside, and the biggest pass) and the last texture memory line.
 
-Why: a change of the GPU's work without an in-run switch (MKW_ASTC_BC1 picks formats at image creation) is compared
+Why: a change of the GPU's work without an in-run switch (ORBITALS_ASTC_BC1 picks formats at image creation) is compared
 between runs; the frame interval there is noisy (up to 12 ms between equal runs), the GPU's own time less so.
 
 Usage: uv run tools/run/gpucmp.py build/run/NAME.log [...]

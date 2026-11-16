@@ -4,7 +4,7 @@ Why: a sparse texture becomes a Vulkan sparse image whose tiles are bound at eac
 the texture's storage -> (layer, level, tile) map the game uses. The game computes its page offsets itself (it calls
 only nvnTextureGetSparseTileLayout), so the map is fitted to what it maps.
 
-Input: a run log with MKW_SPARSE_TRACE=1 ("sparse: tex ..." per sparse texture, "sparse: map ..." per request).
+Input: a run log with ORBITALS_SPARSE_TRACE=1 ("sparse: tex ..." per sparse texture, "sparse: map ..." per request).
 Hypothesis (per layer): levels with whole tiles, row-major tiles of 64 KiB each; then the mip tail; the layer stride is
 that rounded up to 64 KiB. For each texture it prints the layer stride, how many mapped pages land in each part, and
 pages past the end.

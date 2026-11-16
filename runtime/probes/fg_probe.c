@@ -1,7 +1,7 @@
 // --probe-framegen: frame generation's passes (gfx/vk/device/vk_framegen.c) on two pictures, without the game. Reads
-// $MKW_FG_PROBE/a.rgba and b.rgba (uint32 width and height, then the RGBA8 rows; tools/imagen/fg_check.py writes them
-// from PNGs), makes the frame halfway between them as the present thread does and writes it to $MKW_FG_PROBE/mid.png,
-// with the vectors of each level of the search in $MKW_FG_PROBE/flow.bin (uint32 width and height of the grid, then six
+// $ORBITALS_FG_PROBE/a.rgba and b.rgba (uint32 width and height, then the RGBA8 rows; tools/imagen/fg_check.py writes them
+// from PNGs), makes the frame halfway between them as the present thread does and writes it to $ORBITALS_FG_PROBE/mid.png,
+// with the vectors of each level of the search in $ORBITALS_FG_PROBE/flow.bin (uint32 width and height of the grid, then six
 // grids of float16 x, y: vk_fg_flow's levels), then times 20 game frames with one made frame each (the GPU's wall time
 // per frame, its submission included).
 #include <stdio.h>
@@ -76,8 +76,8 @@ static int frame(VkImage src, uint32_t w, uint32_t h, int made, VkBuffer rb, dou
 }
 
 int probe_framegen(void) {
-    const char *dir = cfg_get("MKW_FG_PROBE");
-    if (!dir) { printf("probe-framegen: FAIL set MKW_FG_PROBE to a folder with a.rgba and b.rgba\n"); return 1; }
+    const char *dir = cfg_get("ORBITALS_FG_PROBE");
+    if (!dir) { printf("probe-framegen: FAIL set ORBITALS_FG_PROBE to a folder with a.rgba and b.rgba\n"); return 1; }
     uint32_t w, h, w2, h2;
     uint8_t *a = read_rgba(dir, "a.rgba", &w, &h), *b = read_rgba(dir, "b.rgba", &w2, &h2);
     if (!a || !b || w != w2 || h != h2) { printf("probe-framegen: FAIL no two pictures of the same size in %s\n", dir); return 1; }

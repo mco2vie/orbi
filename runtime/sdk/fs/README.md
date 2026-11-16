@@ -9,4 +9,4 @@ Files, saves and RomFS, and the RomFS overlay with the internal resolution.
 | `nup.c`, `nup.h` | `.nup` packages: the table of contents, and each file in place or zstd-decompressed whole |
 | `nx.cpp` | `.nx` packages (NXFormat) through its reader (`third_party/nxformat`): any range of a file, decoding only its blocks |
 | `pack_unpack.c` | `mkw --unpack PACKAGE DEST [PREFIX...]`: a package's files written out, for the setup (exefs, the shader archives, a copied RomFS) |
-| `romfs_res.c` | Internal resolution (`MKW_RESOLUTION`, the original by default): at boot writes the RomFS overlay with the chosen lines to `cache/resolution-<lines>/`, as `tools/romfs/resolution.py` does |
+| `romfs_res.c` | Internal resolution (`ORBITALS_RESOLUTION`, the original by default): at boot writes the RomFS overlay with the chosen lines to `cache/resolution-<lines>/`, as `tools/romfs/resolution.py` does |

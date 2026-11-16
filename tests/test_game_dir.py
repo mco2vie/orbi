@@ -31,7 +31,7 @@ def game_dir_probe(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 def probe(exe: Path, *args: str, **overrides: str) -> dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("MKW_", "TEST_LOG_", "TEST_STDERR_"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("ORBITALS_", "TEST_LOG_", "TEST_STDERR_"))}
     env.update(overrides)
     p = subprocess.run([str(exe), *args], env=env, check=True, capture_output=True, text=True)
     return dict(line.split("=", 1) for line in p.stdout.splitlines())
@@ -71,8 +71,8 @@ def test_relative_directory_and_environment_override(launcher: Path, tmp_path: P
     (launcher.parent / "orbital.ini").write_text("game_dir = Installed game\n")
     assert probe(launcher)["dir"] == str(game)
     other = installation(tmp_path / "Other game", 65)
-    assert probe(launcher, MKW_GAME_DIR=str(other), MKW_VOLUME="32")["volume"] == "32"
-    result = probe(launcher, "select", str(game), MKW_GAME_DIR=str(other))
+    assert probe(launcher, ORBITALS_GAME_DIR=str(other), ORBITALS_VOLUME="32")["volume"] == "32"
+    result = probe(launcher, "select", str(game), ORBITALS_GAME_DIR=str(other))
     assert result["dir"] == str(other) and result["selected"] == "0"
     assert probe(launcher)["dir"] == str(game)
 

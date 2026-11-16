@@ -1,4 +1,4 @@
-// Steam Remote Play Together (steam_rpt.h). With MKW_STEAM_APPID set (a number, or auto: the game Steam started), the game process starts Steam's API as that App
+// Steam Remote Play Together (steam_rpt.h). With ORBITALS_STEAM_APPID set (a number, or auto: the game Steam started), the game process starts Steam's API as that App
 // ID before the game boots; Steam then streams the window and the sound to the guests itself, and this file turns the
 // guests into players:
 //   - a guest's controller is a Steam virtual gamepad on the host, which input.c gives to the next free player once SDL
@@ -95,7 +95,7 @@ static void auto_store(const char *id) {
 }
 
 const char *steam_rpt_app_id(void) {
-    const char *v = cfg_get("MKW_STEAM_APPID");
+    const char *v = cfg_get("ORBITALS_STEAM_APPID");
     if (!v) return "";
     if (strcmp(v, "auto")) return v;
     static int resolved;
@@ -182,7 +182,7 @@ static void choice_done(int choice, void *ctx) {
 
 int steam_rpt_multiplayer(int need, int have) {
     if (need < 2 || steam_rpt_state() != STEAM_RPT_READY) return 0;
-    const char *mode = cfg_get("MKW_STEAM_INVITE");
+    const char *mode = cfg_get("ORBITALS_STEAM_INVITE");
     if (mode && !strcmp(mode, "off")) return 0;
     int missing = have < need;
     // ask (default): with too few controllers the player chooses how the others join, local controllers or Steam's

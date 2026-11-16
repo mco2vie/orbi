@@ -47,7 +47,7 @@ void shrink_rgb(int format, const uint8_t *src, uint8_t *dst, size_t n) {
     for (size_t i = 0; i < n; i++, src += 4 * e, dst += 3 * e) memcpy(dst, src, 3 * e);
 }
 
-// MKW_ASTC=check: the compute decoder's texels of n regions (gpu: the regions one after the other) against
+// ORBITALS_ASTC=check: the compute decoder's texels of n regions (gpu: the regions one after the other) against
 // astc_decode_ldr of the same raw blocks (raw: the staging bytes the regions point into).
 static void astc_check(const Tex *e, const uint8_t *raw, const VkAstcRegion *ar, int n, const uint8_t *gpu) {
     static volatile int32_t n_bad;
@@ -125,15 +125,15 @@ static int upload_texpre(Tex *e, uint32_t levels, uint32_t layers) {
 }
 
 // Copies the whole storage into the image (every level and layer the image has).
-// MKW_TRACE_ADDR=<hex> (diagnosis): the texture whose storage starts there: its GPU writes (vk_texture_gpu_written),
+// ORBITALS_TRACE_ADDR=<hex> (diagnosis): the texture whose storage starts there: its GPU writes (vk_texture_gpu_written),
 // uploads and WriteTexels, the first 64 events.
 uint64_t trace_addr = 1;
 static volatile int32_t traced;
-// MKW_TRACE_ADDR=all (diagnosis): every texture, up to 20 000 lines: two replays of a capture told apart by their
+// ORBITALS_TRACE_ADDR=all (diagnosis): every texture, up to 20 000 lines: two replays of a capture told apart by their
 // uploads and GPU writes (tools/test: a recording order that changes the image).
 int tracing(uint64_t addr) {
     if (trace_addr == 1) {
-        const char *e = cfg_get("MKW_TRACE_ADDR");
+        const char *e = cfg_get("ORBITALS_TRACE_ADDR");
         trace_addr = e && !strcmp(e, "all") ? UINT64_MAX : e && *e ? strtoull(e, NULL, 16) : 0;
     }
     if (trace_addr == UINT64_MAX) return plat_inc32(&traced) <= 20000;
@@ -180,7 +180,7 @@ static void upload(Tex *e) {
     int linear = nvn_tex_is_linear(d), is3d = d->target == NVN_TEXTURE_TARGET_3D, one_d = e->pub.type == VK_IMAGE_TYPE_1D;
     uint32_t levels = linear ? 1 : e->pub.levels, layers = linear ? 1 : e->pub.layers;
     int astc = e->f.astc_bw != 0, rgb = e->f.expand_rgb;
-    // MKW_ASTC=check stages a CPU decode beside the GPU one: textures over 16 MiB stay unchecked (a 357 MB staging
+    // ORBITALS_ASTC=check stages a CPU decode beside the GPU one: textures over 16 MiB stay unchecked (a 357 MB staging
     // buffer failed at a course load, vis22; 64 MiB still failed with the mip levels, vis24).
     int agpu = astc && vk_astc_gpu(),
         acheck = agpu && vk_astc_mode() == VK_ASTC_CHECK && (uint64_t)e->pub.width * e->pub.height * e->pub.layers * 4 <= (16ull << 20);
@@ -285,13 +285,13 @@ counted:;
     } else {
         n_uploads++, perf_count(PERF_CNT_TEX_UP);
     }
-    // MKW_TEX_UP_LOG=N (diagnosis): the first N uploads from frame MKW_TEX_UP_LOG_AT (2300) on, with how many submits
+    // ORBITALS_TEX_UP_LOG=N (diagnosis): the first N uploads from frame ORBITALS_TEX_UP_LOG_AT (2300) on, with how many submits
     // the game had made past the one being recorded: their storage is read now, from guest memory (Hookshot: MKW's
     // terrain height tiles, 68x68 RGBA16 at new addresses every frame, rewritten right after their submit).
     static int up_log = -1, up_at;
     if (up_log < 0) {
-        up_log = cfg_get("MKW_TEX_UP_LOG") ? atoi(cfg_get("MKW_TEX_UP_LOG")) : 0;
-        up_at = cfg_get("MKW_TEX_UP_LOG_AT") ? atoi(cfg_get("MKW_TEX_UP_LOG_AT")) : 2300;
+        up_log = cfg_get("ORBITALS_TEX_UP_LOG") ? atoi(cfg_get("ORBITALS_TEX_UP_LOG")) : 0;
+        up_at = cfg_get("ORBITALS_TEX_UP_LOG_AT") ? atoi(cfg_get("ORBITALS_TEX_UP_LOG_AT")) : 2300;
     }
     uint64_t fr = __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED);
     if (up_log > 0 && fr >= (uint64_t)up_at) {
@@ -332,11 +332,11 @@ int vk_texture_astc_copy(const tex_t *src, uint32_t level, uint32_t layer, uint3
         ar[l] = (VkAstcRegion){.src = l * per, .w = w, .h = h, .slices = 1, .level = dlevel, .layer = dlayer + l,
                                .offset = {dx, dy, 0}, .lw = dst->width >> dlevel, .lh = dst->height >> dlevel};
     }
-    // MKW_ASTC_PROBE_LEVEL=<n> (diagnosis): the first copies into level n read back the decoded texels and log them with
+    // ORBITALS_ASTC_PROBE_LEVEL=<n> (diagnosis): the first copies into level n read back the decoded texels and log them with
     // the source's first block (the bushes' level 11 of the terrain arrays sampled black, 01/11/2026).
     static int probe = -2;
     static volatile int32_t n_probed;
-    if (probe == -2) probe = cfg_get("MKW_ASTC_PROBE_LEVEL") ? atoi(cfg_get("MKW_ASTC_PROBE_LEVEL")) : -1;
+    if (probe == -2) probe = cfg_get("ORBITALS_ASTC_PROBE_LEVEL") ? atoi(cfg_get("ORBITALS_ASTC_PROBE_LEVEL")) : -1;
     VkBuffer rbuf = VK_NULL_HANDLE;
     VmaAllocation ralloc = NULL;
     uint8_t *rmap = NULL;
@@ -382,7 +382,7 @@ int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now) {
 // Without a write watch (vk_mem_changed -1: a kernel without userfaultfd, as the Odin 2's SteamOS ARM 7.2) every check
 // uploaded the texture again: three 8192x8192 ASTC textures 627 times each at the first menus (run7, 10/11/2026), ~100
 // ms of every frame. The storage's hash, once per submission, tells a rewrite apart: 1 when it is unchanged since the
-// last upload. MKW_TEX_HASH_UNTRACKED=1 on any GPU, 0 never; on by default wherever the write watch is missing: also
+// last upload. ORBITALS_TEX_HASH_UNTRACKED=1 on any GPU, 0 never; on by default wherever the write watch is missing: also
 // in a container whose seccomp profile refuses userfaultfd (#241: Docker's default, an RX 9070 at ~6 fps on the title,
 // ~20 with this, 60 with userfaultfd allowed), not only on Qualcomm's kernels.
 // The check runs once per submission: a rewrite of the storage later in the same submission is uploaded at the next
@@ -391,13 +391,13 @@ int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now) {
 static int hash_untracked(void) {
     static int on = -1;
     if (on < 0) {
-        const char *c = cfg_get("MKW_TEX_HASH_UNTRACKED");
+        const char *c = cfg_get("ORBITALS_TEX_HASH_UNTRACKED");
         uint64_t page;
         int no_watch = plat_mem_written(mem_layout()->heap.base, 0x1000, &page, 1, 0) == UINT64_MAX;
         on = c && *c ? atoi(c) != 0 : no_watch;
         if (no_watch)
             rt_log("vk: no write watch (on Linux, userfaultfd refused: in a container, allow it in its seccomp profile): "
-                   "texture storage %s, much slower than with it (MKW_TEX_HASH_UNTRACKED)",
+                   "texture storage %s, much slower than with it (ORBITALS_TEX_HASH_UNTRACKED)",
                    on ? "is hashed once per submission instead" : "is uploaded again at every check");
     }
     return on;

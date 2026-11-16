@@ -314,7 +314,7 @@ void plat_sleep_ms(uint32_t ms) { Sleep(ms); }
 
 void plat_mutex_init(PlatMutex *m) { InitializeSRWLock((PSRWLOCK)m); }
 
-// MKW_LOCK_PROF=1: time from finding a lock taken to getting it, per lock and caller, as linux_sync.c measures it, and
+// ORBITALS_LOCK_PROF=1: time from finding a lock taken to getting it, per lock and caller, as linux_sync.c measures it, and
 // how long a holder kept a lock some thread waited for, per the holder's caller (which section to shorten; wlp1: 2.5-6
 // ms a frame of waits). Off: one load per contention.
 #define LP_N 512
@@ -340,7 +340,7 @@ static volatile int32_t *lw_count(const void *m, int add) {
     return NULL;
 }
 
-// The locks this thread holds exclusively since MKW_LOCK_PROF found its first contention, with when and by whom.
+// The locks this thread holds exclusively since ORBITALS_LOCK_PROF found its first contention, with when and by whom.
 #define LH_DEPTH 16
 static __thread struct { const void *m; uintptr_t ra; uint64_t t; } lh[LH_DEPTH];
 static __thread int nlh;
@@ -388,7 +388,7 @@ static inline __attribute__((always_inline)) void lock_at(PlatMutex *m, uintptr_
         return;
     }
     if (lp_on < 0) {
-        const char *e = getenv("MKW_LOCK_PROF");
+        const char *e = getenv("ORBITALS_LOCK_PROF");
         lp_on = e && *e && *e != '0';
     }
     if (lp_on <= 0) {
@@ -408,7 +408,7 @@ void plat_mutex_lock(PlatMutex *m) { lock_at(m, (uintptr_t)__builtin_return_addr
 void plat_mutex_lock_from(PlatMutex *m, uintptr_t ra) { lock_at(m, ra); }
 int plat_mutex_trylock(PlatMutex *m) { return TryAcquireSRWLockExclusive((PSRWLOCK)m) != 0; }
 
-// MKW_LOCK_PROF: m leaves this thread's held list (counted as a hold when a thread waits for it); the caller that took
+// ORBITALS_LOCK_PROF: m leaves this thread's held list (counted as a hold when a thread waits for it); the caller that took
 // it, for lh_push when a condition variable wait takes it back.
 static uintptr_t lh_pop(const PlatMutex *m) {
     for (int i = nlh - 1; i >= 0; i--)
@@ -432,7 +432,7 @@ int plat_mutex_trylock_shared(PlatMutex *m) { return TryAcquireSRWLockShared((PS
 void plat_mutex_unlock_shared(PlatMutex *m) { ReleaseSRWLockShared((PSRWLOCK)m); }
 
 void plat_cond_init(PlatCond *c) { InitializeConditionVariable((PCONDITION_VARIABLE)c); }
-// The wait releases m inside SleepConditionVariableSRW: MKW_LOCK_PROF takes it off the held list first, or the sleep
+// The wait releases m inside SleepConditionVariableSRW: ORBITALS_LOCK_PROF takes it off the held list first, or the sleep
 // counted as a hold (wlp2c: G «held» ~10 ms at a time by WaitProcessWideKeyAtomic).
 void plat_cond_wait(PlatCond *c, PlatMutex *m) { plat_cond_wait_ns(c, m, UINT64_MAX); }
 

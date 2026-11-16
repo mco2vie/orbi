@@ -15,21 +15,21 @@
 // and gives it up only where Horizon would switch threads (waits, sleep, yield, exit, blocking host calls); a free
 // core goes to the best waiting thread. A waiter better than a holder asks one holder to give its core up (core_kick),
 // which it does at its next SVC or indirect call (kern_checkpoint, rt_dispatch), as Horizon runs the better thread at
-// once; guest code without either keeps the core until it reaches one. MKW_FREE_CORES=1 turns the gate off (the game
-// crashes); MKW_CORE_NUM_GATE keeps it only for threads that read their core number (core_take_num).
+// once; guest code without either keeps the core until it reaches one. ORBITALS_FREE_CORES=1 turns the gate off (the game
+// crashes); ORBITALS_CORE_NUM_GATE keeps it only for threads that read their core number (core_take_num).
 RtThread *g_core_owner[NCORE], *g_core_wait;
 static int g_cores_on = -1, g_num_gate, g_held_max;
 
 
-// Whether every guest thread needs a core to run guest code now (MKW_CORE_NUM_GATE: only those that use the number).
+// Whether every guest thread needs a core to run guest code now (ORBITALS_CORE_NUM_GATE: only those that use the number).
 int cores_enabled(void) {
     if (g_cores_on < 0) {
-        g_cores_on = !cfg_bool("MKW_FREE_CORES");   // "0" keeps the gate, like unset
+        g_cores_on = !cfg_bool("ORBITALS_FREE_CORES");   // "0" keeps the gate, like unset
         g_num_gate = g_cores_on ? rt_knob("CORE_NUM_GATE", "0") : 0;
         diag_init();
         ap_init();
         if (g_num_gate)
-            rt_log("kernel: virtual cores only for threads that read their core number%s (MKW_CORE_NUM_GATE)",
+            rt_log("kernel: virtual cores only for threads that read their core number%s (ORBITALS_CORE_NUM_GATE)",
                    g_num_gate == 2 ? " in the B blocks" : "");
     }
     return g_cores_on && !RT_KNOB_ON(g_num_gate);
@@ -44,7 +44,7 @@ static void core_count(void) {
     if (n > g_held_max) g_held_max = n;
 }
 
-static struct DgRel g_dg_rel;   // MKW_CORE_DIAG: the owner core_put is releasing, for core_grant
+static struct DgRel g_dg_rel;   // ORBITALS_CORE_DIAG: the owner core_put is releasing, for core_grant
 
 static void core_grant(int c) {
     RtThread *b = NULL, **bp = NULL;
@@ -157,8 +157,8 @@ void core_take(RtThread *t) {
     core_take_gated(t);
 }
 
-// SVC 0x10 on a thread without a core. MKW_CORE_NUM_GATE: threads run guest code without a core, and the game keys
-// per-core data by the core number without locks (with MKW_FREE_CORES=1 two
+// SVC 0x10 on a thread without a core. ORBITALS_CORE_NUM_GATE: threads run guest code without a core, and the game keys
+// per-core data by the core number without locks (with ORBITALS_FREE_CORES=1 two
 // threads reported core 0 at once and the game crashed in frame 1), so one that asks for it takes a core through the
 // gate and keeps it until its next wait, host call or preemption: two threads running at once never report the same
 // number. Also a thread left without a core when the A/B blocks turn the whole gate back on. Holding G.
@@ -262,10 +262,10 @@ void kern_core_back(int *away) {
 // where a better thread pinned there preempts it; here it holds a virtual core and a host core, and pollers that take a
 // lock on every pass hand its cache line between their host cores so the thread whose item it is rarely gets it
 // (nxnative found this in Breath of the Wild's job queue). Every pass pauses the host core once. A wait is a run of
-// passes through the same loop at most SPIN_GAP_NS apart; once one has lasted MKW_SPIN_HANDOFF_US (default 50) and a
+// passes through the same loop at most SPIN_GAP_NS apart; once one has lasted ORBITALS_SPIN_HANDOFF_US (default 50) and a
 // thread waits for a virtual core, each pass gives the core to the waiter, whatever its priority, yields the host CPU
 // and takes a core again. Shorter waits keep the core: a lock held for a moment would otherwise make the next pass wait
-// for another thread's next SVC (MacNativeGames). MKW_SPIN=0 keeps the core always (the gate's own cost only).
+// for another thread's next SVC (MacNativeGames). ORBITALS_SPIN=0 keeps the core always (the gate's own cost only).
 #define SPIN_GAP_NS 20000ull
 static int g_spin_on = -1;
 static uint64_t g_spin_handoff_ns;
@@ -277,9 +277,9 @@ void rt_spin_gate(Cpu *c, uint64_t head) {
     RtThread *t = tcur;
     if (!t) return;
     if (g_spin_on < 0) {
-        const char *e = cfg_get("MKW_SPIN_HANDOFF_US");
+        const char *e = cfg_get("ORBITALS_SPIN_HANDOFF_US");
         g_spin_handoff_ns = (uint64_t)(e && *e ? atoll(e) : 50) * 1000;
-        g_spin_on = !(cfg_get("MKW_SPIN") && !cfg_bool("MKW_SPIN"));
+        g_spin_on = !(cfg_get("ORBITALS_SPIN") && !cfg_bool("ORBITALS_SPIN"));
     }
     t->sp_n++;
     t->sp_site = head;

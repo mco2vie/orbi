@@ -14,13 +14,13 @@
 
 #define LOG_ONCE(...) do { static volatile int32_t once_; if (!plat_xchg32(&once_, 1)) rt_log(__VA_ARGS__); } while (0)
 
-// MKW_PIPE_TRACE=1 (diagnosis): the shader a library is compiled from, logged before vkCreateGraphicsPipelines. The
+// ORBITALS_PIPE_TRACE=1 (diagnosis): the shader a library is compiled from, logged before vkCreateGraphicsPipelines. The
 // driver's compiler crashes in there now and then (libnvidia-gpucomp, SIGSEGV, twice in the pause menu, 10/11/2026) and
 // the log names nothing; the last line before the crash is the shader it died on. stderr is flushed: the process dies
 // inside the call, and a redirected stderr would keep the line in its buffer.
 static int pipe_trace(void) {
     static int on = -1;
-    if (on < 0) { const char *e = cfg_get("MKW_PIPE_TRACE"); on = e && *e && *e != '0'; }
+    if (on < 0) { const char *e = cfg_get("ORBITALS_PIPE_TRACE"); on = e && *e && *e != '0'; }
     return on;
 }
 

@@ -73,9 +73,9 @@ static void make_dummy(int i, VkFormat fmt, VkImage *image, VmaAllocation *alloc
     vkCmdPipelineBarrier2(cb, &di);
     // Cleared to 0: a texture the game binds before the runtime has it reads nothing, as an empty slot does on the
     // console; left undefined it reads whatever the memory held. Not the white square on the first frame of each
-    // countdown number: with them magenta it stayed white (cnt5, 06/11/2026). MKW_STANDIN_MAGENTA=1 (diagnosis) fills the sampled ones magenta, to see where they are drawn.
+    // countdown number: with them magenta it stayed white (cnt5, 06/11/2026). ORBITALS_STANDIN_MAGENTA=1 (diagnosis) fills the sampled ones magenta, to see where they are drawn.
     static int magenta = -1;
-    if (magenta < 0) magenta = cfg_get("MKW_STANDIN_MAGENTA") && atoi(cfg_get("MKW_STANDIN_MAGENTA"));
+    if (magenta < 0) magenta = cfg_get("ORBITALS_STANDIN_MAGENTA") && atoi(cfg_get("ORBITALS_STANDIN_MAGENTA"));
     VkClearColorValue cv = {0};
     if (magenta && fmt == VK_FORMAT_R8G8B8A8_UNORM) cv.float32[0] = cv.float32[2] = cv.float32[3] = 1.0f;
     VkImageSubresourceRange rr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, dinfo[i].layers};
@@ -102,7 +102,7 @@ static const VkFormat tex_format[40] = {
     VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_FORMAT_B10G11R11_UFLOAT_PACK32};
 static struct { int used, di; VkFormat fmt; VkImage image; VmaAllocation alloc; VkImageView view, sview; } SD[48];
 
-static PlatMutex sd_lock = PLAT_MUTEX_INIT;   // SD: chunks record on several threads (MKW_REPLAY_PAR)
+static PlatMutex sd_lock = PLAT_MUTEX_INIT;   // SD: chunks record on several threads (ORBITALS_REPLAY_PAR)
 
 static VkImageView storage_dummy(int di, int code) {
     VkFormat fmt = code > 0 && code < 40 ? tex_format[code] : VK_FORMAT_R8G8B8A8_UNORM;
@@ -289,13 +289,13 @@ static VkImageView get_view(VkExec *ex, const VkTexImage *img, const view_t *v, 
     if (!nl) nl = img->levels - l0;
     if (l0 + nl > img->levels) nl = img->levels - l0;
     if (storage) nl = 1;
-    // MKW_TEX_QUALITY=half|quarter (Graphics tab; "full" by default): sampled views of
+    // ORBITALS_TEX_QUALITY=half|quarter (Graphics tab; "full" by default): sampled views of
     // the game's own textures start 1 or 2 levels down. Only images nothing renders into (a render target's mip chain,
     // a bloom's, is read level by level on purpose), a full chain the view did not narrow, and at least 32 texels left
     // on the short side.
     static int skip = -1;
     if (skip < 0) {
-        const char *q = cfg_value("MKW_TEX_QUALITY");
+        const char *q = cfg_value("ORBITALS_TEX_QUALITY");
         skip = !strcmp(q, "quarter") ? 2 : !strcmp(q, "half") ? 1 : 0;
     }
     if (skip > 0 && !storage && !(hv && v->set_levels) &&

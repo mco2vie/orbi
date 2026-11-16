@@ -1,5 +1,5 @@
-// Skip movies: MKW_SKIP_MOVIES=1 presses A for the player while a cup opening plays, the way
-// a player skips it on the console (the input scripts skipped it by accident: MKW_SEQ_HOLD exists for that). Only the
+// Skip movies: ORBITALS_SKIP_MOVIES=1 presses A for the player while a cup opening plays, the way
+// a player skips it on the console (the input scripts skipped it by accident: ORBITALS_SEQ_HOLD exists for that). Only the
 // openings (romfs/Movie/*Op.webm, SV0N_OP.webm): the ad boards in the race and the manuals are movies too.
 // A movie starts when its file opens (fs_host.c) and ends when its VP9 decoder is finalized (ov_codec.c), which the
 // player does when it stops, skipped or not; the presses stop then, or after MAX_TICKS, so no A reaches what follows.
@@ -25,9 +25,9 @@ static int is_opening(const char *path) {
 }
 
 void skip_file_opened(const char *path) {
-    if (!is_opening(path) || !cfg_bool("MKW_SKIP_MOVIES")) return;   // the path first: every guest file open comes here
+    if (!is_opening(path) || !cfg_bool("ORBITALS_SKIP_MOVIES")) return;   // the path first: every guest file open comes here
     atomic_store_explicit(&since, frame_step_ticks() + 1, memory_order_relaxed);
-    rt_log("skip: %s opened: pressing A until it ends (MKW_SKIP_MOVIES)", path);
+    rt_log("skip: %s opened: pressing A until it ends (ORBITALS_SKIP_MOVIES)", path);
 }
 
 void skip_movie_closed(void) {

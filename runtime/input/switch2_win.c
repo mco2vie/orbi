@@ -283,7 +283,7 @@ static int parse_guid(const char *s, GUID *g) {
 
 static ICryptographicBufferStatics *bytes_to_buffer;
 static uint8_t host[6];   // the adapter's address, little endian (what the controllers wake toward)
-static int trace;         // MKW_SWITCH2=2
+static int trace;         // ORBITALS_SWITCH2=2
 
 // ---- links
 
@@ -439,7 +439,7 @@ static struct { uint64_t addr; uint16_t pid; int use; } pending[MAX_PENDING];
 static int npending;
 static struct { uint64_t addr, until; } failed[MAX_PENDING];
 
-static int first_seen(uint64_t addr) {   // MKW_SWITCH2=2 logs each device once
+static int first_seen(uint64_t addr) {   // ORBITALS_SWITCH2=2 logs each device once
     static uint64_t seen[64];
     static int n;
     for (int i = 0; i < n; i++)
@@ -663,7 +663,7 @@ static void bt_main(void *arg) {
 }
 
 void switch2_start(void) {
-    trace = cfg_int("MKW_SWITCH2") >= 2;
-    if (cfg_int("MKW_SWITCH2") && !plat_thread_spawn(bt_main, NULL, "switch2", 0))
+    trace = cfg_int("ORBITALS_SWITCH2") >= 2;
+    if (cfg_int("ORBITALS_SWITCH2") && !plat_thread_spawn(bt_main, NULL, "switch2", 0))
         rt_log("input: Switch 2 controllers off: no thread");
 }

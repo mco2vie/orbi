@@ -36,7 +36,7 @@ typedef struct {
     float main_cpu_ms, render_cpu_ms;
 } PerfStats;
 
-// Overlay mode 0 off, 1 fps, 2 full (MKW_PERF_OVERLAY), from the present path when the setting changes. Full starts
+// Overlay mode 0 off, 1 fps, 2 full (ORBITALS_PERF_OVERLAY), from the present path when the setting changes. Full starts
 // the machine sampling thread (twice a second) and turns on the event counts and GPU timestamps; leaving full stops
 // them. Off: perf_present skips perfmon_frame and nothing samples.
 void perfmon_mode(int mode);

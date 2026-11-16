@@ -6,7 +6,7 @@
 #include "vk_exec.h"
 #include "vk_mem_internal.h"
 
-// ---------------------------------------------------------------- MKW_SHADOW_RACE (diagnosis, default 0)
+// ---------------------------------------------------------------- ORBITALS_SHADOW_RACE (diagnosis, default 0)
 // The GPU reads a shadow pool (vk_mem_shadow.c) straight from its host-visible buffer, and the sync before the next
 // submission copies the CPU's newer bytes into that same buffer: if the GPU is still running an earlier submission that
 // reads them, that one sees the newer bytes. A capture's serial replay drew a black cactus in one frame of some replays
@@ -27,7 +27,7 @@ static uint64_t r_hits, r_bytes, r_lines;   // race_lock: since the last log, an
 static uint8_t *tmp;
 static uint64_t ctmp;
 
-// MKW_FENCE_EARLY with its precise guard (MKW_FENCE_EARLY_GUARD unset or 2; vk_sync.c prologue): the same notes, and a
+// ORBITALS_FENCE_EARLY with its precise guard (ORBITALS_FENCE_EARLY_GUARD unset or 2; vk_sync.c prologue): the same notes, and a
 // copy that would change bytes a running submission reads first waits for that submission's GPU work (race_on 2: no
 // srace lines). The game, told a fence is done once recorded, rewrote such bytes when the GPU ran behind (fe3: 20
 // copies at the first frame of a B block, the GPU 6 submissions behind); a wait before every part cost 7.7 ms each (fe1).
@@ -35,10 +35,10 @@ static uint64_t r_waits, r_wait_ns;   // shadow_lock: since the last log
 
 int race_level(void) {
     if (race_on < 0) {
-        const char *e = cfg_get("MKW_SHADOW_RACE"), *fe = cfg_get("MKW_FENCE_EARLY"), *g = cfg_get("MKW_FENCE_EARLY_GUARD");
+        const char *e = cfg_get("ORBITALS_SHADOW_RACE"), *fe = cfg_get("ORBITALS_FENCE_EARLY"), *g = cfg_get("ORBITALS_FENCE_EARLY_GUARD");
         race_on = e && *e && strcmp(e, "0") ? 1 : fe && *fe && strcmp(fe, "0") && (!g || atoi(g) == 2) ? 2 : 0;
-        if (race_on == 1) rt_log("mem: shadow copies over ranges a running submission reads are logged (MKW_SHADOW_RACE)");
-        if (race_on == 2) rt_log("mem: shadow copies over ranges a running submission reads wait for it while fences end early (MKW_FENCE_EARLY)");
+        if (race_on == 1) rt_log("mem: shadow copies over ranges a running submission reads are logged (ORBITALS_SHADOW_RACE)");
+        if (race_on == 2) rt_log("mem: shadow copies over ranges a running submission reads wait for it while fences end early (ORBITALS_FENCE_EARLY)");
     }
     return race_on;
 }
@@ -83,7 +83,7 @@ uint64_t race_check(const PoolRec *r, uint64_t a, uint64_t b, uint64_t sync, con
         const RNote *n = &notes[i];
         if (n->r != r || n->fence >= sync || n->lo >= b || n->hi <= a) continue;
         uint64_t lo = n->lo > a ? n->lo : a, hi = n->hi < b ? n->hi : b, len = hi - lo;
-        if (len > ctmp && !(tmp = realloc(tmp, ctmp = len))) rt_fatal("vk: out of memory (MKW_SHADOW_RACE)");
+        if (len > ctmp && !(tmp = realloc(tmp, ctmp = len))) rt_fatal("vk: out of memory (ORBITALS_SHADOW_RACE)");
         if (old) memcpy(tmp, old + (lo - a), len);
         else mem_copy_out(tmp, lo, len);
         const uint8_t *s = r->smap + (lo - r->import_lo);
@@ -112,7 +112,7 @@ void race_log(uint64_t frame) {
     plat_mutex_unlock(&race_lock);
 }
 
-// ---------------------------------------------------------------- MKW_SHADOW_WATCH=<lo>-<hi>[,...] (hex; diagnosis)
+// ---------------------------------------------------------------- ORBITALS_SHADOW_WATCH=<lo>-<hi>[,...] (hex; diagnosis)
 // Every change the shadow syncs make to the shadow inside [lo, hi), every pending GPU write they skip there and every
 // write-back over it, one "swatch:" line each with the frame and the submission: the order of CPU copies and GPU
 // results over one buffer (the per-instance records the culling dispatch writes).
@@ -121,13 +121,13 @@ static uint64_t wr[4][2];
 static int nwr;
 
 void watch_init(void) {
-    const char *e = cfg_get("MKW_SHADOW_WATCH");
+    const char *e = cfg_get("ORBITALS_SHADOW_WATCH");
     for (const char *p = e; p && nwr < 4 && strchr(p, '-');) {
         char *end;
         wr[nwr][0] = strtoull(p, &end, 16);
         wr[nwr][1] = strtoull(end + 1, &end, 16);
         if (wr[nwr][1] > watch_hi) watch_hi = wr[nwr][1];
-        rt_log("mem: shadow changes over [%#llx, %#llx) logged (MKW_SHADOW_WATCH)", (unsigned long long)wr[nwr][0],
+        rt_log("mem: shadow changes over [%#llx, %#llx) logged (ORBITALS_SHADOW_WATCH)", (unsigned long long)wr[nwr][0],
                (unsigned long long)wr[nwr][1]);
         nwr++;
         p = *end == ',' ? end + 1 : NULL;
@@ -153,7 +153,7 @@ void watch_copy(const PoolRec *r, uint64_t a, uint64_t b, uint64_t sync) {
 static void watch_one(const PoolRec *r, uint64_t lo, uint64_t hi, uint64_t sync) {
     uint64_t len = hi - lo;
     plat_mutex_lock(&race_lock);
-    if (len > ctmp && !(tmp = realloc(tmp, ctmp = len))) rt_fatal("vk: out of memory (MKW_SHADOW_WATCH)");
+    if (len > ctmp && !(tmp = realloc(tmp, ctmp = len))) rt_fatal("vk: out of memory (ORBITALS_SHADOW_WATCH)");
     mem_copy_out(tmp, lo, len);
     const uint8_t *s = r->smap + (lo - r->import_lo);
     uint64_t diff = 0, zero = 0, first = 0;

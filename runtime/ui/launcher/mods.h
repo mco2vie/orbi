@@ -2,7 +2,7 @@
 // <game>/mods, imported from a zip or a folder by tools/mod/import.py. Enabling a mod takes effect at the next start:
 // its romfs/ overlays the game's (runtime/sdk/fs/romfs.c reads the MODS list) and its mod.json switches are set into
 // the config, which is how a ported code mod's patch sets turn on (patches stay compiled in; the menu only flips
-// their switches). A port declares them bare in "switches" ({"CLASSICGP_MAPLINES": "1"}); the page adds the MKW_
+// their switches). A port declares them bare in "switches" ({"CLASSICGP_MAPLINES": "1"}); the page adds the ORBITALS_
 // prefix when it sets them.
 #pragma once
 

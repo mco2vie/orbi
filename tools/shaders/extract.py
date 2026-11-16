@@ -24,7 +24,7 @@ from compression import zstd
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_ROMFS = Path(os.environ.get("MKW_GAME", "game")) / "romfs"
+DEFAULT_ROMFS = Path(os.environ.get("ORBITALS_GAME", "game")) / "romfs"
 CONTROL_MAGIC = b"\x34\x12\x76\x98"
 CONTROL_SIZE = 0xD8
 SPH_SIZE = 0x80
@@ -241,7 +241,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "build/shaders")
     ap.add_argument("--shader-dir", action="store_true", help="only romfs/Shader (~10 s instead of ~2 min)")
     ap.add_argument("--everything", action="store_true", help=f"every RomFS file, not only {', '.join(SHADER_DIRS)}")
-    ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("MKW_GAME", "game")) / "exefs")
+    ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     rows, seen, stages = [], set(), Counter()
