@@ -2,6 +2,7 @@
 
 | Script | What it does | Usage |
 |---|---|---|
+| `romfs_check.py` | What a `.nup`'s RomFS holds, from its table of contents only: file count, top folders, formats, and whether the MKW-style Gyml files `runtime/sdk/fs/romfs_res.c` reads are there. Built as `romfs_check.exe` by `.github/workflows/romfs_check.yml` (release `romfs-check`) | `uv run tools/analisis/romfs_check.py GAME.nup` |
 | `prof_win.py` | Report of a Windows profile (`ORBITALS_PROFILE=<path>`, `runtime/core/diag/prof_win.c`): samples per thread, per module (driver, ntdll…) and per function of `orbitals-recomp.exe` and `orbitalgame.dll` with `llvm-symbolizer` from `build/win` | `uv run tools/analisis/prof_win.py PROFILE [--top 40]` |
 | `bindb.py` | Builds `build/bindb.sqlite` from `main`, `sdk` and `subsdk0`: functions, symbols (with their readable C++ name), PLT stubs resolved to the import, `BL`/`B` calls, `ADRP`+`ADD`/load-store references, strings, `SVC` instructions (table `svc`) and data words that point to a function (table `fptr`: 219 757, in 21 382 vtable columns; 109 475 functions are only reached that way); the NVN2 driver functions of `sdk` with their name (`tools/gpu/nvn2_procs.py`). Addresses from `recomp/layout.py`, the same as in the generated C | `uv run tools/analisis/bindb.py` (~6 s) |
 | `q.py` | Short queries over that database | `uv run tools/analisis/q.py <command> <arg>` |
