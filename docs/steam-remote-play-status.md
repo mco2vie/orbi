@@ -15,7 +15,7 @@ yet.
 | Guests' controllers as players, guests' keyboards as players | Implemented (generic: SDL gamepads and Steam direct input) |
 | The "local players or Remote Play Together" choice when controllers are missing | Implemented, hooked on `nn::hid::ShowControllerSupport`; whether Orbitals calls it is unknown |
 | Settings, menu rows, texts, guide (`docs/remote-play.md`) | Present, named `ORBITALS_STEAM_*` |
-| Steam's library in the Windows package | **Missing**: not in the zip, only fetched by a `uv` script |
+| Steam's library in the Windows package | In the zip since 16/11/2026 (`steamlib.py` run by the workflows, `release.py` packs it) |
 | Tests | **None** for this code (`tests/` has no Steam test; CI only compiles it) |
 | Run against a real Steam, with the first game or with Orbitals | **Not done** (a mock only, 13/11/2026) |
 
@@ -41,7 +41,7 @@ yet.
 - **Start order.** `main.c:654` calls `steam_rpt_start()` before `rt_boot()`, so the overlay can hook the Vulkan device
   and SDL sees Steam's virtual gamepads (`steam_rpt.c:482`, `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD`). It saves
   and gives back the signal handlers Steam replaces (`plat_handlers_save`).
-- **Guests as players.** Controllers: `input.c:162` `steam_virtual`, `:240` joins them as the next free player (2-8).
+- **Guests as players.** Controllers: `input.c:162` `steam_virtual`, `:240` joins them as the next free player (player 2).
   Keyboards: `steam_rpt.c:313` `read_keys` and `input.c:574` `input_remote_attach`, on the host's key table, only for a
   guest without a controller and after the guest's first 5 s.
 - **The choice.** `ov_input.c:204` `ov_controller_support` calls `steam_rpt_multiplayer(lo, have)` (`steam_rpt.c:183`):
@@ -61,20 +61,19 @@ yet.
    list by itself. Check in `port_check.md` (PowerShell, from the folder holding it):
    `Select-String -Path port_check.md -Pattern 'ShowControllerSupport|SetSupportedNpadIdType|GetNpadStates|SetNpadJoyAssignment'`.
    The result says which `nn::hid` calls Orbitals imports.
-3. **Player count.** The runtime allows 8 (`INPUT_MAX_PLAYERS`, `input.h:16`) and the guide says "up to 8". That was
-   the first game's split-screen limit; Orbitals' own limit is not known. The comment at `ov_input.c:203` still names
-   that game's address (`main+0x25da6c8`) for the applet argument; Orbitals' layout of that argument is unchecked.
-4. **The App ID is borrowed, not Orbitals'.** Steam only offers Remote Play Together for an App ID that is in the
-   host's library and has the feature on. This project is not a Steam app, so the runtime starts the Steam API as an
-   App ID the host already owns (RetroArch, 1118310, is the documented one) and Steam shows that game's name to the
-   guests. A Steamworks application of its own (a partner account and a store page) would be the clean route; it is not
-   something this repository can set up. The guide says so ("Use an App ID you own or are allowed to use"). Whether
-   to keep this approach is a decision for you.
-5. **Steam's library is not in the package.** `release.py` and `dist.py` do not copy `steam_api64.dll` or
-   `libsteam_api.so`; `tools/build/steamlib.py` downloads them (SDK 1.65 from the Steamworks.NET release, checked by
-   sha256) and the guide tells the player to run it with `uv`, which a Windows player with the zip does not have.
-   Valve's redistribution terms for that file (the Steamworks SDK Access Agreement) are not something I can judge:
-   please read them before shipping it. Meanwhile the player has to put the library next to the exe by hand.
+3. **Player count (decided 16/11/2026): 2.** `INPUT_MAX_PLAYERS` (`input.h`) is 2, the applet answer is clamped to
+   it (`ov_input.c`), the guide says "2-player game", and one guest is a player. A second Remote Play guest still joins
+   the stream; their keys and controller give no player ("no free player" notice). Orbitals' layout of the applet
+   argument is unchecked.
+4. **The App ID is borrowed (decided 16/11/2026).** Steam only offers Remote Play Together for an App ID that is in
+   the host's library and has the feature on. This project is not a Steam app, so the runtime starts the Steam API as
+   an App ID the host already owns (RetroArch, 1118310, is the documented default) and Steam shows that game's name to
+   the guests, as in the earlier project. The guide says "Use an App ID you own or are allowed to use".
+5. **Steam's library in the package (decided 16/11/2026).** The Windows zip includes `steam_api64.dll`, as the earlier
+   project's release did: `.github/workflows/build-windows.yml` and `port_windows.yml` run
+   `tools/build/steamlib.py --target windows` before `release.py`, which adds the file to the zip when it is beside the
+   exe (SDK 1.65 from the Steamworks.NET release, checked by sha256). A local build without it packs the same zip as
+   before. The AppImage does not carry `libsteam_api.so` yet: a Linux player still runs `steamlib.py`.
 6. **No automated test.** Pure logic exists that could be tested without Steam: `steam_rpt_saved_ids` and
    `steam_rpt_saved_add` (the typed App IDs list), `is_app_id`, and the choice of `steam_rpt_multiplayer` by mode.
    The Steam calls themselves need a Steam client.
@@ -91,11 +90,10 @@ Following the shape of `v0.1.11-rpt8` (which this tree already is), what is left
 2. **A first run against a real Steam**, the check nobody has made: when Orbitals reaches a scene, with `steam_appid = 1118310` (or another owned App ID), Steam running and the
    library next to the exe. Look for the log lines `steam: running as App ID ...; Remote Play Together ready`, then
    `steam: ... joined (session ...)`, then `input: gamepad ... for player 2 (... a Remote Play guest's)`. The guide lists them under "Set up". Risk: unknown: the code has only met a mock of Steam, and Orbitals has to offer a scene with several players.
-3. **Package the library** once the redistribution question is settled: `steamlib.py` called by `dist.py` for the
-   target, the file added to the zip and the AppImage, and the guide updated. Risk: legal, not technical.
+3. **Package the library**: done for the Windows zip (item 5); the AppImage is left. Risk: none known.
 4. **Add the tests of item 6** as a C probe built the way `tests/c/` builds its probes, plus a CI step. Estimated: a
    few hours; no gameplay risk.
-5. **Orbitals' own limit of players** (item 3), from its first multiplayer scene, in `input.h` and the guide.
+5. **Check the limit of 2** against Orbitals' first multiplayer scene.
 
 Not planned: a Steamworks application for Orbitals, and any code from Eglantine's Remote Play extension (GPL-3.0; the
 idea was the only thing taken, as `runtime/steam/README.md` says).
