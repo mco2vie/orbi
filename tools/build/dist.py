@@ -119,7 +119,7 @@ PINS = {
 # tools/mod: the Mods page's import, merge, GameBanana and .ips tools (the launcher runs them; tests/test_setup.py checks
 # every tool it names is here: until 13/11/2026 none was, and the page failed with "no setup tools" in every package)
 SOURCES = ["recomp", "sm86", "tools/build/build.py", "tools/prepare", "tools/mod", "tools/romfs/resolution.py",
-           "tools/i18n/catalog.py", "tools/i18n/game_texts.py", "i18n/game",
+           "tools/i18n/catalog.py", "tools/i18n/game_texts.py",
            "tools/shaders/extract.py", "tools/shaders/translate.py", "tools/shaders/shaderc_lib.py",
            # a game this port has no version row for: its spin loops and NVN2 proc table, found at setup
            "tools/cpu/spin_waits.py", "tools/gpu/nvn2_procs.py",

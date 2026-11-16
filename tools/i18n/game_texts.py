@@ -212,6 +212,8 @@ def read_translation(lang: str, version: int = 0) -> dict[str, str]:
     sys.path.insert(0, str(ROOT / "recomp"))
     from versions import VERSIONS
 
+    if not TRANSLATIONS.is_dir():
+        raise SystemExit("no game translations: i18n/game was removed from the repository")
     numbers = {v.name: v.number for v in VERSIONS}
     out = read_tsv(TRANSLATIONS / f"{lang}.tsv")
     for sub in sorted((d for d in TRANSLATIONS.iterdir() if d.name in numbers), key=lambda d: numbers[d.name]):
@@ -284,6 +286,8 @@ def build(lang: str, out: Path, romfs: Path | None = None, strict: bool = True, 
 
 def build_all(game: Path, romfs: Path) -> None:
     """Every translation into game/lang/<lang>/ (the setup's last step, tools/prepare/prepare.py)."""
+    if not TRANSLATIONS.is_dir():   # i18n/game holds no translation at present: nothing to build
+        return
     version = game_version(game / "exefs")
     for path in sorted(TRANSLATIONS.glob("*.tsv")):
         build(path.stem, game / "lang" / path.stem, romfs, strict=False, version=version)
