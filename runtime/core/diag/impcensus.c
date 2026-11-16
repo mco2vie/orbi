@@ -3,7 +3,7 @@
 // than its 1 289 imports. Overridden imports never reach guest code and are not
 // listed here: hostfn_report counts those.
 //
-// It rides the function-entry hook of the lifted code (FN_ENTER, g_fnprof), as ORBITALS_SEQ_WATCH does: a call counts when
+// It rides the function-entry hook of the lifted code (FN_ENTER, g_fnprof; fnprof_hit below): a call counts when
 // the callee is outside main and the return address inside it, which takes the PLT calls and the game's calls through
 // SDK function pointers alike. No wrapper sits around the call, so threads and preemption behave as without the
 // census; the cost is a range check per guest call and a hash probe per call from main into the SDK.
@@ -46,6 +46,12 @@ void impcensus_init(void) {
     impcensus_on = 1;
     rt_fnprof_set(1);
     rt_log("impcensus: counting calls from main into the SDK modules (%s)", out_path ? out_path : "port mode, live");
+}
+
+// The function-entry hook of the lifted code (cpu.h FN_ENTER, on while g_fnprof): the census is its only user.
+void fnprof_hit(uint64_t addr, uint64_t lr, uint64_t x0) {
+    (void)x0;
+    if (impcensus_on) impcensus_hit(addr, lr);
 }
 
 void impcensus_hit(uint64_t addr, uint64_t lr) {

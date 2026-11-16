@@ -38,7 +38,6 @@ void input_menu(int open);
 int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4]);
 int input_overlay_gate(int *held, uint64_t *buttons);   // L3+R3: 1 in the poll both go down
 int input_script_inject(const char *line);   // ORBITALS_CTL: "<ticks from now> <button> [hold]", 1 when queued
-void input_script_phase(const char *node);   // seqwatch.c: a phase started (script lines "<node>+<ticks> ...")
 int input_pad_read(uint64_t *buttons, int32_t *lx, int32_t *ly);
 // The device the player used last (a press, or a stick moved): the button icons follow it (ui/glyphs/glyphs.c). Before any
 // input, the gamepad when one is connected. Any thread.

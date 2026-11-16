@@ -79,7 +79,7 @@ typedef uint32_t __attribute__((aligned(1), may_alias)) u32u;
 typedef uint64_t __attribute__((aligned(1), may_alias)) u64u;
 typedef uint8_t __attribute__((may_alias)) u8a;
 
-// Function-entry profiler (core/diag/seqwatch.c, impcensus.c): one predictable branch per call when off. g_fnprof and
+// Function-entry profiler (core/diag/impcensus.c): one predictable branch per call when off. g_fnprof and
 // rt_patch_on (recomp/gen.py) are defined beside the generated code (build.py modules.c): hidden, so the game code
 // library reads them directly rather than through an import.
 extern volatile int g_fnprof __attribute__((visibility("hidden")));

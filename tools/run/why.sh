@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Sourced by the scripts that start a game run (run_perf.sh, live.sh): a run started by an agent must say
+# Sourced by the scripts that start a game run (run_perf.sh, lan2.sh): a run started by an agent must say
 # what it expects to see and what each result means, in ORBITALS_RUN_WHY. Rules alone did not hold: on 07/11/2026 the
 # session started 22 min after "test the replay without the game first" still launched 59 runs, against 81 replays.
 # Only under Claude Code (CLAUDECODE=1); by hand nothing is asked. Each reason goes to build/run/why.log.

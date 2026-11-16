@@ -253,7 +253,7 @@ static void dec_main(void *arg) {
             }
             for (int k = 0; k < npics; k++) push_frame(d, pics[k], pw[k], ph[k], p.pts, 0);
         }
-        if (p.eos) push_frame(d, NULL, 0, 0, p.pts, 1), seqwatch_movie_end();
+        if (p.eos) push_frame(d, NULL, 0, 0, p.pts, 1);
         free(p.data);
         d->busy = 0;
         // a packet with no picture leaves room the player may be waiting for

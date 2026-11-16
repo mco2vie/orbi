@@ -11,7 +11,7 @@ the wake that ended the wait names the waker: the time from that signal to the e
 the walk goes on on the waker at the moment it signalled. A wait no guest thread ended (a timeout, a host signal)
 counts whole. The sums per frame add up to the frame interval.
 
-Usage: uv run tools/run/crit_path.py <crit.bin> [--top N]   (ORBITALS_CRIT=w8-20 ORBITALS_CRIT_OUT=... tools/run/race.sh NAME)
+Usage: uv run tools/run/crit_path.py <crit.bin> [--top N]   (ORBITALS_CRIT=w8-20 ORBITALS_CRIT_OUT=... tools/run/run_perf.sh NAME)
 """
 
 import argparse

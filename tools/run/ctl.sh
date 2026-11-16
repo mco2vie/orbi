@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sends one command to a run started with tools/run/live.sh and prints its answer from the log; shot and dump also wait
+# Sends one command to a run started with ORBITALS_CTL (run_perf.sh, lan2.sh) and prints its answer from the log; shot and dump also wait
 # until the file or the dump is written (60 s at most); shot also writes PATH-s.png, 1280 wide, to look at.
 # Usage: tools/run/ctl.sh NAME COMMAND...
 #   frame | shot PATH | dump DIR [ubo|lut] | flight | pause | step [N] | resume | tex ADDR | mem ADDR SIZE PATH | press <ticks> <button> [hold] | press <ticks> LSTICK x y [hold] (a "p<N> " prefix: for player N) | stop
@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 n=${1:?usage: ctl.sh NAME COMMAND...}; shift
 log=build/run/$n.log fifo=build/run/$n.ctl
-# A run is a service (job start) or a scope named job-NAME-PID (job run, as race.sh starts it): stop whichever is live.
+# A run is a service (job start) or a scope named job-NAME-PID (job run, as run_perf.sh starts it): stop whichever is live.
 if [ "${1:-}" = stop ]; then
   units=$(systemctl --user list-units --no-legend --plain --state=active "job-$n.service" "job-$n-*.scope" 2>/dev/null | awk '{print $1}')
   if [ -z "$units" ]; then

@@ -4,7 +4,7 @@
 # SO_REUSEPORT (which Pia sets) then splits unicast datagrams between them, so neither sees the other whole. Here a
 # user namespace (no root) holds two network namespaces joined by a veth pair: A at 10.77.0.1, B at 10.77.0.2 (/24,
 # broadcast 10.77.0.255), each told its address with ORBITALS_LAN_IP. Both run in one job unit, so JOB_MEM caps the pair
-# (default 14G: 7G each, live.sh's cap). Each has its log, control FIFO and profile: build/run/NAME-a.{log,ctl},
+# (default 14G: 7G each). Each has its log, control FIFO and profile: build/run/NAME-a.{log,ctl},
 # NAME-b.{log,ctl}; B's profile is build/profile-b, copied from build/profile the first time (same account, so the
 # same save; the pipeline cache is not shared between two writers).
 # Usage: tools/run/lan2.sh NAME [SECONDS]   (default 900; then both are killed). Extra env (ORBITALS_*) passes through.
@@ -39,7 +39,7 @@ if [ -n "$(find runtime -newer build/orbitals-recomp \( -name '*.c' -o -name '*.
 fi
 if pgrep -x mkw >/dev/null; then echo "lan2: a build/orbitals-recomp is already running" >&2; exit 1; fi
 tools/run/gpu_ok.sh || exit 1
-# two runs: twice live.sh's floor of 8500 MB
+# two runs: twice the floor of 8500 MB a single run needs
 need=${MIN_AVAIL:-17000}
 avail=$(tools/run/avail.sh --wait "$need")
 [ "$avail" -ge "$need" ] || { echo "lan2: only $avail MB available: not starting"; exit 1; }
@@ -47,10 +47,10 @@ mkdir -p build/run
 [ -d build/profile-b ] || cp -a build/profile build/profile-b
 rm -f "build/run/$n-b.ns" "build/run/$n-b.go"
 for i in a b; do rm -f "build/run/$n-$i.ctl"; mkfifo "build/run/$n-$i.ctl"; done
-# live.sh's settings
+# the settings of a single run
 export ORBITALS_LAN=${ORBITALS_LAN:-1} ORBITALS_GPU_GUARD=${ORBITALS_GPU_GUARD:-1}
 export ORBITALS_SPARSE_MIB=${ORBITALS_SPARSE_MIB:-768} ORBITALS_GPU_MEM_LIMIT=${ORBITALS_GPU_MEM_LIMIT:-4096}
-export ORBITALS_TRACE=${ORBITALS_TRACE:-gfx,present} ORBITALS_SEQ_WATCH=${ORBITALS_SEQ_WATCH:-1} ORBITALS_INPUT=${ORBITALS_INPUT:-none}
+export ORBITALS_TRACE=${ORBITALS_TRACE:-gfx,present} ORBITALS_INPUT=${ORBITALS_INPUT:-none}
 export ORBITALS_FULLSCREEN=${ORBITALS_FULLSCREEN:-0} ORBITALS_WINDOW_SIZE=${ORBITALS_WINDOW_SIZE:-1280x720}
 export ORBITALS_BACKGROUND_WINDOW=${ORBITALS_BACKGROUND_WINDOW:-1} ORBITALS_ASSUME_FOCUS=${ORBITALS_ASSUME_FOCUS:-1}
 tools/run/kwin-rule.sh --ensure >/dev/null

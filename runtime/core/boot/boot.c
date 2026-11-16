@@ -395,7 +395,6 @@ void rt_boot(void) {
     PlatThread *warm = plat_thread_new(prewarm_main, NULL, "prewarm");
     ldr_load(rt_config()->exefs);
     rt_patches_init();
-    seqwatch_init();
     impcensus_init();
     cb_addr[0] = hostfn_register("<rtld loader_ready>", cb_loader_ready);
     cb_addr[1] = hostfn_register("<rtld module_inits>", cb_module_inits);

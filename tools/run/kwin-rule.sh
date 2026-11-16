@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # KWin window rule for our runs: windows whose Wayland app id is orbitals-recomp-run (ORBITALS_BACKGROUND_WINDOW=1, set by
-# live.sh, run_perf.sh and the launcher shots) never take the focus and open minimized, below the others. KWin
+# run_perf.sh and the launcher shots) never take the focus and open minimized, below the others. KWin
 # activates every new window by default and ignores SDL's NOT_FOCUSABLE for that, so a run an agent launched jumped in
 # front of Adrià (07/11/2026). Plasma 6 lists the rules in General/Order (it rewrites the older rules/count keys).
 # The player's window (app id orbitals-recomp) is not touched. Idempotent: the rule is written again under a fixed id.

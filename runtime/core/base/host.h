@@ -223,20 +223,12 @@ typedef struct {
 void ldr_load(const char *exefs_dir);                      // load, relocate (overrides applied), seal; once
 int ldr_count(void);
 const RtLoaded *ldr_module(int i);                         // order: main, subsdk0, sdk
-void seqwatch_init(void);                                  // ORBITALS_SEQ_WATCH=1: log the game's sequence nodes (seqwatch.c)
 void impcensus_init(void);                                 // ORBITALS_IMPORT_CENSUS=<file>: SDK functions main calls
-void impcensus_hit(uint64_t addr, uint64_t lr);            // from fnprof_hit, while impcensus_on
+void impcensus_hit(uint64_t addr, uint64_t lr);            // from fnprof_hit (impcensus.c), while impcensus_on
 void impcensus_write(void);                                // the census file, at exit (prof_write)
 extern volatile int impcensus_on;
 void hostfn_time_report(uint64_t frame);                   // ORBITALS_HOST_TIME=1: host functions by time, every 600 presents
-void hostfn_time_window(uint64_t frame);                   // the same since the last report, now (seqwatch.c ORBITALS_SEQ_EXIT)
-void seqwatch_frame(uint64_t frame);                       // each present: phases whose update stopped have ended
-int seqwatch_window(void);                                 // ORBITALS_SEQ_EXIT's window is open: no periodic host time report
-int64_t seqwatch_since_us(void);                         // since ORBITALS_SEQ_UNTIL's event, -1 before (the A/B world clock)
-int seqwatch_hold(void);                                   // a ORBITALS_SEQ_HOLD node is active: no input script presses
-void seqwatch_movie_end(void);                              // a video reached its end of stream (ov_codec.c)
-void seqwatch_log_active(void);                            // ctl seq: the active sequence nodes
-int seqwatch_probe(void);                                  // inside a ORBITALS_PROBE window: a probe logs every call
+void hostfn_time_window(uint64_t frame);                   // the same since the last report, now
 uint64_t ldr_symbol(const char *name);                     // exported definition, 0 if none
 uint64_t ldr_plt_stub(const char *module, const char *name); // PLT stub whose GOT slot holds name, 0 if none
 const char *ldr_describe(uint64_t a, char *buf, int n);    // "main+0x1234 (symbol+0x10)", "host <name>", or the address
@@ -300,9 +292,9 @@ void rt_patch_hosts(void);                                 // before the dispatc
                                                            // patch page holds (hostfn_seal)
 void rt_patch_switch(int set, int on);                     // at run time (live settings): each site takes the new code
                                                            // the next time it runs
-int64_t frame_step_world_us(void);                         // game time since the phase ORBITALS_SEQ_UNTIL waits for, -1 before
+int64_t frame_step_world_us(void);                         // game time since the first present, -1 before
 void ctl_init(void);                                       // ORBITALS_CTL=<fifo>: commands to the running game (ctl.c)
-void ctl_run(char *line);                                  // one ctl command now (ORBITALS_SEQ_CTL, seqwatch.c)
+void ctl_run(char *line);                                  // one ctl command now
 void rt_shot_request(const char *path);                    // the next presented frame to path, full size (boot.c)
 void gfx_aspect_set(float a);  // gfx_present.c: the output's width / height when wider than 16:9, else 0 (no caller yet)
 int ov_movie_playing(void);  // ov_codec.c: a full-screen movie (1280 wide or more) gave a frame in the last half second

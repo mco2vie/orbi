@@ -261,8 +261,7 @@ void perf_present(uint64_t frame) {
     static int64_t win_prev[PERF_CNT_N];
     prof_render_tid = plat_thread_id();
     if (rt_trace & RT_TRACE_SCHED) kern_sched_report(frame);
-    seqwatch_frame(frame);
-    if (!seqwatch_window()) hostfn_time_report(frame);
+    hostfn_time_report(frame);
     uint64_t now = kern_now_ns(), d = last ? now - last : 0;
     prof_sampler_frame(frame, now, last ? d : 0);
     uint64_t rep = ft_frame(frame, now, d);   // d is 0 on the first present: it only starts the period

@@ -8,7 +8,7 @@ cd "$(dirname "$0")/../.."
 # black (sp-v0, sp-h0, 01/11/2026); every good race run of that day (rt-*, vis*, m30) had 4096 passed by hand.
 n=$1; secs=${2:-120}; log=build/run/$n.log
 # The last line of every run, whatever ended it: a wait looks for it instead of guessing from the output (07/11/2026:
-# waits for «exit» in race.sh's output never ended, the perf report has no such word, and two twins sat idle).
+# waits for «exit» in a run's output never ended, the perf report has no such word, and two twins sat idle).
 trap 'echo "run_perf.sh: $n ended (rc $?)"' EXIT
 . tools/run/why.sh "$n"
 # MIN_AVAIL only raises the floor: below 8500 the system OOM killed runs and the desktop (on an integrated GPU;
@@ -21,7 +21,7 @@ avail=$(tools/run/avail.sh --wait "${MIN_AVAIL:-8500}")   # WAIT_MEM=<min>: wait
 [ "$avail" -ge "${MIN_AVAIL:-8500}" ] || { echo "only $avail MB available (with the GPU page pool): not starting"; exit 1; }
 # Our runs open their window behind whatever is in use, without the focus; the game is told it has it (it pauses
 # otherwise). ORBITALS_BACKGROUND_WINDOW=0 brings the window to the front.
-# The control FIFO (runtime/core/base/ctl.c), as live.sh opens it: tools/run/at.sh and ctl.sh shot reach race.sh's runs
+# The control FIFO (runtime/core/base/ctl.c), so tools/run/ctl.sh shot reaches these runs
 # too (mz4-fp, 08/11/2026: the HUD shots of a race run went nowhere without it).
 mkdir -p build/run; rm -f "build/run/$n.ctl"; mkfifo "build/run/$n.ctl"
 export ORBITALS_CTL=${ORBITALS_CTL:-$PWD/build/run/$n.ctl}

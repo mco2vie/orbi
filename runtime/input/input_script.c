@@ -23,15 +23,13 @@
 // applied once. In a script with timed lines (a recording) the untimed ones belong before the world clock: they stop
 // when it starts, as the load ends at another tick in each run.
 // at, hold: ticks, or microseconds of the world clock when timed.
-// A line "<node>+<ticks> ..." waits for a phase of the game instead (ORBITALS_SEQ_WATCH=1, seqwatch.c): it lands <ticks>
-// after the node's first start, so a press in a menu does not depend on how long the menus before it took (turbo, loads).
 // A line that starts with "p<N> " (N 1-8) presses for player N (input_poll_player); without it, for player 1.
 typedef struct {
     uint64_t at, hold;
     int bit, stick, timed, player;
     int32_t x, y;
     int logged;
-    char text[48], node[40];   // node: the phase it waits for, "" when none or already started
+    char text[48];
 } ScriptEv;
 static const struct { const char *name; int bit; } script_buttons[] = {
     {"A", B_A}, {"B", B_B}, {"X", B_X}, {"Y", B_Y}, {"LCLICK", B_STICK_L}, {"RCLICK", B_STICK_R}, {"L", B_L}, {"R", B_R},
@@ -49,11 +47,9 @@ static int script_parse(char *line, int ln, ScriptEv *out) {
     int player = 0;
     if (line[0] == 'p' && line[1] >= '1' && line[1] <= '0' + INPUT_MAX_PLAYERS && line[2] == ' ')
         player = line[1] - '1', line += 3;
-    char name[32], node[40] = "";
+    char name[32];
     double at;
     int off = 0, timed = line[0] == '@', skip = timed;
-    if ((line[0] >= 'A' && line[0] <= 'Z') && sscanf(line, "%39[A-Za-z0-9_]+%n", node, &skip) == 1 && skip) timed = 0;
-    else node[0] = 0, skip = timed;
     if (sscanf(line + skip, "%lf %31s%n", &at, name, &off) < 2 || at < 0) return 0;
     off += skip;
     double unit = timed ? 1000.0 : 1.0;   // ms to us, or presents
@@ -75,22 +71,11 @@ static int script_parse(char *line, int ln, ScriptEv *out) {
         if (sscanf(line + off, "%lf", &c) == 1 && c > 0) e.hold = (uint64_t)(c * unit + 0.5);
         snprintf(e.text, sizeof e.text, "%s%s", who, name);
     }
-    snprintf(e.node, sizeof e.node, "%s", node);
     *out = e;
     return 1;
 }
 
 static void script_load(void);
-
-// seqwatch.c: a phase started; the script lines waiting for it count their ticks from now.
-void input_script_phase(const char *node) {
-    plat_mutex_lock(&script_lock);
-    if (!script_state) script_load();
-    uint64_t now = frame_step_ticks() + 1;
-    for (int i = 0; i < script_n; i++)
-        if (script_ev[i].node[0] && !strcmp(script_ev[i].node, node)) script_ev[i].at += now, script_ev[i].node[0] = 0;
-    plat_mutex_unlock(&script_lock);
-}
 
 static void script_add(const ScriptEv *e) {
     static int cap;
@@ -144,12 +129,12 @@ void script_apply(uint64_t *b, int32_t sl[2], int32_t sr[2], int player) {
 }
 
 static void script_apply_locked(uint64_t *b, int32_t sl[2], int32_t sr[2], int player) {
-    if (!script_n || seqwatch_hold()) return;   // ORBITALS_SEQ_HOLD: e.g. no presses during the cup movie
+    if (!script_n) return;
     uint64_t fr = __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED), tick = frame_step_ticks();
     int64_t w = frame_step_world_us();
     for (int i = 0; i < script_n; i++) {
         ScriptEv *e = &script_ev[i];
-        if (e->player != player || e->node[0] || (e->timed ? w < 0 : script_mixed && w >= 0)) continue;
+        if (e->player != player || (e->timed ? w < 0 : script_mixed && w >= 0)) continue;
         uint64_t now = e->timed ? (uint64_t)w : tick;
         if (now < e->at || (now >= e->at + e->hold && (e->logged || !e->timed))) continue;
         if (!e->logged) {

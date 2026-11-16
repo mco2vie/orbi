@@ -46,7 +46,7 @@ static const char *const known[] = {
     "MENU_TEST_DIR", "MENU_TEST_SET", "MINIMAL_LAYOUT", "MIRROR_GAP", "MODS", "MODS_ACK", "MODS_PLAYED", "MOTION",
     "MOUSE_SENS", "PLAYER",   // PLAYER: the launcher's choice (core/base/players.h), no row: Reset all leaves it
     "ONE_PER_CORE", "OPERATION_MODE", "PAD_LAYOUT", "PERF_OVERLAY", "PERF_SLOW_MS", "PICTURE_FIT", "PIPELINE_CACHE", "PIPE_MEMO", "PIPE_PREBUILD", "PIPE_SKIP", "PIPE_STALL", "PIPE_SYNC", "PIPE_TRACE", "PIPE_WAIT", "PIPE_WORKERS",
-    "PROBE", "PROFILE", "PROFILE_CHAINS", "PROFILE_DIR", "PROFILE_FRAMES",
+    "PROFILE", "PROFILE_CHAINS", "PROFILE_DIR", "PROFILE_FRAMES",
     "PROFILE_MAIN", "PROFILE_RENDER", "PUSH_SKIP", "PUSH_STAGE", "RDOC", "RDOC_DIR", "RDOC_DLL", "REEXEC",
     "BIND_XF", "REG_LATE", "REG_QUEUED", "REPLAY_ASYNC", "USNAP_CMP",
     "REPLAY_CHECK", "RESOLVE_CHECK", "ROMFS", "RTSTATS", "ROMFS_MODS", "ROMFS_PATCHES",
@@ -144,7 +144,7 @@ static const CfgMeta metas[] = {
     {"TRACE", "", NULL, RESTART}, {"FLIGHT", "0", "0|1", RESTART}, {"FLIGHT_SPIKE_MS", "100", "0..60000", RESTART},
     {"INPUT_RECORD", "", NULL, RESTART},
     // Hacks: none of them on the console, all off by default
-    {"TURBO", "off", "off|hold|toggle|on|until", LIVE}, {"TURBO_SPEED", "4", "2..8", LIVE},
+    {"TURBO", "off", "off|hold|toggle|on", LIVE}, {"TURBO_SPEED", "4", "2..8", LIVE},
     {"SEED", "", NULL, RESTART},
     {"FREEZE_KEYS", "0", "0|1", LIVE},
 };

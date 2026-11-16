@@ -1,6 +1,6 @@
 // Turbo: the game runs `speed` times faster, to get through menus, movies and loads sooner.
 // ORBITALS_TURBO = off (default) | hold (while F2 is held) | toggle (F2 turns it on and off) | on (the whole run, for the
-// scripts) | until (on until ORBITALS_SEQ_UNTIL's event, for the run scripts: what they measure goes at normal speed);
+// scripts);
 // ORBITALS_TURBO_SPEED = 2..8 (default 4). Both are read live, once per present.
 //
 // Three clocks pace the game and all three go `speed` times faster: the present pacer (nvn_api_obj.c present_period),
@@ -61,7 +61,7 @@ void turbo_poll(void) {
         key_was = down;
         key = mode[0] == 'h' ? down : toggled;
     }
-    int on = !strcmp(mode, "on") || key || (!strcmp(mode, "until") && seqwatch_since_us() < 0);
+    int on = !strcmp(mode, "on") || key;
     int want = on ? cfg_int("ORBITALS_TURBO_SPEED") : 1;
     if (want < 1) want = 1;
     if (want > 8) want = 8;

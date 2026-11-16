@@ -1,8 +1,9 @@
 """In-launch A/B summary: the perf lines of a run with ORBITALS_AB=<seconds> (runtime/core/diag/perf.c rt_ab), A against B.
 
 Why: two runs of the same build differ by up to 12 ms per frame in a race (rt-j4 37 ms, rt-k0 49 ms, 01/11/2026), more
-than most changes. With ORBITALS_AB the blocks of A and B alternate (A B B A) inside one race, so desktop load and scene
-weigh the same on both. Only 60-frame windows wholly A ("ab 0/60") or wholly B ("ab 60/60") count.
+than most changes. With ORBITALS_AB the blocks of A and B alternate (A B B A) inside one run, so desktop load and scene
+weigh the same on both. The blocks count game time from the first present (runtime/core/boot/game.c
+frame_step_world_us): start the measured scene the same way in every run. Only 60-frame windows wholly A ("ab 0/60") or wholly B ("ab 60/60") count.
 The race's stretches are not equally heavy, so blocks of 6 s can still favour one side (sl-ab1/sl-ab2i, 06/11/2026:
 +0.77 and -1.68 ms for the same change). Given runs with ORBITALS_AB_INVERT=1 too, the means of B - A over the plain runs
 and over the inverted ones give the change (their mean) and the scene (half their difference). The race's first window

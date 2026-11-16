@@ -5,7 +5,7 @@ game threads' time, not its call count (the census of 05/11/2026 found 23 M Lock
 nothing of their cost). Lifted functions are f_<guest address>; bindb names them and gives their module.
 
 Usage: uv run tools/run/perf_sdk.py scratchpad/NAME.perf [--threads 8] [--top 25]
-       (a perf record of build/orbitals-recomp, as run_perf.sh and race.sh leave; needs build/bindb.sqlite)
+       (a perf record of build/orbitals-recomp, as run_perf.sh leaves; needs build/bindb.sqlite)
 """
 
 import argparse

@@ -31,7 +31,7 @@ typedef struct {
 
 static TlRec ring[TL_RING];
 static int on = -1;
-static int every = 600;   // ORBITALS_TRACE_TL=N (N > 1): a line every N frames; race.sh's race is ~600 frames, and with
+static int every = 600;   // ORBITALS_TRACE_TL=N (N > 1): a line every N frames; a 10 s window at 60 fps is ~600 frames, and with
                           // ORBITALS_AB a line every 600 split A and B in only one of the two twins (tlab4, tlab5)
 static uint64_t pres[TL_LAG + 2];   // the values of the last presents, newest at pres[0]
 static uint32_t npres;

@@ -10,4 +10,4 @@ Boot, modules, kernel, guest memory, settings and diagnostics. Every subfolder w
 | [memory/](memory/README.md) | Guest address space, write tracking, read traps (`ORBITALS_EARLY_READ`) |
 | [base/](base/README.md) | `base/host.h`, settings (`cfg`), `ORBITALS_CTL`, system info, SHA-256, UTF-16 |
 | [hacks/](hacks/README.md) | Shortcuts the console does not have: turbo, skip movies, development helpers |
-| [diag/](diag/README.md) | Flight recorder, counters, profiling, RenderDoc, `ORBITALS_SEQ_WATCH`, `ORBITALS_IMPORT_CENSUS` |
+| [diag/](diag/README.md) | Flight recorder, counters, profiling, RenderDoc, `ORBITALS_IMPORT_CENSUS` |

@@ -170,7 +170,7 @@ static RtConfig cfg;
 const RtConfig *rt_config(void) { return &cfg; }
 
 // ---- runtime services the generated code calls (cpu.h)
-// fnprof_hit: seqwatch.c (ORBITALS_SEQ_WATCH, ORBITALS_IMPORT_CENSUS)
+// fnprof_hit: impcensus.c (ORBITALS_IMPORT_CENSUS)
 
 // The guest's frame chain (x29) before a fatal stop at a guest instruction: the lr alone names only the last caller
 // (1.8.0's first boot stopped in CentralHeap::Free with nothing about who freed).

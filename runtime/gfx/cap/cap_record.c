@@ -48,7 +48,7 @@ static char want_dir[400];
 static int want_frames;
 static uint64_t want_at = UINT64_MAX, presents, first, frames_left;
 
-// Without the lock: the control commands of ORBITALS_SEQ_CTL run inside the back end's present (perf_present), while
+// Without the lock: a control command can run inside the back end's present (perf_present), while
 // w_present holds it. The present after the next one picks the request up (maybe_start).
 static char req_dir[400];
 static volatile int req_frames;

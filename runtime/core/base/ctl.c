@@ -15,7 +15,6 @@
 //                        (vk_mem_relieve), with the vram line before and after
 //   vram                 the "mem: vram" line now: what holds device-local memory (vk_mem_log.c, ORBITALS_VRAM_LOG)
 //   focus 0|1            the window lost (0) or took (1) the focus, as the window system reports it
-//   seq                  the game's active sequence nodes (ORBITALS_SEQ_WATCH, seqwatch.c)
 //   capture DIR [N]      the next N presented frames (2) as a capture for mkw --replay (runtime/gfx/cap; ORBITALS_CAPTURE=1)
 //   pause | step [N] | resume   the game stops on its next frame, goes N frames on (1) and stops, runs again (freeze.c)
 #include <errno.h>
@@ -82,8 +81,6 @@ void ctl_run(char *line) {
         if (sscanf(arg, "%399s %d", dir, &frames) < 1) frames = 2;
         if (!cap_request(dir, frames)) rt_log("ctl: capture refused: the run needs ORBITALS_CAPTURE=1");
         else rt_log("ctl: capture %s (%d frames) queued at frame %llu", dir, frames, (unsigned long long)frame);
-    } else if (!strcmp(cmd, "seq")) {
-        seqwatch_log_active();
     } else if (!strcmp(cmd, "pause") || !strcmp(cmd, "resume")) {
         freeze_set(cmd[0] == 'p', 0);
     } else if (!strcmp(cmd, "step")) {
