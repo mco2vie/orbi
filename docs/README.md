@@ -4,7 +4,7 @@
 |---|---|
 | [research.md](research.md) | Initial research: the executable, Switch 2 hardware, every source used with its license, NVN2 against NVN1, shaders |
 | [performance.md](performance.md) | Frame times measured on real machines, with their date; users add theirs through the performance report form |
-| `logo.svg` | The repo's logo, the same chequered flag as `mkw.exe`'s icon, drawn by `tools/build/icon.py docs/logo.svg` |
+| `logo.svg` | The repo's logo, the same chequered flag as `orbitals-recomp.exe`'s icon, drawn by `tools/build/icon.py docs/logo.svg` |
 | [i18n/](i18n/README.md) | The README in other languages (Simplified Chinese, Spanish, Arabic, Hindi, Brazilian and European Portuguese), built by `tools/docs/i18n_readme.py` |
 | [images/](images/README.md) | Screenshots of the start screen for the README |
 | [roadmap.md](roadmap.md) | The open work in order of priority, with the measurements behind it: the serial race frame first |
@@ -15,3 +15,4 @@
 | [audit-current-state.md](audit-current-state.md) | The audit before the MKW removal (16/11/2026): the traces found and the project's state |
 | [mkw-removal-plan.md](mkw-removal-plan.md) | The ordered plan of the MKW removal, with the decisions taken |
 | `mkw-inventory.tsv` | Every line with an MKW trace at the audit (file, line, kind); a documentation artifact the runtime never reads |
+| [romfs-res-audit.md](romfs-res-audit.md) | What `runtime/sdk/fs/romfs_res.c` (internal resolution, detail distance) does, what happens without its MKW file, and the decision |
