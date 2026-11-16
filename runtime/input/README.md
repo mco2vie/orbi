@@ -3,7 +3,7 @@
 | File | What it is |
 |---|---|
 | `input.c`, `input.h`, `input_map.*` | Controller state and remapping; one gamepad per player for local multiplayer (`ORBITALS_VIRTUAL_PADS=N` adds N virtual SDL gamepads to try it without controllers); remote keyboards as players 2-8 and the Steam virtual gamepads of Remote Play Together guests ([steam/](../steam/README.md)); the last device used (keyboard or controller, for the button icons) |
-| `input_script.*` | Button script (`ORBITALS_INPUT_SCRIPT`; a `p<N> ` prefix presses for player N, also through `ctl press`) and the input recording (`ORBITALS_INPUT_RECORD`)
+| `input_script.*` | Button script (`ORBITALS_INPUT_SCRIPT`; a `p<N> ` prefix presses for player N, also through `ctl press`) and the input recording (`ORBITALS_INPUT_RECORD`); `ORBITALS_CTL` presses |
 | `input_sdl.*`, `input_wsys.h` | SDL3 back end |
 | `motion_fusion.c` | Gyro and accelerometer |
 | `switch2_proto.h` | The Switch 2 controllers' Bluetooth LE protocol (Pro Controller 2, Joy-Con 2: GATT ids, handshake, reports, stick calibration, rumble, pairing), from seedds/mkw-neo (MIT) with our button bits; checked by `tests/test_switch2.py` |
