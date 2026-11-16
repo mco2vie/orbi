@@ -161,6 +161,9 @@ def _glibc_versions(text: str) -> list[str]:
 def windows(dist: Path, version: str) -> Path:
     out = OUT / f"orbitals-recomp-{version}-windows-x64.zip"
     files = [dist / "orbitals-recomp.exe", *(dist / d for d in WIN_DLLS), *sorted((dist / "setup").rglob("*"))]
+    # Remote Play Together: Steam's steam_api64.dll goes in when tools/build/steamlib.py put it beside the exe (the
+    # workflows do; a local build without it packs the same zip as before), as the earlier project's release did
+    files.append(dist / "steam_api64.dll")
     check_no_game(dist / "setup")
     top = Path("orbitals-recomp")
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:

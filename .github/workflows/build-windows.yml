@@ -58,6 +58,8 @@ jobs:
         run: uv run tools/build/build.py --target windows --dist --runtime-only
       - name: Setup tools
         run: uv run tools/build/dist.py --target windows
+      - name: Steam's steam_api64.dll for Remote Play Together (pinned sha256, docs/remote-play.md)
+        run: uv run tools/build/steamlib.py --target windows
       - name: Zip
         run: uv run tools/build/release.py --target windows --version "0.2.0-${GITHUB_SHA::7}"
       - name: orbitals-recomp.exe out of the zip
@@ -67,6 +69,7 @@ jobs:
           import glob, zipfile
           z = zipfile.ZipFile(glob.glob("build/release/*windows-x64.zip")[0])
           name = next(n for n in z.namelist() if n.endswith("/orbitals-recomp.exe"))
+          print("steam_api64.dll in the zip:", any(n.endswith("/steam_api64.dll") for n in z.namelist()))
           open("build/exe/orbitals-recomp.exe", "wb").write(z.read(name))
           print("extracted", name)
           EOF
