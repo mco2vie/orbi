@@ -314,7 +314,7 @@ static void rows_remote_play(void) {
 static void tab_game(float scale) {
     opt_begin("##game", scale);
     row_game_lang();
-    opt_toggle("ORBITALS_LAN", UI_MENU_LAN, UI_MENU_LAN_DESC);   // sdk/ov/ov_socket.c, the lan set of recomp/patches-mkw.txt
+    opt_toggle("ORBITALS_LAN", UI_MENU_LAN, UI_MENU_LAN_DESC);   // sdk/ov/ov_net.c and ov_socket.c
     rows_remote_play();
     opt_end();
 }
