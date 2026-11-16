@@ -344,7 +344,7 @@ static void attach_virtual_pads(void) {
         d.type = SDL_JOYSTICK_TYPE_GAMEPAD;
         d.naxes = SDL_GAMEPAD_AXIS_COUNT;
         d.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
-        d.name = "MKW virtual gamepad";
+        d.name = "Orbitals virtual gamepad";
         if (!SDL_AttachVirtualJoystick(&d)) rt_fatal("input: ORBITALS_VIRTUAL_PADS: cannot attach gamepad %d (%s)", i + 1, SDL_GetError());
     }
     rt_log("input: %d virtual gamepads (ORBITALS_VIRTUAL_PADS)", n);

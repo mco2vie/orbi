@@ -269,7 +269,7 @@ static void dump_main(void *arg) {
         free(have), free(j);
         return;
     }
-    fprintf(f, "# mkw flight dump: %s at frame %llu, interval %.1f ms\n", j->why, (unsigned long long)j->trig_frame,
+    fprintf(f, "# orbitals-recomp flight dump: %s at frame %llu, interval %.1f ms\n", j->why, (unsigned long long)j->trig_frame,
             j->trig_interval_us / 1000.0);
     fprintf(f, "frame\tt_ms\tinterval_ms");
     for (int k = 0; k < PERF_N; k++) fprintf(f, "\t%s", blocked_names[k]);

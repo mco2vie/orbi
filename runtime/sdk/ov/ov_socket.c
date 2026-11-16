@@ -229,7 +229,7 @@ static int msg_flags(int f, int *dontwait) {
 // ---- lifetime
 // Result internal::Initialize(int concurrency)
 static void ov_init(Cpu *c) {
-    if (!ov_lan()) {   // main's stub: "succeeds" (MKW ignores the result, main+0x2247900)
+    if (!ov_lan()) {   // main's stub: "succeeds" (the first game ignored the result)
         ret_x(c, 0);
         return;
     }

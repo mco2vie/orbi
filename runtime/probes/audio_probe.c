@@ -62,7 +62,7 @@ static void probe_client(Cpu *c) {
            param[1], param[2], (uint32_t)param[13], revision_number((uint32_t)param[13]));
     // Switch 2 spells it "REv" (lowercase v; eden-nx2 NX2_NOTES.md row 39): only the revision byte is compared
     CHECK(param[0] == 48000 && param[1] == 240 && (uint32_t)param[13] == (AUDREN_REV(15) | 0x200000u),
-          "SDK default parameter (MKW's SDK 19.3.3 builds REv15 requests)");
+          "SDK default parameter (the first game's SDK 19.3.3 builds REv15 requests)");
     // A renderer like MKW's: final mix plus submixes, two sinks
     param[2] = 24, param[3] = 8, param[4] = 192, param[5] = 2, param[6] = 12;
     uint64_t work = rt_call(c, stub(SYM_WORK_SIZE), 1, (uint64_t)(uintptr_t)param);
