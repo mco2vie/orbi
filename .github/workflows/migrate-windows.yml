@@ -46,8 +46,9 @@ jobs:
           Need ([Environment]::GetEnvironmentVariable("ORBITALS_CI_PATHY", "User") -eq "%USERPROFILE%\x") "unexpanded value kept (REG_EXPAND_SZ)"
           $p = Get-Content $PROFILE.CurrentUserAllHosts -Raw
           Need ($p -match "ORBITALS_CI_PROFILE" -and $p -notmatch "MKW_") "profile rewritten"
-          Need ((Get-Content $PROFILE.CurrentUserAllHosts -Encoding Byte -TotalCount 3) -join "," -eq "239,187,191") "profile keeps its UTF-8 BOM"
-          Need (Test-Path "$PROFILE.CurrentUserAllHosts.bak" -or (Get-ChildItem (Split-Path $PROFILE.CurrentUserAllHosts) -Filter "*.bak")) "profile .bak"
+          $bytes = [System.IO.File]::ReadAllBytes($PROFILE.CurrentUserAllHosts)
+          Need (($bytes[0..2] -join ",") -eq "239,187,191") "profile keeps its UTF-8 BOM"
+          Need ((Get-ChildItem (Split-Path $PROFILE.CurrentUserAllHosts) -Filter "*.bak").Count -ge 1) "profile .bak"
           Need ((Get-Content inst\orbitals.ini -Raw) -match "ORBITALS_SEED=3") "orbitals.ini written"
           Need (Test-Path inst\mkw.ini.bak) "mkw.ini kept as .bak"
           Need ((Get-ChildItem $HOME -Filter "orbitals-migrate-backup-*.json").Count -ge 1) "registry backup written"
