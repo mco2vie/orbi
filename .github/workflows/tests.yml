@@ -1,0 +1,20 @@
+# The Python tests (tests/test_*.py) on every push to the cleanup branch: they check the setup tools, the settings and
+# the version table without any game file. Python 3.14 is what pyproject.toml asks for.
+name: Tests
+
+on:
+  push:
+    branches: [cleanup/mkw-removal]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - name: Tests
+        run: uv run --python 3.14 pytest -q tests
