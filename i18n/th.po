@@ -106,27 +106,6 @@ msgid ""
 "look at a moment closely."
 msgstr "F3 หยุดเกมที่เฟรมบนหน้าจอและเล่นต่อ F4 เดินหน้าทีละหนึ่งเฟรม ไว้ดูช่วงเวลาใกล้ ๆ"
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "ไปที่"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"ผ่านเมนูเองตอนเริ่ม ไทม์ไทรอัล: มาริโอ คาร์ทมาตรฐาน และสนามที่เกมเสนอ (เหมือนเดิมเสมอเมื่อเปิด "
-"«สุ่มเหมือนเดิมทุกครั้ง») ไม่มีคู่แข่ง ท่องโลกอิสระ: โลกเปิด ยังใช้จอยได้ตามปกติ"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "ไทม์ไทรอัล"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "ท่องโลกอิสระ"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "การกรองพื้นผิว"

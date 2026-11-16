@@ -112,28 +112,6 @@ msgstr ""
 "F3 fige le jeu sur l'image à l'écran et le relance ; F4 avance d'une image. Pour regarder un "
 "moment de près."
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Directement à"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Traverse seul les menus au démarrage. Contre-la-montre : Mario, kart standard et le circuit que "
-"propose le jeu (toujours le même avec « Toujours le même hasard »), sans rivaux. Balade libre : "
-"le monde ouvert. La manette fonctionne toujours."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Contre-la-montre"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Balade libre"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "Filtrage des textures"

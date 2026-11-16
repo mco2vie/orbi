@@ -112,28 +112,6 @@ msgstr ""
 "F3 zet het spel stil op het beeld op het scherm en laat het weer doorgaan; F4 gaat één beeld "
 "verder. Om een moment van dichtbij te bekijken."
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Meteen naar"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Doorloopt bij het starten zelf de menu's. Tijdrace: Mario, standaardkart en de baan die het spel "
-"voorstelt (altijd dezelfde met «Elke keer hetzelfde toeval»), zonder tegenstanders. Rondrijden: "
-"de open wereld. De controller werkt nog steeds."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Tijdrace"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Rondrijden"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "Texturefilter"

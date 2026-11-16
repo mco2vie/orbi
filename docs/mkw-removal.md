@@ -21,6 +21,7 @@ the product, what was kept and why, and the proof from the built executable. Fil
 | Texts naming the first game, and the texts of removed settings, in `i18n/` | `1b5e55e` | The missing-game help and wrong-build error name Orbitals; 13 ids of removed settings dropped from the 21 catalogs |
 | Unlock everything (`runtime/core/hacks/unlock.c`, `unlock_ids.c`, `ORBITALS_UNLOCK_ALL`) | `5dde6e8` | See "unlock.c audit" below |
 | The Mods page's GameBanana tab (`mods_browse.cpp`, `tools/mod/gamebanana.py`, `--gb-install`, the `orbitals-recomp:` link handler, `plat_url_scheme`, `stb_image.h` used only for its previews, 17 texts) | this commit | GameBanana mods tab removed: it listed Mario Kart World mods (game ID 22152). Orbitals has no GameBanana presence. The mods page now only shows local mods |
+| Quick Race (`ORBITALS_QUICK_RACE`, its menu row, 4 texts, the press scripts in `input_script.c`) | this commit | Quick Race removed: it navigated MKW's menus (time trial, Mario, standard kart). Orbitals has no equivalent menu structure |
 
 ## Kept, with the reason
 

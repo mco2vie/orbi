@@ -112,28 +112,6 @@ msgstr ""
 "F3 atura el joc en el fotograma que es veu i el torna a engegar; F4 l'avança un fotograma. Per "
 "mirar un moment amb calma."
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Directe a"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Passa pels menús tot sol en arrencar. Contrarellotge: Mario, kart estàndard i el circuit que "
-"proposa el joc (sempre el mateix amb «Mateix atzar sempre»), sense rivals. Mode lliure: el món "
-"obert. Pots continuar fent servir el comandament."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Contrarellotge"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Mode lliure"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "Filtratge de textures"

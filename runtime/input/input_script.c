@@ -1,4 +1,4 @@
-// Scripted and recorded input (input.c merges it): ORBITALS_INPUT_SCRIPT and ORBITALS_QUICK_RACE presses, ORBITALS_CTL injections and
+// Scripted and recorded input (input.c merges it): ORBITALS_INPUT_SCRIPT presses, ORBITALS_CTL injections and
 // ORBITALS_INPUT_RECORD. Split from input.c; every function here runs on the input thread or ctl.c's, under script_lock.
 #include <stdint.h>
 #include <stdio.h>
@@ -101,37 +101,9 @@ static void script_add(const ScriptEv *e) {
     script_ev[script_n++] = *e;
 }
 
-// ORBITALS_QUICK_RACE (Hacks tab): the menus pressed through by phase (seqwatch.c turns the watch on
-// for it). tt: a time trial, Mario, standard kart, the course the map offers (the title's; fixed with ORBITALS_SEED, tt6a/b),
-// alone (tt2: race 29,6 s after boot); free:
-// free roam, the main menu's Plus (Tab on the keyboard).
-static const char *const quick_tt[] = {
-    "TitleWait+40 A 6",       "TitleMenuMain+40 A 6",     "TitleMenuMain+160 DOWN 6", "TitleMenuMain+190 DOWN 6",
-    "TitleMenuMain+230 A 6",  "PartsSelectEx+60 A 6",     "PartsSelectEx+180 A 6",    "VSStageSelect+60 A 6",
-    "MenuTimeAttackMain+60 A 6", "SimpleConfirm+40 A 6",
-};
-static const char *const quick_free[] = {"TitleWait+40 A 6", "TitleMenuMain+60 PLUS 6"};
-
-static void script_load_quick(const char *mode) {
-    int free_roam = !strcmp(mode, "free");
-    const char *const *lines = free_roam ? quick_free : quick_tt;
-    int n = free_roam ? (int)(sizeof quick_free / sizeof *quick_free) : (int)(sizeof quick_tt / sizeof *quick_tt);
-    for (int i = 0; i < n; i++) {
-        char line[64];
-        ScriptEv e;
-        snprintf(line, sizeof line, "%s", lines[i]);
-        if (script_parse(line, i + 1, &e) > 0) script_add(&e);
-    }
-    rt_log("input: ORBITALS_QUICK_RACE=%s, %d presses by phase", mode, script_n);
-}
-
 static void script_load(void) {
     script_state = 1;
-    const char *path = cfg_get("ORBITALS_INPUT_SCRIPT"), *quick = cfg_value("ORBITALS_QUICK_RACE");
-    if ((!path || !*path) && strcmp(quick, "off")) {
-        script_load_quick(quick);
-        return;
-    }
+    const char *path = cfg_get("ORBITALS_INPUT_SCRIPT");
     if (!path || !*path) return;
     FILE *f = fopen(path, "r");
     if (!f) { rt_log("input: cannot open ORBITALS_INPUT_SCRIPT %s", path); return; }

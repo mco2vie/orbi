@@ -112,28 +112,6 @@ msgstr ""
 "F3 zatrzymuje grę na wyświetlanej klatce i wznawia ją; F4 przesuwa ją o jedną klatkę. Do "
 "dokładnego obejrzenia chwili."
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Od razu do"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Przechodzi przez menu samo przy uruchomieniu. Próba czasowa: Mario, standardowy gokart i trasa "
-"proponowana przez grę (zawsze ta sama przy «Zawsze ta sama losowość»), bez rywali. Swobodna "
-"jazda: otwarty świat. Kontroler nadal działa."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Próba czasowa"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Swobodna jazda"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "Filtrowanie tekstur"

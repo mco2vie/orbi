@@ -104,25 +104,6 @@ msgid ""
 "look at a moment closely."
 msgstr "F3 在目前幀暫停遊戲並可再次繼續；F4 前進一幀。用於仔細查看某一瞬間。"
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "直接進入"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr "啟動時自動完成選單操作。計時賽：瑪利歐、標準車、遊戲推薦的賽道（開啟「每次相同的隨機」時始終相同），無對手。自由行駛：開放世界。控制器仍可正常使用。"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "計時賽"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "自由行駛"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "紋理過濾"

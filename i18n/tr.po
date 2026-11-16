@@ -110,28 +110,6 @@ msgstr ""
 "F3 oyunu ekrandaki karede durdurur ve yeniden başlatır; F4 onu bir kare ilerletir. Bir anı "
 "yakından incelemek için."
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Doğrudan şuraya"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Açılışta menülerden kendiliğinden geçer. Zamana karşı: Mario, standart kart ve oyunun önerdiği "
-"pist («Hep aynı rastgelelik» ile hep aynı), rakipsiz. Serbest dolaşım: açık dünya. Kumanda yine "
-"de çalışır."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Zamana karşı"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Serbest dolaşım"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "Doku filtreleme"

@@ -120,10 +120,8 @@ static int node_index(const char *name) {
 }
 
 void seqwatch_init(void) {
-    // ORBITALS_QUICK_RACE's presses wait for phases (input.c): the watch goes on for it and off where it arrives
-    const char *on = cfg_get("ORBITALS_SEQ_WATCH"), *quick = cfg_value("ORBITALS_QUICK_RACE");
-    int quick_on = strcmp(quick, "off") != 0;
-    if ((!on || !*on || *on == '0') && !quick_on) return;
+    const char *on = cfg_get("ORBITALS_SEQ_WATCH");
+    if (!on || !*on || *on == '0') return;
     // Each version's own table: another's offsets would watch unrelated code
     char own[48];
     snprintf(own, sizeof own, "build/seq_nodes-%d.tsv", rt_version()->number);
@@ -157,8 +155,6 @@ void seqwatch_init(void) {
         p += n + (p[n] == ',');
     }
     const char *until = cfg_get("ORBITALS_SEQ_UNTIL"), *ex = cfg_get("ORBITALS_SEQ_EXIT");
-    // free roam starts from the title's scene with no load: IntoRace2 five frames after Plus (fr1)
-    if ((!until || !*until) && quick_on) until = strcmp(quick, "free") ? "ReadyRace" : "IntoRace2";
     for (const char *p = until; p && *p && nuntil < UNTIL_MAX;) {
         size_t n = strcspn(p, ",");
         char name[48];

@@ -112,28 +112,6 @@ msgstr ""
 "F3k jokoa pantailako fotogramaren gainean gelditzen du eta berriro abiarazten du; F4k fotograma "
 "bat aurreratzen du. Une bat hurbiletik begiratzeko."
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Zuzenean hona"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Hasieran menuetatik bere kabuz pasatzen da. Denbora-proba: Mario, kart estandarra eta jokoak "
-"proposatzen duen zirkuitua («Ausazkotasun bera beti» aukerarekin beti bera), aurkaririk gabe. "
-"Ibilaldi librea: mundu irekia. Agintea erabiltzen jarraitu dezakezu."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Denbora-proba"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Ibilaldi librea"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "Testura-iragazketa"

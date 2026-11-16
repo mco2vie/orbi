@@ -11,14 +11,7 @@ cd "$(dirname "$0")/../.."
 if [ -n "$(find runtime -newer build/orbitals-recomp \( -name '*.c' -o -name '*.h' -o -name '*.cpp' \) -print -quit)" ]; then
   echo "${0##*/}: runtime/ is newer than build/orbitals-recomp: build first (tools/build/build.py)" >&2; exit 1
 fi
-# RACE_TT=1: a time trial instead of the Grand Prix (ORBITALS_QUICK_RACE=tt, runtime/input/input.c): one kart and no
-# rivals, at the grid 28-30 s after boot (tt2, tt3) instead of 52,6; measured from ReadyRace (no cup movie there).
-if [ "${RACE_TT:-0}" = 1 ]; then
-  # ORBITALS_SEED fixes the course (the map's first cursor follows the clock: tt6a/b loaded the same world tiles)
-  export ORBITALS_QUICK_RACE=tt ORBITALS_SEQ_UNTIL=${ORBITALS_SEQ_UNTIL-ReadyRace} ORBITALS_SEED=${ORBITALS_SEED-1}
-else
-  export ORBITALS_INPUT_SCRIPT=${ORBITALS_INPUT_SCRIPT:-tools/run/press-race.txt}
-fi
+export ORBITALS_INPUT_SCRIPT=${ORBITALS_INPUT_SCRIPT:-tools/run/press-race.txt}
 export ORBITALS_SPARSE_MIB=${ORBITALS_SPARSE_MIB:-768}
 export ORBITALS_SEQ_WATCH=${ORBITALS_SEQ_WATCH:-1} ORBITALS_SEQ_UNTIL=${ORBITALS_SEQ_UNTIL--WaitIntroMovie,IsSequenceFlag} ORBITALS_SEQ_EXIT=${ORBITALS_SEQ_EXIT-${RACE_SECS:-20}}
 # The world clock starts with the race: --seconds must not end the run before ORBITALS_SEQ_EXIT (01/11/2026: RACE_SECS=48

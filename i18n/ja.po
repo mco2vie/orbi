@@ -104,26 +104,6 @@ msgid ""
 "look at a moment closely."
 msgstr "F3で画面に出ているフレームでゲームを止め、もう一度押すと再開します。F4で1フレームずつ進みます。ある瞬間をじっくり見るためのものです。"
 
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "すぐに開始"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"起動時にメニューを自動で進みます。タイムアタック：マリオ、スタンダードカート、ゲームが選んだコース（「毎回同じランダム」ならいつも同じ）、ライバルなし。フリーラン：オープンワールド。コントローラーも使えます。"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "タイムアタック"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "フリーラン"
-
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
 msgstr "テクスチャフィルタリング"
