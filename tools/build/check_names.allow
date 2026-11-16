@@ -13,6 +13,8 @@ docs/romfs-res-audit.md
 docs/research.md
 # The first game's performance reports, kept as history with links to where they were filed.
 docs/performance.md
+# The 0.2.0 release notes name the former variable prefix, to tell players what to migrate.
+CHANGELOG.md
 docs/audit-current-state.md
 tools/migrate/*
 tools/migrate_config.py
