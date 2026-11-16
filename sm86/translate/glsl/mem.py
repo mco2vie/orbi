@@ -441,7 +441,7 @@ class MemOps:
             return "gl_PointSize"
         if addr == 0x5C and out:
             # Not in Maxwell's map (Ryujinx); eden-nx2 meets it as "reserved attribute 23". Hypothesis: Ampere's
-            # per-primitive shading rate, which goes with MKW's VRS calls; VRS is off, so the write is dropped.
+            # per-primitive shading rate, which goes with the first game's VRS calls; VRS is off, so the write is dropped.
             return ""
         if 0x2C0 <= addr < 0x2E0 and out:
             self.clip = max(getattr(self, "clip", 0), ((addr - 0x2C0) >> 2) + 1)

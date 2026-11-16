@@ -111,7 +111,7 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
             # block on the bank's own binding (`scalar`, uint w[16384]), the only aliased binding of the translation,
             # and NVIDIA (616-621, Turing to Blackwell) lost the device with "instruction pointer invalid" on draws of
             # vertex shaders whose only difference from a sound twin was one more such read (issue #22, programs
-            # c74a0d4e / 852f48d6); the same pattern faulted in mkw-thwomp ("four reads of c9 at a computed index").
+            # c74a0d4e / 852f48d6); the same pattern faulted in another port of the first game ("four reads of c9 at a computed index").
             head.append(f"layout(std430, binding = {nb}) readonly buffer CB{n}W {{ uint w[]; }} cb{n}w;")
             head.append(f"uint cb{n}w_at(uint i) {{ return i < uint(cb{n}w.w.length()) ? cb{n}w.w[i] : 0u; }}")
             refl["cbufs"].append({"binding": nb, "slot": n, "flags": 2})
@@ -210,7 +210,7 @@ def task_head(head: list[str]) -> list[str]:
 
 # Task/mesh as compute, for devices without VK_EXT_mesh_shader (the idea from AnyPS5
 # #6528, no code): the same translated body, other wrappers. Buffers by address (push constants): trec the task records
-# (TASK_REC words a workgroup: the payload, then task_count, at most MESH_PER_TASK: a ballot count in MKW's 7 task
+# (TASK_REC words a workgroup: the payload, then task_count, at most MESH_PER_TASK: a ballot count in the first game's 7 task
 # programs), mmap the mesh workgroups the tasks asked for, packed as task << 5 | index (runtime/shaders/mesh_compact.comp
 # between the two passes, which also writes the indirect dispatch and draw), mvo the vertices (MESH_VWORDS words each:
 # position and the MESH_GENERICS generics) and mto the triangles as absolute vertex indices, those past the mesh's

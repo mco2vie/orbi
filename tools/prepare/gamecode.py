@@ -125,7 +125,7 @@ def common_key(cc: list[str], gen: Path) -> str:
 
 def object_key(base: str, src: Path, flags: list[str], gen: Path) -> str:
     """An object is reused while this matches: kept across setups (cleanup leaves obj/), an update that changes a few
-    functions (a patch in patches-mkw.txt) compiles their chunks only, not all ~360 (8 min Linux, 12 Windows,
+    functions (a patch in the patch table) compiles their chunks only, not all ~360 (8 min Linux, 12 Windows,
     11/11/2026). Paths leave the key: the AppImage mounts the package at a new /tmp/.mount_* each run."""
     h = hashlib.sha256(base.encode())
     for f in flags:

@@ -7,6 +7,10 @@ both as UTF-8 and as UTF-16LE.
 Names looked for (case-insensitive): MKW, MarioKart, Mario Kart, MKWorld, mkw-recomp, adriadam10. In a binary the
 three-letter "mkw" counts only when no letter touches it, to avoid hits inside compressed data.
 
+In an executable each match names its PE section and file offset. The bare three letters "mkw" inside compressed image
+data (the IDAT chunks of an embedded PNG: the icon) are random bytes of a picture, not text: they are listed apart and
+do not count. The longer names count everywhere.
+
 Paths listed in the allow file (default tools/build/check_names.allow, globs relative to the scanned root) may keep the
 names: the licence texts, the third-party notices, the removal report and the one-shot migration data.
 
@@ -17,6 +21,7 @@ Usage: uv run tools/build/check_names.py PATH [PATH ...] [--allow FILE] [--limit
 import argparse
 import fnmatch
 import re
+import struct
 import sys
 from pathlib import Path
 
@@ -64,18 +69,63 @@ def files_of(root: Path):
             yield p, p.relative_to(root).as_posix()
 
 
-def scan(path: Path) -> list[tuple[str, str]]:
-    """(kind, snippet) of every match in the file."""
+def pe_sections(data: bytes) -> list[tuple[str, int, int]]:
+    """(name, file offset, size) of each section of a PE file; [] for anything else."""
+    if data[:2] != b"MZ" or len(data) < 0x40:
+        return []
+    pe = struct.unpack_from("<I", data, 0x3C)[0]
+    if data[pe : pe + 4] != b"PE\0\0":
+        return []
+    count, opt = struct.unpack_from("<H12xH", data, pe + 6)
+    out, at = [], pe + 24 + opt
+    for i in range(count):
+        name, size, off = struct.unpack_from("<8s8xII", data, at + 40 * i)
+        out.append((name.rstrip(b"\0").decode("ascii", "replace"), off, size))
+    return out
+
+
+def png_image_data(data: bytes) -> list[tuple[int, int]]:
+    """[start, end) of the data of every IDAT chunk of the PNG files embedded in data."""
+    out = []
+    for m in re.finditer(rb"\x89PNG\r\n\x1a\n", data):
+        at = m.end()
+        while at + 12 <= len(data):
+            n, kind = struct.unpack_from(">I4s", data, at)
+            if not kind.isalpha() or at + 12 + n > len(data):
+                break
+            if kind == b"IDAT":
+                out.append((at + 8, at + 8 + n))
+            at += 12 + n
+            if kind == b"IEND":
+                break
+    return out
+
+
+def where(off: int, sections: list[tuple[str, int, int]]) -> str:
+    for name, start, size in sections:
+        if start <= off < start + size:
+            return f"{name}+{off - start:#x}"
+    return f"file+{off:#x}"
+
+
+def scan(path: Path) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """(kind, snippet) of every match in the file, and apart the bare "mkw" found in compressed image data."""
     data = path.read_bytes()
     binary = b"\x00" in data[:8192] and not data[:2] in (b"\xff\xfe", b"\xfe\xff")
-    hits = []
+    sections = pe_sections(data) if binary else []
+    images = png_image_data(data) if binary else []
+    hits, in_images = [], []
     for rx in variants(binary):
+        bare = rx.pattern in (rb"(?<![A-Za-z])mkw(?![A-Za-z])", rb"(?<![A-Za-z]\x00)m\x00k\x00w\x00(?![A-Za-z]\x00)")
         for m in rx.finditer(data):
             a = max(0, m.start() - 20)
             snip = data[a : m.end() + 20]
-            snip = snip.decode("utf-16le", "replace") if b"\x00" in m.group(0) else snip.decode("utf-8", "replace")
-            hits.append(("utf-16" if b"\x00" in m.group(0) else "utf-8", " ".join(snip.split())))
-    return hits
+            wide = b"\x00" in m.group(0)
+            snip = snip.decode("utf-16le" if wide else "utf-8", "replace")
+            kind = ("utf-16" if wide else "utf-8") + (f" {where(m.start(), sections)}" if sections else "")
+            image = bare and any(lo <= m.start() < hi for lo, hi in images)
+            (in_images if image else hits).append((kind + (" png data" if image else ""), " ".join(snip.split())))
+    return hits, in_images
 
 
 def main() -> int:
@@ -87,7 +137,7 @@ def main() -> int:
     args = ap.parse_args()
     patterns = load_allow(args.allow)
 
-    bad = kept = 0
+    bad = kept = image_bytes = 0
     for root in args.paths:
         if not root.exists():
             print(f"check_names: {root} does not exist", file=sys.stderr)
@@ -95,7 +145,10 @@ def main() -> int:
         # Filenames are checked too.
         for p, rel in files_of(root):
             ok = allowed(rel, patterns)
-            hits = scan(p)
+            hits, in_images = scan(p)
+            for kind, snip in in_images:
+                print(f"{rel}: image data, not counted [{kind}] {snip[:80]!r}")
+            image_bytes += len(in_images)
             if TEXT_RE.search(rel):
                 hits.insert(0, ("filename", rel))
             if not hits:
@@ -107,7 +160,7 @@ def main() -> int:
             print(f"{rel}: {len(hits)} match(es)")
             for kind, snip in hits[: args.limit]:
                 print(f"    [{kind}] {snip[:110]}")
-    print(f"check_names: {bad} match(es) outside the allow file, {kept} inside it")
+    print(f"check_names: {bad} match(es) outside the allow file, {kept} inside it, {image_bytes} in image data")
     return 1 if (bad and args.strict) else 0
 
 

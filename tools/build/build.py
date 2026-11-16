@@ -92,7 +92,7 @@ WINDOWS = Target(
     str(WIN / "llvm-mingw/bin/x86_64-w64-mingw32-clang"), str(WIN / "llvm-mingw/bin/x86_64-w64-mingw32-clang++"),
     str(WIN / "llvm-mingw/bin/llvm-ar"), ROOT / "build/orbitals-recomp.exe",
     [f"-I{WIN / 'deps/include'}"],
-    # 16 MiB main-thread stack, as mkw; the map as on Linux.
+    # 16 MiB main-thread stack, as the Linux runtime; the map as on Linux.
     [f"-L{WIN / 'deps/lib'}", "-fuse-ld=lld", "-Wl,--stack,16777216", "-Wl,--Map=$builddir/orbitals-recomp.map"],
     ["-lpsapi", "-lbcrypt", "-ladvapi32", "-lws2_32", "-liphlpapi", "-luser32", "-lole32", "-luuid", "-lshell32", "-lgdi32", "-ldwmapi", "-lruntimeobject", "-lwinmm", "-lvulkan-1", "-lSDL3", "-lopus",
      "-l:libvpx.a", "-l:libzstd.a", "-l:libc++.a", "-l:libc++abi.a", "-l:libunwind.a", "-l:libwinpthread.a"],
@@ -226,7 +226,7 @@ RT_EXPORTS = ("rt_dispatch", "rt_sj_owner", "rt_svc", "rt_brk", "rt_udf", "rt_ti
 def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: Path | None,
                runtime_only: bool = False, ld_extra: list[str] | None = None,
                sys_flags: list[str] | None = None) -> str:  # fmt: skip
-    """dist: the player's build into that folder, the runtime (mkw, orbitals-recomp.exe) and the game code apart (orbitalgame.so,
+    """dist: the player's build into that folder, the runtime (orbitals-recomp, orbitals-recomp.exe) and the game code apart (orbitalgame.so,
     orbitalgame.dll); else build/orbitals-recomp with the game code linked in. runtime_only (with dist): the runtime alone, what a
     release ships and the CI builds, without the game's generated C."""
     inc = " ".join(f"-I{d}" for d in sorted({RUNTIME} | {p.parent for p in RUNTIME.rglob("*.h")}))

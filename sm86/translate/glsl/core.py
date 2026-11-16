@@ -166,7 +166,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         # the same predicate does the jump (agl_technique_shdw: `@!P1 BREAK B2; @!P1 BREAK B1; @!P1 BRA`)
         if op in ("NOP", "DEPBAR", "BSSY", "BSYNC", "BREAK", "WARPSYNC", "ERRBAR"):
             return ""
-        # MEMBAR orders this thread's memory accesses for the others: four compute of MKW share data between the
+        # MEMBAR orders this thread's memory accesses for the others: four compute of the first game share data between the
         # lanes of a 16-thread group through STS / MEMBAR.SC.VC / LDS with no BAR, which dropped left the compiler free
         # to move the load first. .CTA as groupMemoryBarrier, the rest as memoryBarrier (Ryujinx InstEmitBarrier, MIT)
         if op == "MEMBAR":
@@ -504,14 +504,14 @@ def translate(
     # precise: no FMUL + FADD fused into an FMA by the compiler (NoContraction, as eden-nx2 marks each FADD, FMUL and
     # FFMA: frontend/maxwell/translate/impl/floating_point_add.cpp:25, floating_point_multiply.cpp:66). Two programs
     # computing one position (a depth pre-pass and an EQUAL colour pass) must get the same bits, as on the console;
-    # fused differently, the MKW bushes failed the EQUAL test and stayed black (01/11/2026).
+    # fused differently, the first game's  failed the EQUAL test and stayed black (01/11/2026).
     decl = [f"    precise uint {regs};", f"    bool {preds};", "    uint loops = 0u;"]
     if b.zombie:
         decl.append("    bool exited = false;")
     if stage == "vs" and not (b.task or b.mesh):
         decl.append("    gl_PointSize = support.point_size;")   # first: a program that writes its own overrides it
         # The position components a program does not write are (0, 0, 0, 1) on the console; Vulkan leaves them
-        # undefined. MKW's full-screen passes write only x and y (or x, y, z): with w undefined, Intel (ANV) and Adreno
+        # undefined. The first game's full-screen passes write only x and y (or x, y, z): with w undefined, Intel (ANV) and Adreno
         # (Turnip) interpolated the texture coordinates with a garbage 1/w, so the race's tonemap read a magnified,
         # stale corner of the scene and the frame came out black, and menus split along the triangle's diagonal (#26).
         decl.append("    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);")

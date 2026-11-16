@@ -21,7 +21,7 @@ ROMFS_MARGIN = 0.95  # a few short still passes: some dumping tools skip empty f
 
 
 def is_nx(path: Path) -> bool:
-    """A .nx package (NXFormat): read through the runtime (mkw --unpack, runtime/sdk/fs/nx.cpp), which has its reader."""
+    """A .nx package (NXFormat): read through the runtime (orbitals-recomp --unpack, runtime/sdk/fs/nx.cpp), which has its reader."""
     try:
         with path.open("rb") as f:
             return f.read(4) == b"NXAR"

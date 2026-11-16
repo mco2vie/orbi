@@ -6,9 +6,9 @@ the player's package and shows its progress; the same steps run from a source ch
 order follows totk-pc-recomp's installer (docs/installer.md, MIT): check before writing, one key per step so a
 cancelled or failed run resumes from the last finished step.
 
-Steps, into --game (by default the folder of mkw / orbitals-recomp.exe):
-  check     exefs/main is a version of MKW the port knows (NSO build id, recomp/versions.py: 1.0.0, 1.8.0), the RomFS
-            has at least 95 % of that version's files (1.0.0: 205 660)
+Steps, into --game (by default the folder of orbitals-recomp / orbitals-recomp.exe):
+  check     exefs/main is a build the port knows (NSO build id, recomp/versions.py), the RomFS
+            has at least 95 % of that build's files when its count is known
   exefs     exefs/ copied (40 MB)
   romfs     romfs/ copied (23 GB), or --romfs link: its path written to orbitals.ini (romfs = ...)
   generate  recomp/gen.py: the game code as C, in <game>/setup-work
@@ -243,7 +243,7 @@ def main() -> None:
         help="the folder with the player's exefs/ and romfs/, or their .nup package (default: the last's)",
     )
     ap.add_argument("--game", type=Path, required=True, help="the game installation folder")
-    ap.add_argument("--runtime", type=Path, help="the folder of mkw / orbitals-recomp.exe (default: --game)")
+    ap.add_argument("--runtime", type=Path, help="the folder of orbitals-recomp / orbitals-recomp.exe (default: --game)")
     ap.add_argument("--romfs", choices=("copy", "link"), help="(default: the last setup's, else copy)")
     ap.add_argument("--jobs", type=int, default=0, help="parallel jobs (default: from cores and memory)")
     ap.add_argument("--cc", help="the C compiler command (default: the package's zig cc, else clang)")

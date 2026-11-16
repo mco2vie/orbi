@@ -11,8 +11,8 @@ from glsl.common import BOP, ICMP, LOP3_FORMS, PT, RZ, URZ, Unsupported, fcmp, p
 class AluOps:
     def src_cmp(self, i: Insn, slot: str) -> str:
         """A float compare's operand; .FTZ compares a denormal as zero. Ignored, FSETP.NEU.FTZ sum, 0 let a denormal
-        through and 1/sum gave inf in MKW's deferred lighting (nxnative docs/reference/shaders.md, «.FTZ in compares»,
-        InstEmitAluHelper.cs FlushDenormal @ 2a6f9b3, MIT); 9 177 of MKW's 11 561 programs carry it."""
+        through and 1/sum gave inf in the first game's deferred lighting (nxnative docs/reference/shaders.md, «.FTZ in compares»,
+        InstEmitAluHelper.cs FlushDenormal @ 2a6f9b3, MIT); 9 177 of the first game's 11 561 programs carry it."""
         e = self.src_f(i, slot)
         return f"(abs({e}) < 1.17549435e-38 ? 0.0 : {e})" if i.sym("ftz") == "FTZ" else e
 
@@ -310,7 +310,7 @@ class AluOps:
 
     def hsetp2(self, i: Insn) -> str:
         """HSETP2: an f16 compare per lane (Mesa NAK OpHSetP2, Ryujinx HsetP2): Pu = lane 0 and Pv = lane 1, each
-        combined with Pp; .H_AND puts both lanes together in Pu and its negation in Pv. In MKW's 17 programs (31/10/2026)
+        combined with Pp; .H_AND puts both lanes together in Pu and its negation in Pv. In the first game's 17 programs (31/10/2026)
         it compares the two halves of one register (H0_H0 against H1_H1)."""
         if fcmp(i.sym("cmp"), "", "") is None:
             raise Unsupported(f"HSETP2.{i.sym('cmp')}")

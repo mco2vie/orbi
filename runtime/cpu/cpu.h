@@ -39,7 +39,7 @@ void rt_spin_gate(Cpu *c, uint64_t head);  // a pass of a spin wait loop (kernel
 void rt_svc(Cpu *c, uint32_t imm, uint64_t pc);
 void rt_brk(Cpu *c, uint32_t imm, uint64_t pc) __attribute__((noreturn));
 void rt_udf(Cpu *c, uint64_t pc) __attribute__((noreturn));
-// The Switch 2 counter runs at 31.25 MHz (32 ns a tick): MKW's sdk returns 31,250,000 from
+// The Switch 2 counter runs at 31.25 MHz (32 ns a tick): the first game's sdk returns 31,250,000 from
 // nn::os::GetSystemTickFrequency and converts with it (TickManager::ConvertToTimeSpan, sdk+0x147208).
 #define RT_TICK_HZ 31250000u
 #define RT_TICK_NS 32u

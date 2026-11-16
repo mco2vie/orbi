@@ -114,7 +114,7 @@ TURNS = {"COS", "SIN"}
 FMUL_SCALE = {"D2": " * 0.5", "D4": " * 0.25", "D8": " * 0.125", "M2": " * 2.0", "M4": " * 4.0", "M8": " * 8.0"}
 # Float compares: glslc makes < <= > >= == ordered (false with a NaN) and != unordered (OpFUnordNotEqual); SM86's ..U
 # forms are true with a NaN and NE is ordered, as PTX setp.ltu / setp.ne. Read as the plain operator, GEU/GTU/LEU (45 %
-# of MKW's FSETP) were false with a NaN.
+# of the first game's FSETP) were false with a NaN.
 FCMP = {"LT": "({a} < {b})", "EQ": "({a} == {b})", "LE": "({a} <= {b})", "GT": "({a} > {b})", "GE": "({a} >= {b})",
         "NE": "({a} < {b} || {a} > {b})", "NEU": "({a} != {b})", "LTU": "!({a} >= {b})", "LEU": "!({a} > {b})",
         "GTU": "!({a} <= {b})", "GEU": "!({a} < {b})", "EQU": "!({a} < {b} || {a} > {b})"}  # fmt: skip

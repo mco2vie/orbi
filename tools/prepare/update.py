@@ -36,7 +36,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-# orbitals-port: never offer MKW's releases as an update of this package
+# never offer the earlier project's releases as an update of this package
 REPO = os.environ.get("ORBITALS_UPDATE_REPO") or "sinedgiveaways/pmocer-latibro"
 CHECK_TIMEOUT = 5  # s: the start screen waits for nothing, but a hung request should not linger
 FETCH_TIMEOUT = 30

@@ -61,7 +61,7 @@ class ThreadOps:
 
     def ldsm(self, i: Insn) -> str:
         """LDSM.16.M88.4 / MT88.4: four 8x8 matrices of 16-bit elements from shared memory, matrix k into Rd+k (ldsm in
-        LDSM_FN; the row addresses come from the other lanes). The x1 and x2 forms do not occur in MKW."""
+        LDSM_FN; the row addresses come from the other lanes). The x1 and x2 forms do not occur in the first game."""
         if i.sym("sz") != "16" or i.sym("mode") not in ("M88", "MT88") or i.sym("num") != "4":
             raise Unsupported(f"LDSM.{i.sym('sz')}.{i.sym('mode')}.{i.sym('num')}")
         self.uses_subgroup = self.uses_shared = self.uses_ldsm = True
@@ -144,7 +144,7 @@ class ThreadOps:
         self.uses_subgroup = True
         p = pred(i.v("Pp"), i.v("Pp@not"))
         # an exited lane (Builder.zombie) is not active on the console: out of the ballot and the votes. EQ keeps it
-        # in (none of MKW's programs with BAR votes EQ after an EXIT)
+        # in (none of the first game's programs with BAR votes EQ after an EXIT)
         eq_p, all_p = p, f"({p}) || exited" if self.zombie else p
         if self.zombie:
             p = f"({p}) && !exited"
@@ -170,7 +170,7 @@ class ThreadOps:
         """Task programs (the NV_mesh_shader model on Ampere, eden-nx2 rows 89 and 97): ISBEWR.O.ATTR [0x4] is the
         number of mesh workgroups, ISBEWR.O.ATTR [Ra + 0x10 + n] the payload the mesh workgroups read at the same
         offsets; ISBERD.ATTR [RZ] reads word 0 of the input, the workgroup index (the task multiplies it by 32 and adds
-        the lane). Measured on MKW's 7 task programs (31/10/2026)."""
+        the lane). Measured on the first game's 7 task programs (31/10/2026)."""
         if i.sym("base") != "ATTR" or i.sym("sz") not in ("32", ""):
             raise Unsupported(f"task {i.op}.{i.sym('base')}.{i.sym('sz')}")
         ra, off = i.v("Ra"), i.v("Ra_offset")

@@ -38,7 +38,7 @@ def constants(ctl: bytes, blob: bytes) -> bytes:
     size, off = struct.unpack_from("<2I", ctl, C1_AT)
     return blob[off : off + size] if size and off + size <= len(blob) else b""
 SLOT_STAGES = {0x08: "vs", 0x10: "tcs", 0x18: "tes", 0x20: "gs", 0x28: "ps", 0x30: "cs"}
-# Type 3 is TES on Maxwell; MKW has no tessellation and its 12 type-3 programs match the 12 task/mesh programs
+# Type 3 is TES on Maxwell; the first game has no tessellation and its 12 type-3 programs match the 12 task/mesh programs
 # eden-nx2 could not lower (NX2_NOTES.md row 88), so it is named apart until the SPH fields are read.
 SPH_STAGES = {1: "vs", 2: "tcs", 3: "tes?", 4: "gs", 5: "ps"}
 

@@ -80,7 +80,7 @@ Timer/
 
 Rules the generate enforces (`recomp/patches.py`, `recomp/gen.py`):
 
-- `off` is the offset in the module's image, the same space the recomp's own `recomp/patches-mkw*.txt` use. Switch `.pchtxt` files often declare `@flag offset_shift 0x100`: subtract `0x100` from those addresses.
+- `off` is the offset in the module's image, the same space the recomp's own patch tables (`recomp/patches.py`) use. Switch `.pchtxt` files often declare `@flag offset_shift 0x100`: subtract `0x100` from those addresses.
 - `orig` and every span word must match the game files; a mismatch stops the generate with the offset and both words, so a mod for another build cannot be applied.
 - `repl` may not contain a branch: the replacement keeps the function's control flow. A patch that needs a branch is a span.
 - Two mods patching one address, or a site inside a span, stop the generate naming both sides - they are never merged silently.

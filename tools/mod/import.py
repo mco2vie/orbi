@@ -8,7 +8,7 @@ patches name this game's build id, and writes both files.
 
 Usage: import.py --game EXEDIR --romfs ROMFS [--exefs DIR] [--build-id HEX] (--zip FILE | --folder DIR)
                  [--name NAME] [--variant PATH]
-  --game: the folder of mkw / orbitals-recomp.exe (mods/ is made inside it)
+  --game: the folder of orbitals-recomp / orbitals-recomp.exe (mods/ is made inside it)
   --romfs: the game's RomFS the manifest's original hashes come from: a loose folder or a .nup package
   --zip: a mod archive, .zip, .rar or .7z (rar and 7z through tar, which is bsdtar on Windows 10 and later)
   --folder: an extracted mod folder
@@ -37,7 +37,7 @@ from nup import romfs_read  # noqa: E402  (a loose RomFS or a .nup package)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ips  # noqa: E402  (a mod's .ips / .pchtxt as patches of the game's code)
 
-# An archive that unpacks to more is refused (a zip bomb, or not a mod): the largest MKW mods are a few hundred MB
+# An archive that unpacks to more is refused (a zip bomb, or not a mod): the largest mods of the first game were a few hundred MB
 MAX_BYTES, MAX_FILES = 4 << 30, 50_000
 
 BUILD_ID_OFF, BUILD_ID_LEN = 0x40, 8
