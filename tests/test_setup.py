@@ -198,7 +198,8 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
     monkeypatch.setattr(prepare, "STEPS", ("check", "warm"))
     monkeypatch.setattr(prepare, "check", lambda *args: (source / "exefs", source / "romfs",
-                                                       SimpleNamespace(name="test", number=100)))
+                                                       SimpleNamespace(name="test", number=1,
+                                                                       skip_steps=())))
     monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
     monkeypatch.setattr(prepare.subprocess, "Popen", start)
     monkeypatch.setattr(sys, "argv", ["prepare.py", "--game", str(alias), "--runtime", str(runtime),
