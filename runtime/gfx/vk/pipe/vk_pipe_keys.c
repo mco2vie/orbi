@@ -94,7 +94,7 @@ void keys_flush(void) {
         FILE *f = fopen(K.path, K.header_ok ? "ab" : "wb");
         int ok = f != NULL;
         if (ok && !K.header_ok) {
-            KeysHeader h = {{'M', 'K', 'W', '_', 'P', 'K', 'E', 'Y'}, KEYS_VERSION, sizeof(KeyRec)};   // keys_open checks it
+            KeysHeader h = {{'O', 'R', 'B', '_', 'P', 'K', 'E', 'Y'}, KEYS_VERSION, sizeof(KeyRec)};   // keys_open checks it
             ok = fwrite(&h, sizeof h, 1, f) == 1;
         }
         if (ok) ok = fwrite(r, sizeof *r, n, f) == n;
@@ -120,7 +120,7 @@ void keys_open(void) {
     fseek(f, 0, SEEK_END);
     long len = ftell(f);
     fseek(f, 0, SEEK_SET);
-    if (len >= (long)sizeof h && fread(&h, sizeof h, 1, f) == 1 && !memcmp(h.magic, "ORBITALS_PKEY", 8) &&
+    if (len >= (long)sizeof h && fread(&h, sizeof h, 1, f) == 1 && !memcmp(h.magic, "ORB_PKEY", 8) &&
         h.version == KEYS_VERSION && h.rec_size == sizeof(KeyRec)) {
         K.header_ok = 1;
         size_t n = ((size_t)len - sizeof h) / sizeof(KeyRec);

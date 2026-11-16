@@ -10,7 +10,7 @@
 
 #include "gfx.h"
 
-#define CAP_MAGIC 0x3150414357424b4dull   // "MKWBCAP1"
+#define CAP_MAGIC 0x315041434242524full   // "ORBBCAP1"
 #define CAP_VERSION 1u
 
 // Records: {type, size of what follows} + payload. Memory records come before the state that points into them.
