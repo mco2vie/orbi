@@ -18,9 +18,24 @@ the log.
 - SDK coverage: 991 of Orbitals' 1 305 SDK imports are not replaced yet, 319 of them backed by a console service
   (`tools/analisis/port_check.py`, `sdk_gaps.py`).
 - NVN2 coverage: 171 procs listed and not implemented, 195 names without an implementation, out of 731.
-- Shaders: where Orbitals' programs are (its RomFS is Unreal `.pak`/`.utoc` containers, no BNSH archive) and how
-  they reach NVN2. The setup's shader step is skipped for it until then. The image atomic with its handle in a
-  register (Ampere instruction 394) is a known blocker of the translator for this game.
+- First run of the game (16/11/2026, RTX 4080, Windows): the SDK and the 1 990 `DT_INIT` constructors run, `nnMain`
+  is reached, Unreal reads its pak and config files, the audio and NVN start, frames are presented. At 120 s Unreal's
+  watchdog (`GameThread timed out waiting for RenderThread`) aborts the run through `svc #0x26 Break`. In the dump
+  every thread is waiting on an event and none is running, so it is a missing signal, not a loop. The log also shows
+  `no prepared SPIR-V` and draws skipped for it. Whether the two are linked is **not known**; no run of the first
+  game exists as a baseline for Orbitals. The way forward, in this order:
+  1. **Which event is never signalled.** Read the log without the noise (`Select-String -NotMatch` on `AllocateMemoryPages`,
+     `nn::codec: queued`, `sdk call`, `fs entry`), count the presents, and find the fence, vsync or
+     frame-history wait the RenderThread and the Viewport thread sit on (`main+0x4a6d4`, `main+0x1540434`).
+     `nn::vi::ListFrameHistory` answers 0 today. A second run with draws without a shader made non-blocking would
+     tell whether the shaders are the cause; no such switch exists yet (`ORBITALS_PIPE_SKIP` is about draws whose
+     pipeline is still building).
+  2. **Fix what step 1 finds.** Shader work only if step 1 points at it.
+  3. **Shaders.** Where Orbitals' programs are (its RomFS is Unreal `.pak`/`.utoc` containers, no BNSH archive) and
+     how they reach NVN2; the log's `no prepared SPIR-V <hash>` lines are the hashes of the blobs the game hands to
+     `nvnProgramSetShaders`, which may be captured at run time (to check). The setup's shader step is skipped for
+     Orbitals (`skip_steps`) until then. The image atomic with its handle in a register (Ampere instruction 394) is
+     a known blocker of the translator for this game.
 - The save format, if hacks on the save are wanted again (the former one was the first game's).
 
 ## 2. Stability and memory
