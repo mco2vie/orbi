@@ -1,7 +1,7 @@
 """Import a Switch-style mod into <game>/mods for the start screen's Mods page.
 
 Why: mods ship in the emulators' layout (romfs/ and/or exefs/ with <build id>.ips + .pchtxt inside), as
-GameBanana has them: zip, rar or 7z, with those folders at the root, under one folder, deeper, or under
+mod sites ship them: zip, rar or 7z, with those folders at the root, under one folder, deeper, or under
 atmosphere/contents/<title id>/. The port reads a mod from <game>/mods/<name>/ with a manifest.tsv over its romfs/
 (runtime/sdk/fs/romfs.c) and a mod.json the Mods page shows. This copies the mod in as it comes, checks the exefs
 patches name this game's build id, and writes both files.
@@ -205,7 +205,7 @@ def main():
         usable = [p for p in shipped_patches.get("spans", []) + shipped_patches.get("sites", []) if isinstance(p, dict)]
         image = []
         if has_exefs and not usable:
-            # as GameBanana has them: the .ips applied to the code before the generator lifts it (enabling or
+            # as mod sites ship them: the .ips applied to the code before the generator lifts it (enabling or
             # removing the mod then builds the game code again: tools/prepare/prepare.py)
             files = [p for p in Path(src, "exefs").iterdir() if p.suffix.lower() in (".ips", ".pchtxt")]
             try:

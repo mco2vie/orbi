@@ -537,7 +537,6 @@ static int want_launcher(int argc, char **argv) {
     int asked = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--launcher")) asked = 1;
-        else if (!strcmp(argv[i], "--gb-install")) asked = 1, i++;   // GameBanana's 1-Click: the Mods page
         else if (!strcmp(argv[i], "--exefs") || !strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup") ||
                  !strcmp(argv[i], "--profile"))
             i++;
@@ -577,8 +576,6 @@ static int run_launcher(int argc, char **argv) {
         exefs = portable_path(cfg_game_dir(), "ORBITALS_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs,
                               rt_default_exefs);
     if (exefs) launcher_set_exefs(exefs);
-    for (int i = 1; i + 1 < argc; i++)
-        if (!strcmp(argv[i], "--gb-install")) launcher_gb_install(argv[i + 1]);
     if (launcher_run() != LAUNCHER_PLAY) return 0;
     plat_setenv("ORBITALS_LAUNCHED", "1");
     plat_reexec();

@@ -116,7 +116,7 @@ PINS = {
     },
 }  # fmt: skip
 # The sources the setup runs, from the repository (tools/prepare/prepare.py imports and runs them).
-# tools/mod: the Mods page's import, merge, GameBanana and .ips tools (the launcher runs them; tests/test_setup.py checks
+# tools/mod: the Mods page's import, merge and .ips tools (the launcher runs them; tests/test_setup.py checks
 # every tool it names is here: until 13/11/2026 none was, and the page failed with "no setup tools" in every package)
 SOURCES = ["recomp", "sm86", "tools/build/build.py", "tools/prepare", "tools/mod",
            "tools/i18n/catalog.py", "tools/i18n/game_texts.py",

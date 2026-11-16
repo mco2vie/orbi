@@ -45,7 +45,6 @@
 #include "ui/launcher/launcher_lastrun.h"
 #include "ui/launcher/launcher_update.h"
 #include "ui/launcher/mods.h"
-#include "ui/launcher/mods_browse.h"
 #include "ui/menu/menu_look.h"
 #include "ui/menu/option_rows.h"
 #include "ui/menu/settings_tabs.h"
@@ -74,7 +73,6 @@ static struct {
     int focus_main;                 // the main page's first button takes the cursor
     int result;                     // LAUNCHER_PLAY or LAUNCHER_QUIT once chosen; -1 running
     int play_after_setup;           // Play with code mods changed: the setup builds the game code, then the game
-    int gb_open;                    // a 1-Click link: the Mods page's GameBanana tab first (launcher_gb_install)
     int save_pending;
     // test hook
     long shot_at;
@@ -755,25 +753,6 @@ static void page_mods(float w, float h) {
         snprintf(shown, sizeof shown, "%s", L.exe_dir);
         if (!getenv("ORBITALS_LAUNCHER_NO_MERGE")) mods_merge_start(L.exe_dir);   // (test) skip: pre-merged shots
     }
-    // two tabs: the player's mods, and GameBanana's (ORBITALS_LAUNCHER_MODS_FIND=1 opens the second, for shots)
-    static int find_tab = getenv("ORBITALS_LAUNCHER_MODS_FIND") ? 1 : 0;
-    if (L.gb_open) find_tab = 1, L.gb_open = 0;
-    if (ImGui::RadioButton(menu_text(UI_MOD_TAB_INSTALLED), find_tab == 0)) find_tab = 0;
-    ImGui::SameLine();
-    if (ImGui::RadioButton(menu_text(UI_MOD_TAB_FIND), find_tab == 1)) find_tab = 1;
-    ImGui::Separator();
-    if (find_tab == 1) {
-        mods_poll();
-        if (!ready) ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_FILES_MISSING));
-        else if (mods_browse_draw(L.exe_dir, L.ren)) find_tab = 0;   // an install went to the import: show it
-        ImGui::EndChild();
-        bool leave = panel_back_row() || back_pressed();
-        ImGui::End();
-        if (!leave) return;
-        if (mods_merge_running()) mods_merge_cancel();
-        go_main();
-        return;
-    }
     if (const char *t = getenv("ORBITALS_LAUNCHER_MODS_PICK")) {   // (test) the picked zip or folder, as its dialog does
         if (!mods_has_pick()) {
             size_t n = strlen(t);
@@ -1047,19 +1026,6 @@ extern "C" void launcher_set_romfs(const char *romfs) { mods_set_romfs(romfs); }
 extern "C" void launcher_set_exefs(const char *exefs) { mods_set_exefs(exefs); }
 extern "C" void launcher_set_profile(const char *profile) { launcher_players_set_base(profile); }
 
-extern "C" void launcher_gb_install(const char *url) {
-    const char *p = !strncmp(url, "orbitals-recomp:", sizeof "orbitals-recomp:" - 1) ? url + sizeof "orbitals-recomp:" - 1 : url;
-    int file = 0, mod = 0;
-    char tail = 0;
-    if (sscanf(p, "https://gamebanana.com/mmdl/%d,Mod,%d%c", &file, &mod, &tail) == 2 && file > 0 && mod > 0) {
-        L.gb_open = 1;
-        mods_browse_open(mod, file);
-        rt_log("launcher: GameBanana 1-Click: mod %d, file %d", mod, file);
-    } else {
-        rt_log("launcher: not a GameBanana 1-Click link, ignored: %.200s", url);
-    }
-}
-
 extern "C" int launcher_run(void) {
     L.result = -1;
     L.focus_main = 1;
@@ -1089,15 +1055,6 @@ extern "C" int launcher_run(void) {
     if (!rt_game_present() && !L.shot_at) L.page = PAGE_FILES;
     char state[PLAT_PATH_MAX * 3];
     snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
-    if (L.gb_open && rt_game_present()) L.page = PAGE_MODS;
-    if (!L.shot_at && plat_file_exists(state)) {   // a set-up folder: GameBanana's 1-Click opens this program
-        char exe[PLAT_PATH_MAX * 2];
-        const char *appimage = getenv("APPIMAGE");   // Linux: the AppImage, not the mounted copy inside it
-        if (appimage && *appimage) snprintf(exe, sizeof exe, "%s", appimage);
-        else if (!plat_exe_path(exe, sizeof exe)) exe[0] = 0;
-        if (exe[0] && !plat_url_scheme("orbitals-recomp", "Orbitals Recomp mods", exe, "--gb-install"))
-            rt_log("launcher: the orbitals-recomp: links could not be registered");
-    }
     int updated = update_just_installed(L.exe_dir, L.updated, sizeof L.updated);
     int other = !updated && !L.shot_at && setup_from_other_version(state);
     if ((updated || other) && L.tools && plat_file_exists(state)) {

@@ -2,7 +2,7 @@
 
 Why: the port has no executable to byte-patch at run time: a code change has to be lifted into the generated C, as a
 `site` (one instruction replaced, switchable) or a `span` (a region skipped, for a branch over code), the shapes of
-recomp/patches.py. GameBanana's code mods (200cc, Classic Grand Prix, 30 FPS...) ship .ips files named by the build
+recomp/patches.py. Code mods ship .ips files named by the build
 id of the module they patch; this turns them into a mod.json "patches" block, so a player installs them as they come.
 
 What converts: in .text, a changed word that is not a branch becomes a site (a bl too: the lifter calls its target),
