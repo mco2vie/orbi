@@ -1,30 +1,30 @@
 <!-- translated from README.md c175259cbc98 -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../logo.svg" width="128" alt="orbitals-recomp logo"></p>
 
-<h1 align="center">mkw-recomp</h1>
+<h1 align="center">orbitals-recomp</h1>
 
 <p align="center">
   <b>《马力欧赛车 世界》（Nintendo Switch 2）的重编译版本，可在 Linux 和 Windows 上原生运行。</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_%E4%B8%8B%E8%BD%BD-Windows_%E6%9C%80%E6%96%B0%E7%89%88-0078d6?style=for-the-badge&labelColor=1b2740" alt="下载: Windows 最新版"></a>
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_%E4%B8%8B%E8%BD%BD-Linux_%E6%9C%80%E6%96%B0%E7%89%88_%28AppImage%29-e95420?style=for-the-badge&labelColor=1b2740" alt="下载: Linux 最新版 (AppImage)"></a>
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_%E4%B8%8B%E8%BD%BD-Linux_ARM_%E6%9C%80%E6%96%B0%E7%89%88-8957e5?style=for-the-badge&labelColor=1b2740" alt="下载: Linux ARM 最新版"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_%E4%B8%8B%E8%BD%BD-Windows_%E6%9C%80%E6%96%B0%E7%89%88-0078d6?style=for-the-badge&labelColor=1b2740" alt="下载: Windows 最新版"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_%E4%B8%8B%E8%BD%BD-Linux_%E6%9C%80%E6%96%B0%E7%89%88_%28AppImage%29-e95420?style=for-the-badge&labelColor=1b2740" alt="下载: Linux 最新版 (AppImage)"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_%E4%B8%8B%E8%BD%BD-Linux_ARM_%E6%9C%80%E6%96%B0%E7%89%88-8957e5?style=for-the-badge&labelColor=1b2740" alt="下载: Linux ARM 最新版"></a>
 </p>
 
 <p align="center">
-  <b><a href="https://github.com/adriadam10/mkw-recomp/releases">发布</a></b> ·
-  <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">帮助 Wiki</a></b> ·
+  <b><a href="https://github.com/sinedgiveaways/pmocer-latibro/releases">发布</a></b> ·
+  <b><a href="https://github.com/sinedgiveaways/pmocer-latibro/tree/HEAD/docs">帮助 Wiki</a></b> ·
   <a href="../../CHANGELOG.md">更新日志</a> ·
   <a href="../../CONTRIBUTING.md">参与贡献</a> ·
   <a href="../../docs/research.md#sources">来源</a> ·
   <a href="../../docs/roadmap.md">路线图</a> ·
   <a href="../../docs/performance.md">性能</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/issues">问题</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/discussions">讨论</a> ·
-  <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">存档</a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/issues">问题</a> ·
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/issues">讨论</a> ·
+  <a href="https://archive.org/search?query=subject%3A%22orbitals-recomp%22">存档</a>
 </p>
 
 <!-- i18n-bar:start -->
@@ -70,7 +70,7 @@ PC 程序。你需要自己的游戏副本，并从你自己的主机中导出�
 - **所有菜单**都与主机对照检查：接下来是模式、角色和车辆选择。
 - **不再出现 GPU 卡死**、更少的显存占用，然后是无卡顿的加载，以及面向非滚动更新发行版的 Linux 包。
 - **1.8.0 与 1.0.0 持平**：它的超宽屏比例、阴影贴图尺寸和固定随机种子
-  （[#19](https://github.com/adriadam10/mkw-recomp/issues/19)）。
+  （[#19](https://github.com/sinedgiveaways/pmocer-latibro/issues/19)）。
 
 \* 测量于 2026/11/09，我们的测试机：Radeon 660M APU（Ryzen 5 7535HS），Linux，720p 内部分辨率。
 
@@ -79,7 +79,7 @@ PC 程序。你需要自己的游戏副本，并从你自己的主机中导出�
 ## 性能
 
 实测的帧时间及其日期见 [docs/performance.md](../../docs/performance.md)。要添加你的机器，请提交一份
-[性能报告](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml)：它会以报告日期加入表格。这些时间是
+[性能报告](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml)：它会以报告日期加入表格。这些时间是
 游戏自身的帧：插帧会显示更多帧，但不会缩短它们。16.7 ms 即 60 fps；帧率设为自动（与主机相同）时，达不到 60 会降到
 30 fps，而超过 33.3 ms 的帧会让比赛慢于实时。
 
@@ -101,7 +101,7 @@ PC 程序。你需要自己的游戏副本，并从你自己的主机中导出�
 
 1. 从你的 Switch 2 导出《马力欧赛车 世界》1.0.0 或 1.8.0（`exefs/` 和 `romfs/`，已解密；1.8.0 需将更新合并进本体的
    RomFS），或将同一导出打包成单个 `.nup` 或 `.nx` 文件。
-2. 从[发布](https://github.com/adriadam10/mkw-recomp/releases)下载适合你系统的启动器：Linux 下载 `.AppImage`（ARM 上用
+2. 从[发布](https://github.com/sinedgiveaways/pmocer-latibro/releases)下载适合你系统的启动器：Linux 下载 `.AppImage`（ARM 上用
    `-aarch64`；默认游戏文件夹是 `~/.local/share/orbitals-recomp`；需要 glibc 2.31 或更新：Debian 11、Ubuntu 20.04、SteamOS
    及之后的版本），Windows 下载 `.zip` 并解压到一个文件夹。两者都需要约 30 GB 可用空间。
 3. 运行 AppImage（先 `chmod +x`）或 `orbitals-recomp.exe`，打开**游戏文件**，可选用**选择游戏文件夹**指定游戏的安装位置（或一个已有的
@@ -240,5 +240,5 @@ build/orbitals-recomp
 
 ## 参与贡献
 
-参见 [CONTRIBUTING.md](../../CONTRIBUTING.md)。错误和性能报告请提交到 [Issues](https://github.com/adriadam10/mkw-recomp/issues)，
-问题请发到 [Discussions](https://github.com/adriadam10/mkw-recomp/discussions)。
+参见 [CONTRIBUTING.md](../../CONTRIBUTING.md)。错误和性能报告请提交到 [Issues](https://github.com/sinedgiveaways/pmocer-latibro/issues)，
+问题请发到 [Discussions](https://github.com/sinedgiveaways/pmocer-latibro/issues)。

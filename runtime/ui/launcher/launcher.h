@@ -15,7 +15,7 @@ void launcher_set_romfs(const char *romfs);
 void launcher_set_profile(const char *profile);
 // The exefs the game will boot: an import checks a mod's build id against it.
 void launcher_set_exefs(const char *exefs);
-// --gb-install URL (GameBanana's 1-Click, "mkw-recomp:https://gamebanana.com/mmdl/FILE,Mod,MOD"): the start screen
+// --gb-install URL (GameBanana's 1-Click, "orbitals-recomp:https://gamebanana.com/mmdl/FILE,Mod,MOD"): the start screen
 // opens on that mod's GameBanana page and asks before installing; any other URL is refused (logged)
 void launcher_gb_install(const char *url);
 

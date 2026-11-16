@@ -86,7 +86,7 @@ def constraint_failures(cls, word, use_starred=True, use_tables=True):
     return bad
 
 
-_ENUM_NAMES = {}  # (spec, type) -> {value: sorted names}: one pass over each table, not one per read (mkw-recomp)
+_ENUM_NAMES = {}  # (spec, type) -> {value: sorted names}: one pass over each table, not one per read
 
 
 def _enum_symbols(spec, type_name, value):

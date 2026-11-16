@@ -38,12 +38,12 @@ AMD (Radeon, Ryzen APU, Steam Deck, ROG Ally)
 
 LAUNCHER = """**What happened:**
 
-- Game: MKW Recomp v0.1.7
+- Game: Orbitals Recomp v0.1.7
 - System: Windows (x64)
 - Started from RecompLauncher 0.90.0-beta.36
 - Closed with code 70 after 79 s
 
-From C:\\Users\\x\\AppData\\Roaming\\com.recomplauncher.app\\game-output\\mkw-recomp.log:
+From C:\\Users\\x\\AppData\\Roaming\\com.recomplauncher.app\\game-output\\orbitals-recomp.log:
 ```
 [host]   f3fcb854 d1fcc5cd
 [host]   663ecddc de465b9e
@@ -140,7 +140,7 @@ def test_replies_that_settle():
 
 
 def test_modified_build_from_the_log_line():
-    log = "[host] cfg: read mkw.ini\n[host] log: C:/mkw/logs/mkw.log (MKW Recomp 0.1.8-3-gabc1234-dirty)\n"
+    log = "[host] cfg: read mkw.ini\n[host] log: C:/mkw/logs/mkw.log (Orbitals Recomp 0.1.8-3-gabc1234-dirty)\n"
     assert classify.modified_build(log) == "0.1.8-3-gabc1234-dirty"
     assert classify.modified_build(log.replace("-dirty", "")) is None
     assert classify.modified_build("[host] log: C:/mkw/logs/mkw.log\n") is None   # up to 0.1.8: no version

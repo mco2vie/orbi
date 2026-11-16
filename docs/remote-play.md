@@ -75,7 +75,7 @@ It is off by default and changes nothing until you set it up.
    in place of the App ID's own program:
    - install the App ID's game in Steam (RetroArch, free);
    - right-click it > Properties > General > Launch options, and enter the path of `orbitals-recomp.exe` in quotes followed by
-     `%command%`, for example `"C:\Users\you\Downloads\mkw-recomp\orbitals-recomp.exe" %command%`;
+     `%command%`, for example `"C:\Users\you\Downloads\orbitals-recomp\orbitals-recomp.exe" %command%`;
    - press Play on it. Steam starts `orbitals-recomp.exe` with the game's program as its last argument, which mkw leaves out (the
      log says `boot: started by Steam's %command%`). Empty the launch options to get the real game back.
 

@@ -34,7 +34,7 @@ from datetime import UTC, datetime, timedelta
 import classify
 
 MAINTAINERS = {"OWNER", "MEMBER", "COLLABORATOR"}
-MARK = "<!-- mkw-bot:{} -->"
+MARK = "<!-- orbitals-bot:{} -->"
 DUP_DAYS, LOG_DAYS = 0, 7  # DUP_DAYS 0: duplicates labelled before 14/11/2026, when they waited 3 days, close now
 QUIET_DAYS, RETRY_DAYS = 3, 7
 NOT_RETRIED = {"duplicate", "needs-logs", "needs-retry", "fixed-next-release", "enhancement"}
@@ -68,7 +68,7 @@ TEXT = {
     "logs_closed": f"Closed: no log in {LOG_DAYS} days. If it still happens on the latest release, open a new issue "
     "with `logs/mkw.log` attached.",
     "dup_closed": "Closed as a duplicate of #{issue}.",
-    "modified": "Note: this log is from a build with local changes (`MKW Recomp {ver}`). Please check whether it "
+    "modified": "Note: this log is from a build with local changes (`Orbitals Recomp {ver}`). Please check whether it "
     "happens with a [release package]({repo_url}/releases/latest) or a clean build of `main`: a change outside the "
     "repository can cause it, and we cannot see it.",
     "mods": "Note: this run had mods on ({mods}). Mods are made by other people and can cause crashes and glitches "
@@ -322,7 +322,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("event", choices=["issue", "comment", "sweep", "release", "backlog"])
     ap.add_argument("args", nargs="*")
-    ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "adriadam10/mkw-recomp"))
+    ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "sinedgiveaways/pmocer-latibro"))
     ap.add_argument("--apply", action="store_true", help="act; without it, print what it would do")
     a = ap.parse_args()
     m = Moderator(GitHub(a.repo, a.apply))

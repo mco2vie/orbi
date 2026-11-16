@@ -1,6 +1,6 @@
 # Guide for coding agents
 
-Read this before changing mkw-recomp with an AI agent. The rules are those of [CONTRIBUTING.md](CONTRIBUTING.md);
+Read this before changing orbitals-recomp with an AI agent. The rules are those of [CONTRIBUTING.md](CONTRIBUTING.md);
 this file says how to work by them without wasting runs.
 
 ## What this is

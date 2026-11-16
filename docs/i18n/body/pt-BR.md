@@ -36,7 +36,7 @@ O principal trabalho em aberto, em ordem; os detalhes estão em [docs/roadmap.md
 - **Sem travamentos de GPU** e menos memória de GPU; depois, carregamentos sem engasgos e um pacote para distribuições
   Linux que não são rolling release.
 - **A 1.8.0 no mesmo nível da 1.0.0**: seu aspecto ultrawide, o tamanho do mapa de sombras e a semente fixa
-  ([#19](https://github.com/adriadam10/mkw-recomp/issues/19)).
+  ([#19](https://github.com/sinedgiveaways/pmocer-latibro/issues/19)).
 
 \* Medido em 09/11/2026 na nossa máquina de teste: APU Radeon 660M (Ryzen 5 7535HS), Linux, resolução interna 720p.
 
@@ -46,7 +46,7 @@ O principal trabalho em aberto, em ordem; os detalhes estão em [docs/roadmap.md
 
 Os tempos de quadro medidos, cada um com sua data, estão em [docs/performance.md](docs/performance.md). Para incluir a
 sua máquina, abra um
-[relatório de desempenho](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml): ele entra na
+[relatório de desempenho](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml): ele entra na
 tabela com a data do relatório. Os tempos são os quadros do próprio jogo: a geração de quadros mostra mais quadros, mas
 não os encurta. 16,7 ms são 60 fps; com Taxa de quadros em Automático (a do console) cai para 30 fps quando 60 não são
 alcançados, e um quadro acima de 33,3 ms faz a corrida rodar mais devagar que o tempo real.
@@ -69,7 +69,7 @@ alcançados, e um quadro acima de 33,3 ms faz a corrida rodar mais devagar que o
 
 1. Extraia o dump de Mario Kart World 1.0.0 ou 1.8.0 do seu Switch 2 (`exefs/` e `romfs/`, descriptografados; a 1.8.0
    com a atualização mesclada à RomFS do jogo base), ou esse mesmo dump empacotado em um único arquivo `.nup` ou `.nx`.
-2. Baixe o launcher para o seu sistema em [Versões](https://github.com/adriadam10/mkw-recomp/releases): no Linux o
+2. Baixe o launcher para o seu sistema em [Versões](https://github.com/sinedgiveaways/pmocer-latibro/releases): no Linux o
    `.AppImage` (`-aarch64` em ARM; a pasta padrão do jogo é `~/.local/share/orbitals-recomp`; glibc 2.31 ou mais
    recente: Debian 11, Ubuntu 20.04, SteamOS e posteriores), no Windows o `.zip`, descompactado em uma pasta. Os dois
    precisam de uns 30 GB livres.
@@ -231,5 +231,5 @@ faz: a tela inicial só mostra a listagem pública do GameBanana e baixa um mod 
 ## Contribuir
 
 Veja o [CONTRIBUTING.md](CONTRIBUTING.md). Bugs e relatórios de desempenho vão para as
-[Issues](https://github.com/adriadam10/mkw-recomp/issues), perguntas para as
-[Discussions](https://github.com/adriadam10/mkw-recomp/discussions).
+[Issues](https://github.com/sinedgiveaways/pmocer-latibro/issues), perguntas para as
+[Discussions](https://github.com/sinedgiveaways/pmocer-latibro/issues).

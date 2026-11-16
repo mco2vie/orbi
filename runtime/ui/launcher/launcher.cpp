@@ -278,7 +278,7 @@ static void lastrun_row(float bw) {
     LastRun r = lastrun_state();
     if (r.kind == LASTRUN_NONE) return;
     const char *repo = getenv("ORBITALS_UPDATE_REPO");
-    if (!repo || !*repo) repo = "adriadam10/mkw-recomp";
+    if (!repo || !*repo) repo = "sinedgiveaways/pmocer-latibro";
     char text[700], button[160], url[300];
     url[0] = 0;
     if (r.kind == LASTRUN_KNOWN) {
@@ -1048,7 +1048,7 @@ extern "C" void launcher_set_exefs(const char *exefs) { mods_set_exefs(exefs); }
 extern "C" void launcher_set_profile(const char *profile) { launcher_players_set_base(profile); }
 
 extern "C" void launcher_gb_install(const char *url) {
-    const char *p = !strncmp(url, "orbitals-recomp:", 16) ? url + 16 : !strncmp(url, "mkw-recomp:", 11) ? url + 11 : url;
+    const char *p = !strncmp(url, "orbitals-recomp:", sizeof "orbitals-recomp:" - 1) ? url + sizeof "orbitals-recomp:" - 1 : url;
     int file = 0, mod = 0;
     char tail = 0;
     if (sscanf(p, "https://gamebanana.com/mmdl/%d,Mod,%d%c", &file, &mod, &tail) == 2 && file > 0 && mod > 0) {
@@ -1095,7 +1095,6 @@ extern "C" int launcher_run(void) {
         const char *appimage = getenv("APPIMAGE");   // Linux: the AppImage, not the mounted copy inside it
         if (appimage && *appimage) snprintf(exe, sizeof exe, "%s", appimage);
         else if (!plat_exe_path(exe, sizeof exe)) exe[0] = 0;
-        // orbitals-port: its own scheme, so the real mkw-recomp keeps the mkw-recomp: links
         if (exe[0] && !plat_url_scheme("orbitals-recomp", "Orbitals Recomp mods", exe, "--gb-install"))
             rt_log("launcher: the orbitals-recomp: links could not be registered");
     }

@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 I18N = ROOT / "docs/i18n"
-REPO = "https://github.com/adriadam10/mkw-recomp"
+REPO = "https://github.com/sinedgiveaways/pmocer-latibro"
 # (code, name in its own language, right to left)
 LANGS = [("zh-CN", "简体中文", False), ("es", "Español", False), ("ar", "العربية", True), ("hi", "हिन्दी", False),
          ("pt-BR", "Português (Brasil)", False), ("pt-PT", "Português (Portugal)", False)]  # fmt: skip
@@ -62,7 +62,7 @@ LINKS = [
     f"{REPO}/issues",
     f"{REPO}/discussions",
     # Daily copy of the repository, issues, discussions and releases (tools/github/archive.py)
-    "https://archive.org/search?query=subject%3A%22mkw-recomp%22",
+    "https://archive.org/search?query=subject%3A%22orbitals-recomp%22",
 ]  # fmt: skip
 # Scripts whose letters join (Arabic) or stack (Devanagari): their buttons stay in English (13/11/2026, seen on GitHub)
 LATIN_BUTTONS = {"ar", "hi"}
@@ -105,8 +105,8 @@ def build(code: str, rtl: bool) -> str:
         body = f'<div dir="rtl">\n\n{body}\n\n</div>'
     head = "\n\n".join([
         f"<!-- translated from README.md {readme_hash()} -->",
-        '<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>',
-        '<h1 align="center">mkw-recomp</h1>',
+        '<p align="center"><img src="../logo.svg" width="128" alt="orbitals-recomp logo"></p>',
+        '<h1 align="center">orbitals-recomp</h1>',
         f'<p align="center">\n  <b>{tag}</b>\n</p>',
         '<p align="center">\n' + "\n".join([button(win, "0078d6"), button(lin, "e95420"), button(arm, "8957e5")])
         + "\n</p>",

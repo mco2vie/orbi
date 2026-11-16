@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mkw-recomp\nLanguage: eu\nMIME-Version: 1.0\nContent-Type: text/plain; "
+"Project-Id-Version: orbitals-recomp\nLanguage: eu\nMIME-Version: 1.0\nContent-Type: text/plain; "
 "charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.

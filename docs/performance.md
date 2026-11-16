@@ -6,7 +6,7 @@ longer, the game itself drops to 30 fps (33.3 ms), and Settings > Screen > Frame
 since 0.1.5 (12/11/2026: no switch between 60 and 30 in nine races). A frame time over 33.3 ms means slow motion even
 at 30: the game counts each frame as 1/30 s. The log's `game: speed` lines give the game speed of a run.
 
-To add your machine, open a [performance report](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml);
+To add your machine, open a [performance report](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml);
 it is added here with the issue's date and a link to it.
 
 | Date | Version | GPU (driver) | CPU | OS | Internal resolution | Scene | Frame time | Source |

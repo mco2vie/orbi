@@ -40,7 +40,7 @@ from pathlib import Path
 
 GAME = 22152  # Mario Kart World on GameBanana
 API = "https://gamebanana.com/apiv11"
-USER_AGENT = "mkw-recomp (+https://github.com/adriadam10/mkw-recomp)"
+USER_AGENT = "orbitals-recomp (+https://github.com/sinedgiveaways/pmocer-latibro)"
 TTL, PER_MINUTE, PER_PAGE = 600, 60, 20
 SORTS = {"downloads": "Generic_MostDownloaded", "new": "Generic_Newest", "likes": "Generic_MostLiked"}
 

@@ -1,30 +1,30 @@
 <!-- translated from README.md c175259cbc98 -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../logo.svg" width="128" alt="orbitals-recomp logo"></p>
 
-<h1 align="center">mkw-recomp</h1>
+<h1 align="center">orbitals-recomp</h1>
 
 <p align="center">
   <b>Mario Kart World (Nintendo Switch 2) recompilado para correr nativamente em Linux e Windows.</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Transferir-mais_recente_para_Windows-0078d6?style=for-the-badge&labelColor=1b2740" alt="Transferir: mais recente para Windows"></a>
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Transferir-mais_recente_para_Linux_%28AppImage%29-e95420?style=for-the-badge&labelColor=1b2740" alt="Transferir: mais recente para Linux (AppImage)"></a>
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Transferir-mais_recente_para_Linux_ARM-8957e5?style=for-the-badge&labelColor=1b2740" alt="Transferir: mais recente para Linux ARM"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Transferir-mais_recente_para_Windows-0078d6?style=for-the-badge&labelColor=1b2740" alt="Transferir: mais recente para Windows"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Transferir-mais_recente_para_Linux_%28AppImage%29-e95420?style=for-the-badge&labelColor=1b2740" alt="Transferir: mais recente para Linux (AppImage)"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Transferir-mais_recente_para_Linux_ARM-8957e5?style=for-the-badge&labelColor=1b2740" alt="Transferir: mais recente para Linux ARM"></a>
 </p>
 
 <p align="center">
-  <b><a href="https://github.com/adriadam10/mkw-recomp/releases">Versões</a></b> ·
-  <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">Wiki de ajuda</a></b> ·
+  <b><a href="https://github.com/sinedgiveaways/pmocer-latibro/releases">Versões</a></b> ·
+  <b><a href="https://github.com/sinedgiveaways/pmocer-latibro/tree/HEAD/docs">Wiki de ajuda</a></b> ·
   <a href="../../CHANGELOG.md">Alterações</a> ·
   <a href="../../CONTRIBUTING.md">Contribuir</a> ·
   <a href="../../docs/research.md#sources">Fontes</a> ·
   <a href="../../docs/roadmap.md">Roteiro</a> ·
   <a href="../../docs/performance.md">Desempenho</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/issues">Issues</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/discussions">Discussões</a> ·
-  <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">Arquivo</a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/issues">Issues</a> ·
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/issues">Discussões</a> ·
+  <a href="https://archive.org/search?query=subject%3A%22orbitals-recomp%22">Arquivo</a>
 </p>
 
 <!-- i18n-bar:start -->
@@ -76,7 +76,7 @@ O principal trabalho em aberto, por ordem; os pormenores estão em [docs/roadmap
 - **Sem bloqueios de GPU** e menos memória de GPU; depois, carregamentos sem soluços e um pacote para distribuições
   Linux que não são rolling release.
 - **A 1.8.0 ao nível da 1.0.0**: o seu formato ultrawide, o tamanho do mapa de sombras e a semente fixa
-  ([#19](https://github.com/adriadam10/mkw-recomp/issues/19)).
+  ([#19](https://github.com/sinedgiveaways/pmocer-latibro/issues/19)).
 
 \* Medido a 09/11/2026 na nossa máquina de testes: APU Radeon 660M (Ryzen 5 7535HS), Linux, resolução interna 720p.
 
@@ -86,7 +86,7 @@ O principal trabalho em aberto, por ordem; os pormenores estão em [docs/roadmap
 
 Os tempos por fotograma medidos, cada um com a sua data, estão em [docs/performance.md](../../docs/performance.md). Para
 acrescentar a sua máquina, abra um
-[relatório de desempenho](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml): entra na
+[relatório de desempenho](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml): entra na
 tabela com a data do relatório. Os tempos são os fotogramas do próprio jogo: a geração de fotogramas mostra mais
 fotogramas, mas não os encurta. 16,7 ms são 60 fps; com a Taxa de fotogramas em Automático (a da consola) desce para
 30 fps quando não se chega aos 60, e um fotograma acima de 33,3 ms faz a corrida andar mais devagar do que o tempo
@@ -110,7 +110,7 @@ real.
 
 1. Extraia o dump de Mario Kart World 1.0.0 ou 1.8.0 da sua Switch 2 (`exefs/` e `romfs/`, desencriptados; a 1.8.0 com
    a atualização integrada na RomFS do jogo base), ou esse mesmo dump empacotado num único ficheiro `.nup` ou `.nx`.
-2. Transfira o launcher para o seu sistema em [Versões](https://github.com/adriadam10/mkw-recomp/releases): em Linux o
+2. Transfira o launcher para o seu sistema em [Versões](https://github.com/sinedgiveaways/pmocer-latibro/releases): em Linux o
    `.AppImage` (`-aarch64` em ARM; a pasta do jogo por omissão é `~/.local/share/orbitals-recomp`; glibc 2.31 ou mais
    recente: Debian 11, Ubuntu 20.04, SteamOS e posteriores), em Windows o `.zip`, descompactado numa pasta. Ambos
    precisam de cerca de 30 GB livres.
@@ -273,5 +273,5 @@ o ecrã inicial só mostra a listagem pública do GameBanana e transfere um mod 
 ## Contribuir
 
 Veja o [CONTRIBUTING.md](../../CONTRIBUTING.md). Os erros e os relatórios de desempenho vão para as
-[Issues](https://github.com/adriadam10/mkw-recomp/issues), as perguntas para as
-[Discussions](https://github.com/adriadam10/mkw-recomp/discussions).
+[Issues](https://github.com/sinedgiveaways/pmocer-latibro/issues), as perguntas para as
+[Discussions](https://github.com/sinedgiveaways/pmocer-latibro/issues).

