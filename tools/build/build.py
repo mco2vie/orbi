@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -199,11 +200,21 @@ def module_glue(gen: Path, exefs: Path, library: bool) -> str:
 
 
 def port_version() -> str:
-    """The release tag without its v (0.1.0) or, between tags, git describe's tag-commits-hash; the commit alone in a
-    clone without tags, "dev" outside git (the source tarball of a release says nothing)."""
-    r = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--always", "--dirty"],
+    """The release tag without its v (v0.2.0: 0.2.0) or, between release tags, git describe's tag-commits-hash; with no
+    release tag yet, the newest CHANGELOG.md version and the commit (0.2.0-gabc1234), "dev" outside git (the source
+    tarball of a release says nothing). Only tags of the form v<digit>... count: the tools' own releases (port-check,
+    romfs-check) are tags too, and one of them gave "romfs-check-24-gede6850" as the program's version."""
+    r = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--match", "v[0-9]*", "--dirty"],
                        capture_output=True, text=True, check=False)  # fmt: skip
-    return r.stdout.strip().removeprefix("v") if r.returncode == 0 and r.stdout.strip() else "dev"
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip().removeprefix("v")
+    h = subprocess.run(["git", "-C", str(ROOT), "describe", "--always", "--dirty", "--abbrev=7"],
+                       capture_output=True, text=True, check=False)  # fmt: skip
+    if h.returncode != 0 or not h.stdout.strip():
+        return "dev"
+    log = ROOT / "CHANGELOG.md"
+    m = re.search(r"^## \[?(\d+\.\d+\.\d+)\]?", log.read_text(encoding="utf-8"), re.M) if log.is_file() else None
+    return f"{m[1]}-g{h.stdout.strip()}" if m else h.stdout.strip()
 
 
 def defaults_glue(exefs: Path, romfs: Path, dist: bool) -> str:
