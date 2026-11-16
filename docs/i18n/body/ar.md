@@ -64,9 +64,9 @@ Frame rate على Automatic (كما في الجهاز) ينخفض إلى 30 إط
 1. استخرج Mario Kart World 1.0.0 أو 1.8.0 من جهاز Switch 2 الخاص بك (`exefs/` و`romfs/`، بعد فك تشفيرهما؛ والإصدار 1.8.0
    مع دمج التحديث في RomFS اللعبة الأساسية)، أو النسخة نفسها مجمّعة في ملف واحد `.nup` أو `.nx`.
 2. نزّل المشغّل لنظامك من [الإصدارات](https://github.com/adriadam10/mkw-recomp/releases): على Linux ملف `.AppImage`
-   (‏`-aarch64` على ARM؛ مجلد اللعبة الافتراضي هو `~/.local/share/mkw-recomp`؛ يتطلب glibc 2.31 أو أحدث: Debian 11 وUbuntu
+   (‏`-aarch64` على ARM؛ مجلد اللعبة الافتراضي هو `~/.local/share/orbitals-recomp`؛ يتطلب glibc 2.31 أو أحدث: Debian 11 وUbuntu
    20.04 وSteamOS وما بعدها)، وعلى Windows ملف `.zip` بعد فك ضغطه في مجلد. يحتاج كلاهما إلى نحو 30 GB من المساحة الحرة.
-3. شغّل ملف AppImage (بعد `chmod +x`) أو `mkw.exe`، وافتح **Game files**، واختر إن شئت عبر **Choose game folder** مكان
+3. شغّل ملف AppImage (بعد `chmod +x`) أو `orbitals-recomp.exe`، وافتح **Game files**، واختر إن شئت عبر **Choose game folder** مكان
    تثبيت اللعبة (أو تثبيتًا موجودًا)، ثم حدّد نسختك المستخرجة (**Choose folder** أو **Choose .nup or .nx file**) واضغط
    **Set up**. يتذكر المشغّل مجلد التثبيت؛ وفيه تُحفظ اللعبة المجمَّعة والملفات المجهَّزة وملفات الحفظ والإعدادات وذاكرة
    التخزين المؤقت. اختيار مجلد آخر يترك الملفات الموجودة في مكانها.
@@ -141,8 +141,8 @@ Frame rate على Automatic (كما في الجهاز) ينخفض إلى 30 إط
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
-uv run tools/build/build.py              # build/mkw; --target windows builds mkw.exe with llvm-mingw
-build/mkw
+uv run tools/build/build.py              # build/orbitals-recomp; --target windows builds orbitals-recomp.exe with llvm-mingw
+build/orbitals-recomp
 ```
 
 من نسخة مستخرجة مجمّعة (`.nup`، `.nx`) ولنظام Linux على AArch64: [tools/build/README.md](tools/build/README.md#a-packed-dump)

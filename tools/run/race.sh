@@ -6,10 +6,10 @@
 # Usage: race.sh NAME [SECONDS]; extra env (ORBITALS_*, ORBITALS_DUMP...) passes through.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-# Refuse a stale build/mkw: a runtime source newer than it means the last build did not run or failed (01/11/2026:
+# Refuse a stale build/orbitals-recomp: a runtime source newer than it means the last build did not run or failed (01/11/2026:
 # three runs measured the previous binary after a commit hook stopped the build and a compile error went unseen).
-if [ -n "$(find runtime -newer build/mkw \( -name '*.c' -o -name '*.h' -o -name '*.cpp' \) -print -quit)" ]; then
-  echo "${0##*/}: runtime/ is newer than build/mkw: build first (tools/build/build.py)" >&2; exit 1
+if [ -n "$(find runtime -newer build/orbitals-recomp \( -name '*.c' -o -name '*.h' -o -name '*.cpp' \) -print -quit)" ]; then
+  echo "${0##*/}: runtime/ is newer than build/orbitals-recomp: build first (tools/build/build.py)" >&2; exit 1
 fi
 # RACE_TT=1: a time trial instead of the Grand Prix (ORBITALS_QUICK_RACE=tt, runtime/input/input.c): one kart and no
 # rivals, at the grid 28-30 s after boot (tt2, tt3) instead of 52,6; measured from ReadyRace (no cup movie there).

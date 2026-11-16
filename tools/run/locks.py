@@ -2,12 +2,12 @@
 
 Why: comparing the kernel lock G before and after a change needs the race's windows
 of the "perf: lock waits" lines added up and named; by hand, the log's addresses were read wrong once (06/11/2026:
-sym.py took the absolute addresses for offsets). Lock and caller are named from build/mkw's symbols (nm, addr2line).
+sym.py took the absolute addresses for offsets). Lock and caller are named from build/orbitals-recomp's symbols (nm, addr2line).
 Only the windows after the race starts (ORBITALS_SEQ_UNTIL's "watch off" line) count. The holders' part: how long the
 caller that took a lock kept it while some thread slept waiting for it (which section to shorten).
 
-Usage: uv run tools/run/locks.py build/run/NAME.log [...] [--top 12]   (the build/mkw of that run)
-       uv run tools/run/locks.py build/run/wNAME.log --exe build/dist/windows/mkw.exe   (a Windows run: its exe)
+Usage: uv run tools/run/locks.py build/run/NAME.log [...] [--top 12]   (the build/orbitals-recomp of that run)
+       uv run tools/run/locks.py build/run/wNAME.log --exe build/dist/windows/orbitals-recomp.exe   (a Windows run: its exe)
 """
 
 import argparse
@@ -17,8 +17,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-EXE = ROOT / "build/mkw"
-BASE = 0x200000  # first PT_LOAD of build/mkw, as sym.py; a PE's ImageBase (main)
+EXE = ROOT / "build/orbitals-recomp"
+BASE = 0x200000  # first PT_LOAD of build/orbitals-recomp, as sym.py; a PE's ImageBase (main)
 ENTRY = re.compile(r"exe\+(0x[0-9a-f]+) from exe\+(0x[0-9a-f]+) ([\d.]+) ms \((\d+)\)")
 WINDOW = re.compile(r"perf: frame \d+: interval avg ([\d.]+) ms")
 
@@ -101,7 +101,7 @@ def main() -> None:
     ap.add_argument("logs", nargs="+", type=Path)
     ap.add_argument("--top", type=int, default=12)
     global EXE, BASE
-    ap.add_argument("--exe", type=Path, default=EXE, help="the binary of those runs (default build/mkw)")
+    ap.add_argument("--exe", type=Path, default=EXE, help="the binary of those runs (default build/orbitals-recomp)")
     args = ap.parse_args()
     EXE, BASE = args.exe, image_base(args.exe)
     syms = symbols()

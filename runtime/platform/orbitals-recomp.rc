@@ -1,8 +1,8 @@
-/* The resources of the executable: its icon (mkw.ico: assets/icon/orbitals.ico copied by tools/build/build.py, else the
-   one tools/build/icon.py draws), its manifest (mkw.manifest: UTF-8 process code page) and its version information.
+/* The resources of the executable: its icon (orbitals-recomp.ico: assets/icon/orbitals.ico copied by tools/build/build.py, else the
+   one tools/build/icon.py draws), its manifest (orbitals-recomp.manifest: UTF-8 process code page) and its version information.
    tools/build/build.py --target windows compiles it with the runtime objects. */
-1 ICON "mkw.ico"
-1 24 "mkw.manifest"
+1 ICON "orbitals-recomp.ico"
+1 24 "orbitals-recomp.manifest"
 
 1 VERSIONINFO
 FILEVERSION 0,2,0,0

@@ -61,7 +61,7 @@ static int is_app_id(const char *s);
 
 // steam_appid = auto: the App ID Steam put in the environment when it started mkw from a game's launch options
 // (%command%), so the overlay and the guests' controllers are that game's. Read once, before steam_rpt_start sets it.
-// Each one Steam passes is kept in cache/steam-appid next to orbital.ini, and a start from mkw's own folder (no SteamAppId)
+// Each one Steam passes is kept in cache/steam-appid next to orbitals.ini, and a start from mkw's own folder (no SteamAppId)
 // uses the last one, so Automatic works there as a fixed number does (auto_saved).
 static char auto_id[16];
 static int auto_saved;

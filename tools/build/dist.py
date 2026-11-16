@@ -8,10 +8,10 @@ not go in: the setup builds it (sm86/spec/spec.py). Every download is pinned by 
 mismatch stops.
 
 Layout of build/dist/<target>/ (after build.py --dist):
-    mkw, orbitalgame.id                 the runtime (mkw.exe and its DLLs on Windows; orbitalgame.* comes from the setup)
+    mkw, orbitalgame.id                 the runtime (orbitals-recomp.exe and its DLLs on Windows; orbitalgame.* comes from the setup)
     setup/python, setup/zig, setup/glslc
     setup/src/                      recomp/, sm86/, tools/{build,prepare,romfs,shaders}, runtime/{cpu,core/boot/gamelib.h}
-    setup/lib/libmkw.dll.a          (Windows) the runtime's import library the game code library links against
+    setup/lib/liborbitals-recomp.dll.a          (Windows) the runtime's import library the game code library links against
     setup/lib/crt/                  (Windows) zig's C runtime for the target, prebuilt, and link.json: windows_crt()
 The desktop shortcut is the start screen's (a .desktop on Linux, a .lnk on Windows: platform.h).
 
@@ -126,7 +126,7 @@ SOURCES = ["recomp", "sm86", "tools/build/build.py", "tools/prepare", "tools/mod
            "runtime/cpu",
            "runtime/core/boot/gamelib.h",
            "tools/github/signatures.toml"]  # fmt: skip  (the known errors tools/prepare/lastrun.py names)
-# Windows DLLs mkw.exe needs beside it (build/win/deps/bin, tools/build/windeps.py); vulkan-1.dll is the driver's.
+# Windows DLLs orbitals-recomp.exe needs beside it (build/win/deps/bin, tools/build/windeps.py); vulkan-1.dll is the driver's.
 WIN_DLLS = ["SDL3.dll", "libopus-0.dll", "libusb-1.0.dll"]   # libusb: SDL3.dll loads it (windeps.py)
 
 
@@ -246,7 +246,7 @@ def main() -> None:
     ap.add_argument("--check", action="store_true", help="list what would be fetched and copied; change nothing")
     args = ap.parse_args()
     out = ROOT / "build/dist" / args.target
-    exe = out / ("mkw.exe" if args.target == "windows" else "mkw")
+    exe = out / ("orbitals-recomp.exe" if args.target == "windows" else "orbitals-recomp")
     if args.check:
         for name, (url, want) in PINS[args.target].items():
             print(f"{name}: {url} {want}")
@@ -277,12 +277,11 @@ def main() -> None:
             if p.suffix in (".exe", ".dll"):
                 shutil.copy2(p, glslc / p.name)
         (setup / "lib").mkdir(exist_ok=True)
-        # orbitals-port: the package's program is orbitals-recomp.exe (release.py renames it), and a DLL imports
-        # from its exe by file name. lld's import library names mkw.exe, so the setup's orbitalgame.dll would load a
-        # second, unstarted copy of an old mkw.exe (or fail without it). The same exports (mkw.def), renamed.
+        # the import library the setup's orbitalgame.dll links against: a DLL imports from its exe by file name, so
+        # the library names orbitals-recomp.exe (made from the same exports, orbitals-recomp.def)
         subprocess.run([str(ROOT / "build/win/llvm-mingw/bin/llvm-dlltool"), "-m", "i386:x86-64",
-                        "-d", str(ROOT / "build/obj-dist-win/mkw.def"), "-D", "orbitals-recomp.exe",
-                        "-l", str(setup / "lib/libmkw.dll.a")], check=True)  # fmt: skip
+                        "-d", str(ROOT / "build/obj-dist-win/orbitals-recomp.def"), "-D", "orbitals-recomp.exe",
+                        "-l", str(setup / "lib/liborbitals-recomp.dll.a")], check=True)  # fmt: skip
         windows_crt(setup / "lib/crt")
         for dll in WIN_DLLS:
             shutil.copy2(ROOT / "build/win/deps/bin" / dll, out / dll)

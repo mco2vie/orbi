@@ -1,4 +1,4 @@
-"""CPU time and run-queue wait of each thread of a running build/mkw over a window, grouped by thread name.
+"""CPU time and run-queue wait of each thread of a running build/orbitals-recomp over a window, grouped by thread name.
 
 Why: a change that lets more guest threads run at once (ORBITALS_CORE_NUM_GATE) can
 take host CPU from the replay and render threads; /proc/<pid>/task/<tid>/schedstat gives, per thread, the time on a
@@ -20,8 +20,8 @@ from pathlib import Path
 RACE = "seq: watch off"
 
 
-def mkw_pid() -> int:
-    out = subprocess.run(["pgrep", "-x", "mkw"], check=False, capture_output=True, text=True).stdout.split()
+def game_pid() -> int:
+    out = subprocess.run(["pgrep", "-x", "orbitals-recomp"], check=False, capture_output=True, text=True).stdout.split()
     if len(out) != 1:
         raise SystemExit(f"want one mkw process, found {len(out)}")
     return int(out[0])
@@ -48,7 +48,7 @@ def main() -> None:
     a = ap.parse_args()
     while not (a.log.exists() and RACE in a.log.read_text(errors="replace")):
         time.sleep(1)
-    pid = mkw_pid()
+    pid = game_pid()
     time.sleep(a.skip)
     t0, s0 = time.monotonic(), sample(pid)
     time.sleep(a.secs)

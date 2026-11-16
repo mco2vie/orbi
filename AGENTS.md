@@ -43,7 +43,7 @@ A game run takes minutes; most changes can be checked in seconds:
 - **Shader translator**: `uv run tools/shaders/translate.py` retranslates only what changed; a change to control flow
   (`sm86/translate/flow.py`, loops, branches) must pass `uv run tools/shaders/flow_check.py` before any GPU run, since a
   broken loop can hang the GPU of the whole desktop. `tools/shaders/glsl_hash.py` proves a refactor changes no output.
-- **Runtime pieces**: `build/mkw --selftest` and the `--probe-*` options ([runtime/probes](runtime/probes/README.md)).
+- **Runtime pieces**: `build/orbitals-recomp --selftest` and the `--probe-*` options ([runtime/probes](runtime/probes/README.md)).
 - **CPU lifter**: `uv run --with unicorn tools/cpu/lift_diff.py` compares translated instructions with Unicorn.
 - **Comments and docs only**: no rebuild needed; a comment in `runtime/cpu` rebuilds the whole game.
 

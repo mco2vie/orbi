@@ -1,4 +1,4 @@
-// Binding tables (keyboard/mouse and gamepad), their orbital.ini overrides, the pure mapping functions and the Buttons
+// Binding tables (keyboard/mouse and gamepad), their orbitals.ini overrides, the pure mapping functions and the Buttons
 // tab's edits (input_map.h). No Win32 or SDL here.
 #include <ctype.h>
 #include <math.h>

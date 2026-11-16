@@ -17,7 +17,7 @@
 
 // ---- logging and results
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   // "[host] <msg>\n" to the log, one write
-// The log is stderr plus, in a game run whose stderr is not a file, logs\orbital.log in the game folder (main.c log_open).
+// The log is stderr plus, in a game run whose stderr is not a file, logs\orbitals.log in the game folder (main.c log_open).
 // rt_logf and rt_log_raw write to both without the prefix and the newline: crash reports, fatal errors, guest output.
 void rt_logf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void rt_vlogf(const char *fmt, va_list ap);
@@ -93,12 +93,12 @@ typedef struct { const char *name; GuestFn fn; } RtHostEntry;
 #define RT_CAT(a, b) RT_CAT2(a, b)
 // File-scope declarations; fn must be declared before. The loader binds them by symbol name. The entries of every
 // object file meet in one section per kind, which hostfn.c walks: on PE/COFF ".ovr$m", which the linker sorts between
-// hostfn.c's ".ovr$a" and ".ovr$z" markers; on ELF "mkw_ovr", which the linker brackets with __start_mkw_ovr and
-// __stop_mkw_ovr.
+// hostfn.c's ".ovr$a" and ".ovr$z" markers; on ELF "orbitals_ovr", which the linker brackets with __start_orbitals_ovr and
+// __stop_orbitals_ovr.
 #ifdef _WIN32
 #define RT_HOST_SECTION(kind) section("." #kind "$m")
 #else
-#define RT_HOST_SECTION(kind) section("mkw_" #kind)
+#define RT_HOST_SECTION(kind) section("orbitals_" #kind)
 #endif
 #define HOST_OVERRIDE(sym, fn) /* replaces sym in every GOT/GLOB_DAT/ABS64 of every module */                  \
     __attribute__((used, RT_HOST_SECTION(ovr))) static const RtHostEntry RT_CAT(rt_ovr_, __COUNTER__) = {sym, fn}

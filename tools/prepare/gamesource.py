@@ -30,12 +30,8 @@ def is_nx(path: Path) -> bool:
 
 
 def runtime_exe(folder: Path) -> Path:
-    """The runtime program in folder: orbitals-recomp.exe in this branch's Windows package (renamed so it is not
-    taken for the real mkw-recomp), mkw.exe in a build of the tree, mkw on Linux."""
-    if os.name != "nt":
-        return folder / "mkw"
-    renamed = folder / "orbitals-recomp.exe"
-    return renamed if renamed.is_file() else folder / "mkw.exe"
+    """The runtime program in folder: orbitals-recomp.exe on Windows, orbitals-recomp elsewhere."""
+    return folder / ("orbitals-recomp.exe" if os.name == "nt" else "orbitals-recomp")
 
 
 def unpack(runtime: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:

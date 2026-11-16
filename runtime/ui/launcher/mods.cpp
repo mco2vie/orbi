@@ -1,4 +1,4 @@
-// The Mods page: scan, import, enable, delete. Enabling only writes config (orbital.ini's MODS order and the mod's
+// The Mods page: scan, import, enable, delete. Enabling only writes config (orbitals.ini's MODS order and the mod's
 // switches); the game reads both at the next start, so nothing here touches the running game. The import runs
 // tools/mod/import.py in a child process on a thread, like launcher_setup.cpp runs prepare.py.
 #include <SDL3/SDL.h>

@@ -679,7 +679,7 @@ static int test_rtstats(const GfxBackend *b, uint8_t *guest) {
 
 int probe_vkexec(void) {
     main_tid = plat_thread_id();
-    // The exact colour checks need the plain picture, whatever orbital.ini says: the SDR swapchain (HDR10, ORBITALS_HDR auto on an
+    // The exact colour checks need the plain picture, whatever orbitals.ini says: the SDR swapchain (HDR10, ORBITALS_HDR auto on an
     // HDR screen, encodes them in PQ) and no performance overlay (it draws over the top right corner)
     plat_setenv("ORBITALS_HDR", "off");
     plat_setenv("ORBITALS_PERF_OVERLAY", "off");

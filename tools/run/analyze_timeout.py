@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Summarize Orbitals Recomp thread state around an Unreal RenderThread timeout.
 
-This is a read-only, standard-library analyzer for orbital.log. It prints a compact,
+This is a read-only, standard-library analyzer for orbitals.log. It prints a compact,
 shareable text report; it never uploads or modifies the input log.
 
 Usage:
-  python tools/run/analyze_timeout.py path/to/orbital.log
-  python tools/run/analyze_timeout.py path/to/orbital.log --all-threads
+  python tools/run/analyze_timeout.py path/to/orbitals.log
+  python tools/run/analyze_timeout.py path/to/orbitals.log --all-threads
 """
 
 import argparse
@@ -27,7 +27,7 @@ FATAL_RE = re.compile(r'^\s*FATAL: svc #0x26 Break at\b')
 
 def clean_powershell_prefix(line):
     """Remove Select-String's optional path:line: prefix, if analyzing pasted output."""
-    return re.sub(r'^.*?orbital(?:\.\d+)?\.log:\d+:', '', line, count=1)
+    return re.sub(r'^.*?orbitals(?:\.\d+)?\.log:\d+:', '', line, count=1)
 
 
 def find_fatal_region(lines):
@@ -83,7 +83,7 @@ def classify_state(text):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('log', type=Path, help='path to orbital.log (or a pasted text excerpt)')
+    ap.add_argument('log', type=Path, help='path to orbitals.log (or a pasted text excerpt)')
     ap.add_argument('--all-threads', action='store_true', help='include every thread instead of key/render threads')
     args = ap.parse_args()
 

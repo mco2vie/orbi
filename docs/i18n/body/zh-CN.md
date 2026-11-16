@@ -61,9 +61,9 @@ PC 程序。你需要自己的游戏副本，并从你自己的主机中导出�
 1. 从你的 Switch 2 导出《马力欧赛车 世界》1.0.0 或 1.8.0（`exefs/` 和 `romfs/`，已解密；1.8.0 需将更新合并进本体的
    RomFS），或将同一导出打包成单个 `.nup` 或 `.nx` 文件。
 2. 从[发布](https://github.com/adriadam10/mkw-recomp/releases)下载适合你系统的启动器：Linux 下载 `.AppImage`（ARM 上用
-   `-aarch64`；默认游戏文件夹是 `~/.local/share/mkw-recomp`；需要 glibc 2.31 或更新：Debian 11、Ubuntu 20.04、SteamOS
+   `-aarch64`；默认游戏文件夹是 `~/.local/share/orbitals-recomp`；需要 glibc 2.31 或更新：Debian 11、Ubuntu 20.04、SteamOS
    及之后的版本），Windows 下载 `.zip` 并解压到一个文件夹。两者都需要约 30 GB 可用空间。
-3. 运行 AppImage（先 `chmod +x`）或 `mkw.exe`，打开**游戏文件**，可选用**选择游戏文件夹**指定游戏的安装位置（或一个已有的
+3. 运行 AppImage（先 `chmod +x`）或 `orbitals-recomp.exe`，打开**游戏文件**，可选用**选择游戏文件夹**指定游戏的安装位置（或一个已有的
    安装），再指向你的导出（**选择文件夹**或**选择 .nup 或 .nx 文件**），然后点击**开始设置**。启动器会记住安装文件夹；编译好的
    游戏、设置生成的文件、存档、设置和缓存都放在那里。换选另一个文件夹不会移动已有的文件。
    第一次设置需要一些时间（它会编译整个游戏，并下载 NVIDIA 的 `nvdisasm` 和 `ptxas`，Linux 上 84 MB、Windows 上 126 MB，
@@ -133,8 +133,8 @@ Linux，需要 `uv`、`clang`、`lld`、`ninja`、SDL3、Opus、libvpx、zstd、
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
-uv run tools/build/build.py              # build/mkw; --target windows builds mkw.exe with llvm-mingw
-build/mkw
+uv run tools/build/build.py              # build/orbitals-recomp; --target windows builds orbitals-recomp.exe with llvm-mingw
+build/orbitals-recomp
 ```
 
 从打包的导出（`.nup`、`.nx`）构建以及 AArch64 上的 Linux：[tools/build/README.md](tools/build/README.md#a-packed-dump)

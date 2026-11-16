@@ -28,15 +28,15 @@ __attribute__((section(".fns$z"), used)) static const RtHostEntry fns_stop[1];
 #else
 // ELF: the linker defines __start_<section> and __stop_<section> around a section named like a C identifier. Weak: a
 // build without observers has no such section, and both bounds are then NULL.
-extern const RtHostEntry __start_mkw_ovr[] __attribute__((weak)), __stop_mkw_ovr[] __attribute__((weak));
-extern const RtHostEntry __start_mkw_obs[] __attribute__((weak)), __stop_mkw_obs[] __attribute__((weak));
-extern const RtHostEntry __start_mkw_fns[] __attribute__((weak)), __stop_mkw_fns[] __attribute__((weak));
-#define ovr_start __start_mkw_ovr
-#define ovr_stop __stop_mkw_ovr
-#define obs_start __start_mkw_obs
-#define obs_stop __stop_mkw_obs
-#define fns_start __start_mkw_fns
-#define fns_stop __stop_mkw_fns
+extern const RtHostEntry __start_orbitals_ovr[] __attribute__((weak)), __stop_orbitals_ovr[] __attribute__((weak));
+extern const RtHostEntry __start_orbitals_obs[] __attribute__((weak)), __stop_orbitals_obs[] __attribute__((weak));
+extern const RtHostEntry __start_orbitals_fns[] __attribute__((weak)), __stop_orbitals_fns[] __attribute__((weak));
+#define ovr_start __start_orbitals_ovr
+#define ovr_stop __stop_orbitals_ovr
+#define obs_start __start_orbitals_obs
+#define obs_stop __stop_orbitals_obs
+#define fns_start __start_orbitals_fns
+#define fns_stop __stop_orbitals_fns
 #endif
 
 typedef struct {

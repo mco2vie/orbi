@@ -7,8 +7,8 @@ archive and the library are checked against pinned sha256s, the same ones as the
 extension's release workflow (13/11/2026: both checked by hand against a download of that archive).
 
 Usage: uv run tools/build/steamlib.py [--target linux|windows] [--dest DIR]
-       DIR: the folder holding mkw or mkw.exe (default build/dist/<target>). The Linux AppImage runs its copy of mkw in
-       ~/.local/share/mkw-recomp: pass that folder there.
+       DIR: the folder holding mkw or orbitals-recomp.exe (default build/dist/<target>). The Linux AppImage runs its copy of mkw in
+       ~/.local/share/orbitals-recomp: pass that folder there.
 """
 
 import argparse

@@ -65,7 +65,7 @@ void mods_clear_pick(void);
 // import.py found several mods in the archive ("error variants", tab-separated): import the one chosen
 void mods_import_variant(const char *exe_dir, const char *variant);
 ModsState mods_state(void);
-// Enabled on/off: writes orbital.ini's MODS (enabled order is the overlay precedence) and re-applies every scanned
+// Enabled on/off: writes orbitals.ini's MODS (enabled order is the overlay precedence) and re-applies every scanned
 // mod's switches, so deleting a mod folder cannot strand a switch on.
 void mods_toggle(const char *name, int on);
 // 1 when the named mod is enabled (its checkbox state).

@@ -2198,8 +2198,8 @@ msgstr "O último jogo parou com um problema que a %s corrige. Atualize para ter
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
-msgstr "O último jogo parou com um erro. Relatá-lo com o logs/orbital.log anexado ajuda a corrigi-lo."
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
+msgstr "O último jogo parou com um erro. Relatá-lo com o logs/orbitals.log anexado ajuda a corrigi-lo."
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2314,10 +2314,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "aguardando a Steam"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "Precisa de steam_appid no orbital.ini"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "Precisa de steam_appid no orbitals.ini"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2395,12 +2395,12 @@ msgstr "ID do app na Steam"
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
 "The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"start mkw (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in orbitals.ini. Takes effect at the next start."
 msgstr ""
 "O jogo da Steam como o qual o mkw roda no Remote Play Together. Automático: o jogo cujas opções "
-"de inicialização abrem o mkw (\"C:\\...\\mkw.exe\" %command%), então qualquer jogo seu da Steam "
-"com Remote Play Together funciona. Outro número: steam_appid no orbital.ini. Vale a partir da próxima "
+"de inicialização abrem o mkw (\"C:\\...\\orbitals-recomp.exe\" %command%), então qualquer jogo seu da Steam "
+"com Remote Play Together funciona. Outro número: steam_appid no orbitals.ini. Vale a partir da próxima "
 "inicialização."
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
@@ -2413,8 +2413,8 @@ msgstr "Automático (o jogo iniciado pela Steam)"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
+msgstr "%s (orbitals.ini)"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2425,12 +2425,12 @@ msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
 "press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "Digite com as teclas numéricas o ID do app de um jogo da Steam que você tem e que tenha Remote "
 "Play Together (é o número no endereço do jogo na loja, store.steampowered.com/app/<number>/) e "
 "aperte Enter ou A. A partir da próxima inicialização o mkw roda como esse jogo, e a linha ID do "
-"app na Steam acima o guarda na lista (steam_appids no orbital.ini). Backspace apaga um dígito."
+"app na Steam acima o guarda na lista (steam_appids no orbitals.ini). Backspace apaga um dígito."
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

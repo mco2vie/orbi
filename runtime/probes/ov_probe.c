@@ -282,7 +282,7 @@ static void probe_oe(void) {
     char *keep_lang = cfg_get("ORBITALS_LANG") ? strdup(cfg_get("ORBITALS_LANG")) : NULL;
     char *keep_locale = cfg_get("ORBITALS_LOCALE") ? strdup(cfg_get("ORBITALS_LOCALE")) : NULL;
     char *keep_menu = cfg_get("ORBITALS_MENU_LANG") ? strdup(cfg_get("ORBITALS_MENU_LANG")) : NULL;
-    set_env("ORBITALS_MENU_LANG", NULL);   // the locale cases: a menu language from orbital.ini would decide instead
+    set_env("ORBITALS_MENU_LANG", NULL);   // the locale cases: a menu language from orbitals.ini would decide instead
     static const struct { const char *lang, *locale, *want; } cases[] = {
         {NULL, "en-US", "en-US"}, {NULL, "be-BY", "en-US"}, {NULL, "xx", "en-US"},     {NULL, "ja-JP", "ja"},
         {NULL, "fr-CA", "fr-CA"}, {NULL, "es-MX", "es-419"}, {NULL, "es_ES", "es"},     {NULL, "zh-Hant-TW", "zh-Hant"},

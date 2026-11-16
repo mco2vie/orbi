@@ -2067,7 +2067,7 @@ msgid "The last game stopped with a problem that %s fixes. Update to get the fix
 msgstr ""
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
-msgid "The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
+msgid "The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
 msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
@@ -2174,9 +2174,9 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr ""
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
+msgid "Needs steam_appid in orbitals.ini"
 msgstr ""
 
 msgctxt "UI_MENU_RPT_AT_START"
@@ -2249,8 +2249,8 @@ msgstr ""
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
 "The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options start mkw "
-"(\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together works. Another number: "
-"steam_appid in orbital.ini. Takes effect at the next start."
+"(\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you own with Remote Play Together works. Another number: "
+"steam_appid in orbitals.ini. Takes effect at the next start."
 msgstr ""
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
@@ -2263,7 +2263,7 @@ msgstr ""
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
 msgstr ""
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
@@ -2274,7 +2274,7 @@ msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number keys (it is the "
 "number in the game's store address, store.steampowered.com/app/<number>/), then press Enter or A. mkw runs as that "
-"game from the next start, and the Steam App ID row above keeps it in its list (steam_appids in orbital.ini). Backspace "
+"game from the next start, and the Steam App ID row above keeps it in its list (steam_appids in orbitals.ini). Backspace "
 "deletes a digit."
 msgstr ""
 

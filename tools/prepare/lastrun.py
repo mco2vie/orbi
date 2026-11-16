@@ -1,5 +1,5 @@
-"""How the last game run ended, for the start screen: read from its log (logs/orbital.log, which the next Play moves to
-orbital.1.log) and matched against the known errors of tools/github/signatures.toml, the list the issue bot answers with.
+"""How the last game run ended, for the start screen: read from its log (logs/orbitals.log, which the next Play moves to
+orbitals.1.log) and matched against the known errors of tools/github/signatures.toml, the list the issue bot answers with.
 
 Why: by 14/11/2026 issues came in at 40-68 a day, 15 % of them a known error already tracked or fixed in a newer
 release. Told at the next start that it is known (and where it is followed, or that an update fixes it), a player
@@ -58,7 +58,7 @@ def main() -> None:
     ap.add_argument("--game", required=True, type=Path)
     ap.add_argument("--version", required=True)
     a = ap.parse_args()
-    log = a.game / "logs/orbital.log"
+    log = a.game / "logs/orbitals.log"
     if not log.is_file():
         return
     sigs = tomllib.loads(SIGNATURES.read_text())["signature"] if SIGNATURES.is_file() else []

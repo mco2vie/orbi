@@ -272,7 +272,7 @@ MESH_CS_VS = "\n".join(
     + [f"    out_attr{g} = v{g + 1};" for g in range(MESH_GENERICS)]
     + ["}", ""]
 )
-MESH_CS_VS_KEY = "6d6b772d6d6573682d63732d76732d31" * 2   # "mkw-mesh-cs-vs-1" twice, as hex: not a program key
+MESH_CS_VS_KEY = "6f72622d6d6573682d63732d76732d31" * 2   # "orb-mesh-cs-vs-1" twice, as hex: not a program key
 
 
 def mesh_head_cs(head: list[str]) -> list[str]:

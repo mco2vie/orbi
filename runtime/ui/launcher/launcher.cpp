@@ -1,6 +1,6 @@
 // The start screen, shown before the game: Play, Settings, Game files and Quit, the game files' state at the lower left
 //. The player's build (build.py --dist) always starts here; Play starts the process again
-// with the launcher skipped (main.c), so the game claims its address space in a fresh process. build/mkw shows it only
+// with the launcher skipped (main.c), so the game claims its address space in a fresh process. build/orbitals-recomp shows it only
 // with --launcher.
 //
 // Its own window and SDL_Renderer (Dear ImGui's SDL3 and SDL_Renderer back ends), not the game's Vulkan device: nothing of
@@ -351,7 +351,7 @@ static void page_main(float w, float h) {
         play_test = false;
         char state[PLAT_PATH_MAX + 32];
         snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
-        if (mods_code_changed() && L.tools && plat_file_exists(state)) {   // a set-up folder (not build/mkw)
+        if (mods_code_changed() && L.tools && plat_file_exists(state)) {   // a set-up folder (not build/orbitals-recomp)
             // a code mod changed: the game code is built again first (generate and compile), on the files page
             L.play_after_setup = 1;
             L.page = PAGE_FILES;

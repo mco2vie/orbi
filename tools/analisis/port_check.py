@@ -20,7 +20,7 @@ Usage: uv run tools/analisis/port_check.py GAME.nup|DUMP_DIR [--out build/port_c
        --disasm main+0x181bf8[:0x180] sdk:clock_gettime[:0x200] ...: instead of the report, those ranges (an offset or
        an exported symbol; a trailing * also follows its direct calls two levels) disassembled (capstone), with calls through the PLT named by their import, direct calls by
        the module's exported symbol, and the module + offset of every branch target, to port_disasm.txt (a
-       crash in orbital.log names the addresses). It is the game's own code: send it, never commit it.
+       crash in orbitals.log names the addresses). It is the game's own code: send it, never commit it.
 Windows executable: drop the .nup on port_check.exe (or run it and paste the path); the report goes next to the exe.
 Run it with no argument and it also asks for the --disasm ranges (Enter for the report).
 """

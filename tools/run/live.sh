@@ -5,24 +5,24 @@
 # Usage: tools/run/live.sh NAME [SECONDS]   (default 900; then the run is killed). Extra env (ORBITALS_*) passes
 # through; the defaults are those of the race runs (720p romfs overlay, 768 MiB of sparse tiles, BC1 off).
 # Stop: tools/run/ctl.sh NAME stop. Log: build/run/NAME.log, FIFO: build/run/NAME.ctl.
-# LIVE_WRAP: a command build/mkw runs under, e.g. an HDR display for a machine without one:
+# LIVE_WRAP: a command build/orbitals-recomp runs under, e.g. an HDR display for a machine without one:
 #   LIVE_WRAP="gamescope --backend headless -W 1280 -H 720 --hdr-enabled --hdr-debug-force-support --" (gamescope's
 #   Vulkan layer on with ENABLE_GAMESCOPE_WSI=1, exported before live.sh).
-# LIVE_BIN: another runtime than build/mkw, e.g. a prepared player folder of another game version
-#   (LIVE_BIN=scratchpad/prep-linux-180/mkw: 1.8.0, whose game code build/mkw does not carry). A runtime from a release
+# LIVE_BIN: another runtime than build/orbitals-recomp, e.g. a prepared player folder of another game version
+#   (LIVE_BIN=<a runtime built elsewhere>/orbitals-recomp: a game code build/orbitals-recomp does not carry). A runtime from a release
 #   AppImage links the sysroot's libvpx.so.6 and SDL3, which only the AppImage's lib/ has: LIVE_LIB=<that lib/> (e.g.
 #   from `AppImage --appimage-extract 'lib/*'`) puts it first on the library path.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 n=${1:?usage: live.sh NAME [SECONDS]}; secs=${2:-900}
 . tools/run/why.sh "$n"
-# Refuse a stale build/mkw: a runtime source newer than it means the last build did not run or failed (01/11/2026:
+# Refuse a stale build/orbitals-recomp: a runtime source newer than it means the last build did not run or failed (01/11/2026:
 # three runs measured the previous binary after a commit hook stopped the build and a compile error went unseen).
-bin=${LIVE_BIN:-build/mkw}
-if [ -z "${LIVE_BIN:-}" ] && [ -n "$(find runtime -newer build/mkw \( -name '*.c' -o -name '*.h' -o -name '*.cpp' \) -print -quit)" ]; then
-  echo "${0##*/}: runtime/ is newer than build/mkw: build first (tools/build/build.py)" >&2; exit 1
+bin=${LIVE_BIN:-build/orbitals-recomp}
+if [ -z "${LIVE_BIN:-}" ] && [ -n "$(find runtime -newer build/orbitals-recomp \( -name '*.c' -o -name '*.h' -o -name '*.cpp' \) -print -quit)" ]; then
+  echo "${0##*/}: runtime/ is newer than build/orbitals-recomp: build first (tools/build/build.py)" >&2; exit 1
 fi
-if pgrep -x mkw >/dev/null; then echo "live: a build/mkw is already running (one run at a time)" >&2; exit 1; fi
+if pgrep -x mkw >/dev/null; then echo "live: a build/orbitals-recomp is already running (one run at a time)" >&2; exit 1; fi
 # MIN_AVAIL only raises the floor: below 8500 the system OOM killed runs and the desktop (on an integrated GPU;
 # 07/11/2026: four runs launched at 8000 to get past it).
 [ "${MIN_AVAIL:-8500}" -ge 8500 ] || { echo "MIN_AVAIL=${MIN_AVAIL} refused: the floor is 8500 MB; wait for memory instead"; exit 1; }

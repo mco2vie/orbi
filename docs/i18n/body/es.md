@@ -72,10 +72,10 @@ tiempo real.
    actualización integrada en la RomFS del juego base), o ese mismo volcado empaquetado en un único archivo `.nup` o
    `.nx`.
 2. Descarga el lanzador para tu sistema desde [Versiones](https://github.com/adriadam10/mkw-recomp/releases): en Linux
-   el `.AppImage` (`-aarch64` en ARM; la carpeta del juego por defecto es `~/.local/share/mkw-recomp`; glibc 2.31 o
+   el `.AppImage` (`-aarch64` en ARM; la carpeta del juego por defecto es `~/.local/share/orbitals-recomp`; glibc 2.31 o
    posterior: Debian 11, Ubuntu 20.04, SteamOS y posteriores), en Windows el `.zip`, descomprimido en una carpeta. En
    los dos hacen falta unos 30 GB libres.
-3. Ejecuta el AppImage (antes, `chmod +x`) o `mkw.exe`, abre **Ficheros del juego**, si quieres elige con **Elegir
+3. Ejecuta el AppImage (antes, `chmod +x`) o `orbitals-recomp.exe`, abre **Ficheros del juego**, si quieres elige con **Elegir
    carpeta del juego** dónde se instalará el juego (o una instalación que ya exista), indica tu volcado (**Elegir
    carpeta** o **Elegir archivo .nup o .nx**) y pulsa **Preparar**. El lanzador recuerda la carpeta de instalación; ahí
    viven el juego compilado, los ficheros preparados, las partidas guardadas, los ajustes y las cachés. Elegir otra
@@ -162,8 +162,8 @@ define `ORBITALS_GAME=<dir>`, y desde la raíz del repositorio:
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
-uv run tools/build/build.py              # build/mkw; --target windows compila mkw.exe con llvm-mingw
-build/mkw
+uv run tools/build/build.py              # build/orbitals-recomp; --target windows compila orbitals-recomp.exe con llvm-mingw
+build/orbitals-recomp
 ```
 
 Desde un volcado empaquetado (`.nup`, `.nx`) y para Linux en AArch64:

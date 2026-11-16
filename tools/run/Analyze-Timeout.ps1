@@ -6,8 +6,8 @@ param(
     [switch] $AllThreads
 )
 
-# Read-only Windows PowerShell analyzer for Orbitals Recomp orbital.log.
-# Usage: .\Analyze-Timeout.ps1 .\logs\orbital.log [-AllThreads]
+# Read-only Windows PowerShell analyzer for Orbitals Recomp orbitals.log.
+# Usage: .\Analyze-Timeout.ps1 .\logs\orbitals.log [-AllThreads]
 $ErrorActionPreference = 'Stop'
 
 try {

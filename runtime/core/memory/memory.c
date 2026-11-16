@@ -471,7 +471,7 @@ void mem_init(void) {
     plat_mem_fault_hook(thaw_fault);   // before the crash handler
     alias_pages = calloc(ALIAS_PAGES, 1);
     if (!alias_pages) rt_fatal("memory: cannot allocate the alias page map");
-    // orbital.ini is read here, once the address space is claimed and before the first setting: the pool size below
+    // orbitals.ini is read here, once the address space is claimed and before the first setting: the pool size below
     // depends on ORBITALS_APP_POOL.
     cfg_init();
     const char *pool = cfg_get("ORBITALS_APP_POOL");

@@ -75,7 +75,7 @@ def ssl_context() -> ssl.SSLContext:
 
 def get(url: str, timeout: int) -> urllib.request.addinfourl:
     req = urllib.request.Request(
-        url, headers={"User-Agent": "mkw-recomp-launcher", "Accept": "application/vnd.github+json"}
+        url, headers={"User-Agent": "orbitals-recomp-launcher", "Accept": "application/vnd.github+json"}
     )
     return urllib.request.urlopen(req, timeout=timeout, context=ssl_context())
 

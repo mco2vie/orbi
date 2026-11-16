@@ -1,7 +1,7 @@
 // Sampling profiler (ORBITALS_PROFILE=<path>) and per-frame timing (ORBITALS_TRACE=perf). tools/prof_report.py reads the profile.
 // A host thread wakes every 1 ms and, for every other thread, suspends it, reads Rip and resumes it. The sampler never
 // allocates or takes a lock between SuspendThread and ResumeThread and never runs guest code. The profile is text:
-//   mkw-prof 1 / base <hex> / period_us / samples N / thread <tid> <samples> <in-exe samples> / module <base> <size> <path> /
+//   orbitals-prof 1 / base <hex> / period_us / samples N / thread <tid> <samples> <in-exe samples> / module <base> <size> <path> /
 //   rip <hex> <count> <role> (the top PROF_TOP Rips per thread role: 1 main, 2 render, 3 replay, 0 any other) / stack <count> <rip> <caller> ... (ORBITALS_PROFILE_RENDER or
 //   ORBITALS_PROFILE_CHAINS only, the top PROF_STACKS call chains)
 // With ORBITALS_PROFILE_RENDER (the render thread) or ORBITALS_PROFILE_CHAINS=1 (every thread, chains of all threads summed: for
@@ -195,7 +195,7 @@ static void slow_dump(void) {
     FILE *f = dumps < SLOW_DUMPS ? fopen(path, "w") : NULL;
     if (f) {
         dumps++;
-        fprintf(f, "mkw-prof 1\nbase %llx\nperiod_us 1000\nframe %llu interval_ms %.1f\nmain %u render %u replay %u\n",
+        fprintf(f, "orbitals-prof 1\nbase %llx\nperiod_us 1000\nframe %llu interval_ms %.1f\nmain %u render %u replay %u\n",
                 (unsigned long long)(uintptr_t)GetModuleHandleW(NULL), (unsigned long long)frame, (hi - lo) / 1e6 - 20,
                 main_tid, render_tid, replay_tid);
         write_modules(f);
@@ -321,7 +321,7 @@ void prof_sampler_write(void) {
         rt_log("prof: cannot write %s", out_path);
         return;
     }
-    fprintf(f, "mkw-prof 1\nbase %llx\nperiod_us 1000\nsamples %llu\ndropped %llu\n", (unsigned long long)(uintptr_t)GetModuleHandleW(NULL),
+    fprintf(f, "orbitals-prof 1\nbase %llx\nperiod_us 1000\nsamples %llu\ndropped %llu\n", (unsigned long long)(uintptr_t)GetModuleHandleW(NULL),
             (unsigned long long)total, (unsigned long long)dropped);
     for (int i = 0; i < n_threads; i++)
         fprintf(f, "thread %lu %llu %llu\n", threads[i].tid, (unsigned long long)threads[i].n, (unsigned long long)threads[i].in_exe);

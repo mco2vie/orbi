@@ -700,7 +700,7 @@ int gfx_shader_cs_of_mesh(const GfxShader *s) { return s && s->cs_of_mesh; }
 
 // The vertex shader of task/mesh as compute: a prepared shader under a fixed key that no program has
 // (tools/shaders/translate.py write_mesh_cs_vs, sm86 head.py MESH_CS_VS_KEY), so pipeline key records name it too.
-static const uint8_t mesh_cs_vs_key[32] = "mkw-mesh-cs-vs-1mkw-mesh-cs-vs-1";
+static const uint8_t mesh_cs_vs_key[32] = "orb-mesh-cs-vs-1orb-mesh-cs-vs-1";
 
 const GfxShader *gfx_shader_mesh_cs_vs(void) {
     static const GfxShader *vs;

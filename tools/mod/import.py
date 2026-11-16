@@ -8,7 +8,7 @@ patches name this game's build id, and writes both files.
 
 Usage: import.py --game EXEDIR --romfs ROMFS [--exefs DIR] [--build-id HEX] (--zip FILE | --folder DIR)
                  [--name NAME] [--variant PATH]
-  --game: the folder of mkw / mkw.exe (mods/ is made inside it)
+  --game: the folder of mkw / orbitals-recomp.exe (mods/ is made inside it)
   --romfs: the game's RomFS the manifest's original hashes come from: a loose folder or a .nup package
   --zip: a mod archive, .zip, .rar or .7z (rar and 7z through tar, which is bsdtar on Windows 10 and later)
   --folder: an extracted mod folder
@@ -155,7 +155,7 @@ def main():
     if len(game_id) != 16 or any(c not in "0123456789abcdef" for c in game_id):
         return fail("usage", "bad --build-id")
 
-    with tempfile.TemporaryDirectory(prefix="mkwmod") as tmp:
+    with tempfile.TemporaryDirectory(prefix="orbitalsmod") as tmp:
         if args.zip_path:
             try:
                 err = unpack(args.zip_path, tmp)

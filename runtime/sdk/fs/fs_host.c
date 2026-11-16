@@ -1774,7 +1774,7 @@ static void probe_save_tx(const uint64_t *uid) {
 static void probe_storage(void) {
     char tmp[PLAT_PATH_MAX * 3], dir[PLAT_PATH_MAX * 3 + 64];
     need(plat_temp_dir(tmp, sizeof tmp), "temporary directory");
-    snprintf(dir, sizeof dir, "%s/mkw-probe-fs-%u", tmp, plat_process_id());
+    snprintf(dir, sizeof dir, "%s/orbitals-probe-fs-%u", tmp, plat_process_id());
     remove_tree(dir);
     fs_host_set_profile(dir);
     uint64_t uid[2], other[2], h = 0, h2 = 0, d = 0, l = 0;

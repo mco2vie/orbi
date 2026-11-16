@@ -50,8 +50,8 @@
 unsigned rt_trace;
 
 // Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\orbital.log in the selected game folder, so a player has one to attach to a report; run_game.py and
-// `2> file` keep their own file. Each start moves the earlier logs to orbital.1.log .. orbital.4.log. A file stops at 64 MiB
+// writes its log to logs\orbitals.log in the selected game folder, so a player has one to attach to a report; run_game.py and
+// `2> file` keep their own file. Each start moves the earlier logs to orbitals.1.log .. orbitals.4.log. A file stops at 64 MiB
 // (ORBITALS_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
 #define LOG_KEEP 5
@@ -122,13 +122,13 @@ static void log_open(int game) {
     if (cut && (size_t)(cut - dir) + sizeof "/logs" <= sizeof dir) {
         strcpy(cut, "/logs");
         plat_file_mkdir_p(dir);
-        for (int i = LOG_KEEP - 1; i > 0; i--) {   // orbital.3.log -> orbital.4.log, ..., orbital.log -> orbital.1.log
-            if (i > 1) snprintf(from, sizeof from, "%s/orbital.%d.log", dir, i - 1);
-            else snprintf(from, sizeof from, "%s/orbital.log", dir);
-            snprintf(to, sizeof to, "%s/orbital.%d.log", dir, i);
+        for (int i = LOG_KEEP - 1; i > 0; i--) {   // orbitals.3.log -> orbitals.4.log, ..., orbitals.log -> orbitals.1.log
+            if (i > 1) snprintf(from, sizeof from, "%s/orbitals.%d.log", dir, i - 1);
+            else snprintf(from, sizeof from, "%s/orbitals.log", dir);
+            snprintf(to, sizeof to, "%s/orbitals.%d.log", dir, i);
             if (plat_file_exists(from)) plat_file_replace(from, to);
         }
-        snprintf(g_log_path, sizeof g_log_path, "%s/orbital.log", dir);
+        snprintf(g_log_path, sizeof g_log_path, "%s/orbitals.log", dir);
         g_log_file = plat_append_open(g_log_path);
     }
     if (!g_log_file) {
@@ -248,7 +248,7 @@ static void crash_handler(const PlatCrash *x) {
     if (plat_xchg32(&busy, 1)) plat_exit(71);
     char d[160];
     uintptr_t rip = x->rip;
-    rt_logf("FATAL: %s (%#x) at host %p (%s+%#llx)", x->what, x->code, (void *)rip, x->module ? x->module : "mkw",
+    rt_logf("FATAL: %s (%#x) at host %p (%s+%#llx)", x->what, x->code, (void *)rip, x->module ? x->module : "orbitals-recomp",
             (unsigned long long)x->offset);
     if (x->access >= 0)
         rt_logf(", %s address %#llx", x->access == 1 ? "writing" : x->access == 8 ? "executing" : "reading",
@@ -507,7 +507,7 @@ static const char *portable_path(const char *dir, const char *var, const char *s
 static void portable_paths(RtConfig *c) {
     const char *exe = cfg_game_dir();
     c->exefs = portable_path(exe, "ORBITALS_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
-    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (ORBITALS_ROMFS, orbital.ini's romfs and
+    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (ORBITALS_ROMFS, orbitals.ini's romfs and
     // --romfs may also name a .nup package, romfs.c).
     c->romfs = portable_path(exe, "ORBITALS_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs, c->romfs);
     c->profile = portable_path(exe, "ORBITALS_PROFILE_DIR", "profile", ".", pp_profile, sizeof pp_profile, c->profile);
@@ -519,10 +519,10 @@ static void portable_paths(RtConfig *c) {
 }
 
 // The start screen (ui/launcher/launcher.cpp) comes first in the player's build (no linked game code) on a plain start, and in
-// build/mkw with --launcher. --play, ORBITALS_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
+// build/orbitals-recomp with --launcher. --play, ORBITALS_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
 // ORBITALS_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
 // gone).
-// Steam launch options `"...\\mkw.exe" %command%` on a Steam game (docs/remote-play.md: RetroArch's, the App ID of
+// Steam launch options `"...\\orbitals-recomp.exe" %command%` on a Steam game (docs/remote-play.md: RetroArch's, the App ID of
 // Remote Play Together) start mkw as that game, with its overlay and Steam Input, and append the game's own program:
 // with SteamAppId set (Steam started us), an argument that is not an option and names an existing file is that
 // program, and is skipped.
@@ -548,8 +548,8 @@ static int want_launcher(int argc, char **argv) {
 }
 
 static int run_launcher(int argc, char **argv) {
-    cfg_init();   // orbital.ini: the settings pages read and write it
-    // the Mods page merges against the same romfs the game will boot: argv wins, else ORBITALS_ROMFS / orbital.ini,
+    cfg_init();   // orbitals.ini: the settings pages read and write it
+    // the Mods page merges against the same romfs the game will boot: argv wins, else ORBITALS_ROMFS / orbitals.ini,
     // else the selected installation, else the baked-in default (nup packages cannot merge: no loose files)
     const char *romfs = NULL;
     for (int i = 1; i + 1 < argc; i++)
@@ -559,7 +559,7 @@ static int run_launcher(int argc, char **argv) {
                               rt_default_romfs);
     if (romfs) launcher_set_romfs(romfs);
     // the players (Profiles page) live in the profile folder the game will use: --profile, else ORBITALS_PROFILE_DIR /
-    // orbital.ini, else profile/ in the selected installation
+    // orbitals.ini, else profile/ in the selected installation
     const char *profile = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--profile")) profile = argv[i + 1];
@@ -594,7 +594,7 @@ int main(int argc, char **argv) {
     const char *pt = getenv("ORBITALS_ALLOW_PTRACE");
     if (pt && !strcmp(pt, "1")) prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
 #endif
-    mem_init();   // first: claim the guest address space before anything else can land there; reads orbital.ini
+    mem_init();   // first: claim the guest address space before anything else can land there; reads orbitals.ini
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
     plat_crash_hook(crash_handler);

@@ -1,4 +1,4 @@
-// --probe-cfg: orbital.ini parsing, the environment override and a missing file (cfg.c). Needs no game files.
+// --probe-cfg: orbitals.ini parsing, the environment override and a missing file (cfg.c). Needs no game files.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -136,7 +136,7 @@ int probe_cfg(void) {
     CHECK(m && EQ(m->def, "1") && m->live, "meta: motion defaults to 1 and is live");
     m = cfg_meta("ASYNC_PREEMPT");
     CHECK(m && EQ(m->values, "0|1|2") && !m->live, "meta: async_preempt takes 0|1|2 and needs a restart");
-    m = cfg_meta("mkw_vk_present");
+    m = cfg_meta("orbitals_vk_present");
     CHECK(m && EQ(m->key, "VK_PRESENT") && EQ(m->values, "mailbox|fifo|immediate") && m->live,
           "meta: prefix and case are accepted");
     m = cfg_meta("RUMBLE_STRENGTH");
@@ -146,7 +146,7 @@ int probe_cfg(void) {
     CHECK(cfg_meta("BIND_A") == NULL && cfg_meta("FPS_COUNTER") == NULL && cfg_meta("NO_SUCH") == NULL,
           "meta: keys the menu does not show are NULL");
 
-    // cfg_reset: the key's active lines leave orbital.ini, the commented example stays
+    // cfg_reset: the key's active lines leave orbitals.ini, the commented example stays
     static const char rbase[] = "[audio]\n# volume = 100\n[input]\nmotion = 0\n";
     static const char *const vol[] = {"VOLUME"};
     plat_setenv("ORBITALS_VOLUME", "");

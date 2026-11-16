@@ -231,7 +231,7 @@ typedef enum {
     // CHOICE "%d ... %d" (players, controllers) and its two buttons
     UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
     // the Game tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
-    // from orbital.ini that the list lacks)
+    // from orbitals.ini that the list lacks)
     UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
     // the row under it that takes a typed App ID (opt_digits; steam_appids keeps them for the list): label, description,
     // and the hint shown while nothing is typed

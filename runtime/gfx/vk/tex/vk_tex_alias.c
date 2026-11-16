@@ -204,9 +204,9 @@ int vk_texture_capture_state(const tex_t *t, uint32_t recent) {
 void vk_texture_gpu_written(const tex_t *t) {
     if (!t || !t->mem) return;
     if (tracing((uintptr_t)t->mem)) {   // with the replay function that wrote it (copies, clears, render targets)
-        // the caller as an offset in the executable (addr2line -f -e build/mkw)
+        // the caller as an offset in the executable (addr2line -f -e build/orbitals-recomp)
         uintptr_t off = (uintptr_t)__builtin_return_address(0) - plat_exe_base();
-        rt_log("vk: texture %#llx %ux%ux%u fmt %#x written on the GPU, caller build/mkw+%#llx", (unsigned long long)trace_addr,
+        rt_log("vk: texture %#llx %ux%ux%u fmt %#x written on the GPU, caller build/orbitals-recomp+%#llx", (unsigned long long)trace_addr,
                t->d.width, t->d.height, t->d.depth, t->d.format, (unsigned long long)off);
     }
     vk_exec_frame_written(t);

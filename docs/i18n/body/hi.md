@@ -64,10 +64,10 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 1. अपने Switch 2 से Mario Kart World 1.0.0 या 1.8.0 डंप करें (`exefs/` और `romfs/`, डिक्रिप्ट किए हुए; 1.8.0 में अपडेट बेस गेम
    की RomFS में मिला हुआ), या वही डंप एक `.nup` या `.nx` फ़ाइल में पैक किया हुआ।
 2. [Releases](https://github.com/adriadam10/mkw-recomp/releases) से अपने सिस्टम के लिए लॉन्चर डाउनलोड करें: Linux पर
-   `.AppImage` (ARM पर `-aarch64`; डिफ़ॉल्ट गेम फ़ोल्डर `~/.local/share/mkw-recomp` है; glibc 2.31 या नया: Debian 11,
+   `.AppImage` (ARM पर `-aarch64`; डिफ़ॉल्ट गेम फ़ोल्डर `~/.local/share/orbitals-recomp` है; glibc 2.31 या नया: Debian 11,
    Ubuntu 20.04, SteamOS और उसके बाद के), Windows पर `.zip`, एक फ़ोल्डर में अनज़िप करके। दोनों के लिए लगभग 30 GB ख़ाली जगह
    चाहिए।
-3. AppImage (पहले `chmod +x`) या `mkw.exe` चलाएँ, **Game files** खोलें, चाहें तो **Choose game folder** से चुनें कि गेम कहाँ
+3. AppImage (पहले `chmod +x`) या `orbitals-recomp.exe` चलाएँ, **Game files** खोलें, चाहें तो **Choose game folder** से चुनें कि गेम कहाँ
    इंस्टॉल होगा (या कोई पहले से मौजूद इंस्टॉलेशन), फिर अपना डंप चुनें (**Choose folder** या **Choose .nup or .nx file**)
    और **Set up** दबाएँ। लॉन्चर इंस्टॉलेशन फ़ोल्डर याद रखता है; कम्पाइल किया गया गेम, तैयार फ़ाइलें, सेव, सेटिंग्स और कैश वहीं
    रहते हैं। दूसरा फ़ोल्डर चुनने से मौजूदा फ़ाइलें अपनी जगह रहती हैं।
@@ -143,8 +143,8 @@ Linux, `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, Vulkan �
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
-uv run tools/build/build.py              # build/mkw; --target windows builds mkw.exe with llvm-mingw
-build/mkw
+uv run tools/build/build.py              # build/orbitals-recomp; --target windows builds orbitals-recomp.exe with llvm-mingw
+build/orbitals-recomp
 ```
 
 पैक किए गए डंप (`.nup`, `.nx`) से और AArch64 पर Linux के लिए: [tools/build/README.md](tools/build/README.md#a-packed-dump)

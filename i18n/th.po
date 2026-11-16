@@ -2163,8 +2163,8 @@ msgstr "เกมครั้งล่าสุดหยุดเพราะป
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
-msgstr "เกมครั้งล่าสุดหยุดเพราะข้อผิดพลาด การรายงานพร้อมแนบ logs/orbital.log ช่วยให้แก้ไขได้"
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
+msgstr "เกมครั้งล่าสุดหยุดเพราะข้อผิดพลาด การรายงานพร้อมแนบ logs/orbitals.log ช่วยให้แก้ไขได้"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2278,10 +2278,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "กำลังรอ Steam"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "ต้องตั้ง steam_appid ใน orbital.ini"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "ต้องตั้ง steam_appid ใน orbitals.ini"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2357,12 +2357,12 @@ msgstr "Steam App ID"
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
 "The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"start mkw (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in orbitals.ini. Takes effect at the next start."
 msgstr ""
 "เกม Steam ที่ mkw ทำงานในนามสำหรับ Remote Play Together อัตโนมัติ: เกมที่ตัวเลือกการเปิดใช้เปิด "
-"mkw (\"C:\\...\\mkw.exe\" %command%) จึงใช้ได้กับเกม Steam ใดก็ได้ที่คุณมีซึ่งรองรับ Remote Play "
-"Together หมายเลขอื่น: steam_appid ใน orbital.ini มีผลเมื่อเปิดครั้งถัดไป"
+"mkw (\"C:\\...\\orbitals-recomp.exe\" %command%) จึงใช้ได้กับเกม Steam ใดก็ได้ที่คุณมีซึ่งรองรับ Remote Play "
+"Together หมายเลขอื่น: steam_appid ใน orbitals.ini มีผลเมื่อเปิดครั้งถัดไป"
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2374,8 +2374,8 @@ msgstr "อัตโนมัติ (เกมที่ Steam เปิด)"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
+msgstr "%s (orbitals.ini)"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2386,12 +2386,12 @@ msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
 "press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "พิมพ์ App ID ของเกม Steam ที่คุณมีซึ่งรองรับ Remote Play Together ด้วยปุ่มตัวเลขบนแป้นพิมพ์ "
 "(คือตัวเลขในที่อยู่ร้านค้าของเกม store.steampowered.com/app/<number>/) แล้วกด Enter หรือ A "
 "ตั้งแต่การเปิดครั้งถัดไป mkw จะทำงานในนามเกมนั้น และแถว Steam App ID ด้านบนจะเก็บไว้ในรายการ "
-"(steam_appids ใน orbital.ini) Backspace ลบตัวเลขหนึ่งตัว"
+"(steam_appids ใน orbitals.ini) Backspace ลบตัวเลขหนึ่งตัว"
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

@@ -215,14 +215,14 @@ static int row(const char *key, UiTextId label, UiTextId desc, const RowView &v)
     return off ? 0 : step;
 }
 
-// ---- writing a setting: at once in memory (live settings follow), to orbital.ini a moment later (opt_save_tick)
+// ---- writing a setting: at once in memory (live settings follow), to orbitals.ini a moment later (opt_save_tick)
 static uint64_t g_save_at;   // plat_now_ns deadline of the pending write; 0 none
 static bool g_save_logged;
 
 static void apply(const char *key, const char *value) {
     if (*value) {
         cfg_set(key, value);
-    } else {   // the automatic choice: the key unset, its line removed from orbital.ini
+    } else {   // the automatic choice: the key unset, its line removed from orbitals.ini
         const char *k = key;
         cfg_reset(&k, 1);
     }
@@ -236,7 +236,7 @@ int opt_save_tick(int force) {
     g_save_at = 0;
     if (!cfg_save() && !g_save_logged) {
         g_save_logged = true;
-        rt_log("menu: could not write orbital.ini; the changed settings hold for this session");
+        rt_log("menu: could not write orbitals.ini; the changed settings hold for this session");
     }
     return 0;
 }

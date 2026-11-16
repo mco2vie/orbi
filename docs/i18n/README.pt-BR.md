@@ -111,10 +111,10 @@ alcançados, e um quadro acima de 33,3 ms faz a corrida rodar mais devagar que o
 1. Extraia o dump de Mario Kart World 1.0.0 ou 1.8.0 do seu Switch 2 (`exefs/` e `romfs/`, descriptografados; a 1.8.0
    com a atualização mesclada à RomFS do jogo base), ou esse mesmo dump empacotado em um único arquivo `.nup` ou `.nx`.
 2. Baixe o launcher para o seu sistema em [Versões](https://github.com/adriadam10/mkw-recomp/releases): no Linux o
-   `.AppImage` (`-aarch64` em ARM; a pasta padrão do jogo é `~/.local/share/mkw-recomp`; glibc 2.31 ou mais
+   `.AppImage` (`-aarch64` em ARM; a pasta padrão do jogo é `~/.local/share/orbitals-recomp`; glibc 2.31 ou mais
    recente: Debian 11, Ubuntu 20.04, SteamOS e posteriores), no Windows o `.zip`, descompactado em uma pasta. Os dois
    precisam de uns 30 GB livres.
-3. Execute o AppImage (antes, `chmod +x`) ou o `mkw.exe`, abra **Arquivos do jogo**, se quiser use **Escolher pasta do
+3. Execute o AppImage (antes, `chmod +x`) ou o `orbitals-recomp.exe`, abra **Arquivos do jogo**, se quiser use **Escolher pasta do
    jogo** para escolher onde o jogo será instalado (ou uma instalação que já exista), aponte para o seu dump (**Escolher
    pasta** ou **Escolher arquivo .nup ou .nx**) e clique em **Preparar**. O launcher lembra a pasta de instalação; é
    nela que ficam o jogo compilado, os arquivos preparados, os saves, as configurações e os caches. Escolher outra pasta
@@ -197,8 +197,8 @@ Linux, com `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, os c
 ```sh
 uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
-uv run tools/build/build.py              # build/mkw; --target windows compila o mkw.exe com llvm-mingw
-build/mkw
+uv run tools/build/build.py              # build/orbitals-recomp; --target windows compila o orbitals-recomp.exe com llvm-mingw
+build/orbitals-recomp
 ```
 
 A partir de um dump empacotado (`.nup`, `.nx`) e para Linux em AArch64:
