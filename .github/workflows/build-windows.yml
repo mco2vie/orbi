@@ -73,8 +73,15 @@ jobs:
           python tools/build/check_names.py build/exe/orbitals-recomp.exe
           python tools/build/check_names.py build/dist/windows
           python - <<'EOF'
-          # the version resource, as UTF-16 text
+          # each old name, counted in UTF-8 and UTF-16LE; then the version resource, as UTF-16 text
+          import re
           d = open("build/exe/orbitals-recomp.exe", "rb").read()
+          for name in ("MKW_", "Mario Kart", "MarioKart", "mkw-recomp", "adriadam10", "ORBITALS_"):
+              n8 = len(re.findall(re.escape(name.encode()), d, re.I))
+              n16 = len(re.findall(re.escape(name.encode("utf-16le")), d, re.I))
+              print(f"count {name!r}: {n8} UTF-8, {n16} UTF-16")
+          n = len(re.findall(rb"(?<![A-Za-z])mkw(?![A-Za-z])", d, re.I))
+          print(f"count 'mkw' as a word: {n}")
           for key in ("FileDescription", "ProductName", "OriginalFilename", "ProductVersion"):
               i = d.find(key.encode("utf-16le"))
               tail = d[i + 2 * len(key) : i + 2 * len(key) + 120].decode("utf-16le", "replace") if i >= 0 else None
