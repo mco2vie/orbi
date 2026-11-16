@@ -61,7 +61,7 @@ def main() -> None:
     log = a.game / "logs/orbitals.log"
     if not log.is_file():
         return
-    sigs = tomllib.loads(SIGNATURES.read_text())["signature"] if SIGNATURES.is_file() else []
+    sigs = tomllib.loads(SIGNATURES.read_text()).get("signature", []) if SIGNATURES.is_file() else []
     out = verdict(read_tail(log), a.version, sigs)
     if out:
         print(out, flush=True)

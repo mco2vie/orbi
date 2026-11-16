@@ -14,7 +14,11 @@ sys.path.insert(0, str(ROOT / "tools/github"))
 import classify  # noqa: E402
 
 RELEASES = {f"v0.1.{i}" for i in range(8)}
-SIGS = classify.load_signatures()
+# The matching is tested on rows of its own: tools/github/signatures.toml starts empty for Orbitals
+SIGS = [
+    classify.Signature(1, ("gamelib.h", "file not found"), "the setup could not find `gamelib.h`", "v0.1.2", "setup"),
+    classify.Signature(22, ("instruction pointer invalid",), "the GPU faults mid-draw", None, "device-fault"),
+]
 
 FORM = """### What happens
 
@@ -105,8 +109,8 @@ def test_known_errors_and_regressions():
 
 
 def test_every_signature_links_its_wiki_section():
-    # the bot's duplicate reply sends the player to what they can do (wiki Troubleshooting, one section per row)
-    for s in SIGS:
+    # the bot's duplicate reply sends the player to what they can do (one section per row); an empty list loads
+    for s in classify.load_signatures():
         assert s.wiki and s.wiki == s.wiki.lower() and " " not in s.wiki, s
 
 

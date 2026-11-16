@@ -384,3 +384,8 @@ def test_lastrun_reads_how_the_last_game_ended() -> None:
     assert lastrun.verdict("[host] FATAL: SIGSEGV at host 0x1\n", "0.1.11", sigs) == "crash"
     assert lastrun.verdict("[host] frame 300\n", "0.1.11", sigs) == ""   # killed or power off: nothing to say
     assert (ROOT / "tools/github/signatures.toml").is_file()
+    # the list starts empty for Orbitals: a crash is then "crash", never a known issue that does not exist
+    import tomllib
+
+    rows = tomllib.loads((ROOT / "tools/github/signatures.toml").read_text()).get("signature", [])
+    assert lastrun.verdict("vk: device fault: Instruction pointer invalid\n", "0.2.0", rows) == "crash"
