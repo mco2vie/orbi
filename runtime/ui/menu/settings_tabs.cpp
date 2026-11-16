@@ -173,14 +173,14 @@ static void tab_screen(float scale) {
     opt_end();
 }
 
-// The Quality presets: the values each one gives the three rows below it, in the order
+// The Quality presets: the values each one gives the two rows below it, in the order
 // of kQualityKeys. Console is every row's default. The others are a first guess until each row's cost is measured on
 // the Radeon 660M and the GTX 1050 Ti (its PLAN).
-static const char *const kQualityKeys[] = {"ORBITALS_ANISO", "ORBITALS_TEX_QUALITY", "ORBITALS_DETAIL_DISTANCE"};
+static const char *const kQualityKeys[] = {"ORBITALS_ANISO", "ORBITALS_TEX_QUALITY"};
 enum { NQUALITY = sizeof kQualityKeys / sizeof *kQualityKeys };
 static const struct { const char *name; const char *v[NQUALITY]; } kPresets[] = {
-    {"low", {"game", "quarter", "1"}},  {"medium", {"game", "half", "1.5"}}, {"console", {"game", "full", "2"}},
-    {"high", {"8", "full", "3"}},       {"ultra", {"16", "full", "4"}},
+    {"low", {"game", "quarter"}}, {"medium", {"game", "half"}}, {"console", {"game", "full"}},
+    {"high", {"8", "full"}},       {"ultra", {"16", "full"}},
 };
 enum { NPRESETS = sizeof kPresets / sizeof *kPresets };
 
@@ -212,11 +212,6 @@ static void row_quality(void) {
 // What the graphics card draws and how much: each row defaults to the console's.
 static void tab_graphics(float scale) {
     opt_begin("##graphics", scale);
-    {   // the game's internal render resolution (sdk/fs/romfs_res.c), read at start
-        static const char *const vals[] = {"original", "540", "720", "900", "1080", "1440", "2160"};   // 2160: issue #55
-        const char *names[7] = {menu_text(UI_MENU_RESOLUTION_ORIGINAL), "540p", "720p", "900p", "1080p", "1440p", "2160p"};
-        opt_choice_list("ORBITALS_RESOLUTION", UI_MENU_RESOLUTION, vals, names, 7, UI_MENU_RESOLUTION_DESC);
-    }
     static const UiTextId up[] = {UI_MENU_UPSCALER_FSR, UI_MENU_UPSCALER_BILINEAR};
     opt_choice("ORBITALS_UPSCALER", UI_MENU_UPSCALER, up, 2, UI_MENU_UPSCALER_DESC);
     opt_slider("ORBITALS_SHARPNESS", UI_MENU_SHARPNESS, 0, 100, UI_MENU_SHARPNESS_DESC, 5, "%.0f %%");
@@ -228,13 +223,6 @@ static void tab_graphics(float scale) {
     }
     static const UiTextId texq[] = {UI_MENU_TEX_QUALITY_FULL, UI_MENU_TEX_QUALITY_HALF, UI_MENU_TEX_QUALITY_QUARTER};
     opt_choice("ORBITALS_TEX_QUALITY", UI_MENU_TEX_QUALITY, texq, 3, UI_MENU_TEX_QUALITY_DESC);
-    {   // the game's LODDistanceRatio (sdk/fs/romfs_res.c), 2 on the console
-        static const char *const vals[] = {"1", "1.5", "2", "3", "4"};
-        const char *names[5] = {menu_text(UI_MENU_DETAIL_LOW), menu_text(UI_MENU_DETAIL_MEDIUM),
-                                menu_text(UI_MENU_DETAIL_CONSOLE), menu_text(UI_MENU_DETAIL_HIGH),
-                                menu_text(UI_MENU_DETAIL_ULTRA)};
-        opt_choice_list("ORBITALS_DETAIL_DISTANCE", UI_MENU_DETAIL, vals, names, 5, UI_MENU_DETAIL_DESC);
-    }
     static const UiTextId mode[] = {UI_MENU_MODE_DOCKED, UI_MENU_MODE_HANDHELD};
     opt_choice("ORBITALS_OPERATION_MODE", UI_MENU_OPERATION_MODE, mode, 2, UI_MENU_OPERATION_MODE_DESC);
     opt_end();

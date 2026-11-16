@@ -330,12 +330,9 @@ int romfs_original_sha(const char *rel, char hex[65]) {
 }
 
 static void overlay_init(void) {
-    // ORBITALS_ROMFS_PATCHES (the scripts' build/romfs-res) goes first, as before the mods; else the resolution setting
-    // writes its own last, over whatever the mods left of its archive (a mod that ships general_format, as Classic
-    // GP does, replaced the resolution's copy and the setting did nothing)
+    // ORBITALS_ROMFS_PATCHES (an overlay directory given by hand) goes first, before the mods
     const char *patches = cfg_get("ORBITALS_ROMFS_PATCHES");
     if (patches && *patches && strcmp(patches, "0")) {
-        romfs_resolution_external();
         load_seq++;
         overlay_load(patches);
     }
@@ -383,11 +380,6 @@ static void overlay_init(void) {
     if (lang && *lang) {
         load_seq++;
         overlay_load(lang);
-    }
-    const char *res = patches && *patches ? NULL : romfs_resolution_overlay();
-    if (res) {
-        load_seq++;
-        overlay_load(res);
     }
     added_init();
     if (noverlay) qsort(overlays, noverlay, sizeof *overlays, overlay_order);

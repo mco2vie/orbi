@@ -38,7 +38,7 @@ static const char *const known[] = {
     "BIND_LSTICK_RIGHT", "BIND_LSTICK_UP", "BIND_MINUS",
     "BIND_PLUS", "BIND_R", "BIND_RCLICK", "BIND_RIGHT", "BIND_RSTICK_DOWN", "BIND_RSTICK_LEFT", "BIND_RSTICK_RIGHT", "BIND_RSTICK_UP",
     "BIND_SKIP", "BIND_STATS", "BIND_UP", "BIND_X", "BIND_Y",
-    "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DETAIL_DISTANCE", "DEVICE_PROFILE", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DUMP_LOG",
+    "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DEVICE_PROFILE", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DUMP_LOG",
     "EXEFS", "FEEDBACK", "FG_BIAS", "FG_DUMP", "FG_DUMP_DIR", "FG_LAMBDA", "FG_PROBE", "FIX_C0", "FIX_ZERO", "FLIGHT", "FLIGHT_AT", "FLIGHT_DIR", "FLIGHT_FRAMES", "FLIGHT_SPIKE_MS",
     "FLIGHT_THUMBS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GAME_DIR", "GPL", "GPL_DRAW_BUILD", "GPU",
     "GPU_CRUMBS", "GPU_CRUMBS_DRAW", "HDR", "HDR_FAKE", "GPU_INDEX", "GPU_MEM_LIMIT", "GPU_NAME", "INPUT", "INPUT_RECORD", "INPUT_SCRIPT", "LAN", "LAN_IP", "LANG",
@@ -49,7 +49,7 @@ static const char *const known[] = {
     "PROBE", "PROFILE", "PROFILE_CHAINS", "PROFILE_DIR", "PROFILE_FRAMES",
     "PROFILE_MAIN", "PROFILE_RENDER", "PUSH_SKIP", "PUSH_STAGE", "RDOC", "RDOC_DIR", "RDOC_DLL", "REEXEC",
     "BIND_XF", "REG_LATE", "REG_QUEUED", "REPLAY_ASYNC", "USNAP_CMP",
-    "REPLAY_CHECK", "RESOLUTION", "RESOLVE_CHECK", "ROMFS", "RTSTATS", "ROMFS_MODS", "ROMFS_PATCHES",
+    "REPLAY_CHECK", "RESOLVE_CHECK", "ROMFS", "RTSTATS", "ROMFS_MODS", "ROMFS_PATCHES",
     "RUMBLE", "RUMBLE_CURVE", "RUMBLE_STRENGTH", "RUMBLE_TRIGGERS",
     "SHADER_MEMO", "SHARED_FONTS", "SHARPNESS", "SHOTS", "SHOTS_DIR", "SHOTS_FULL", "SPARSE_IMAGES", "SPARSE_MIB", "SPARSE_NO_BUFFER", "SPIN", "SPIN_HANDOFF_US", "SPLIT_DRAWS", "SPLIT_US", "STEAM_APPID", "STEAM_APPIDS", "STEAM_INVITE", "STICK_DEADZONE", "SWITCH2", "SWKBD_ANSWER",
     "SKIP_PROGRAMS", "SWKBD_TEST", "TEX_ALIAS", "TEX_MEMO", "TEX_QUALITY", "TEX_RELEASED_MIB", "TIMER_1MS", "TRACE", "TURBO", "TURBO_SPEED", "SKIP_MOVIES", "SEED", "UNLOCK_ALL", "QUICK_RACE", "FREEZE_KEYS", "QUALITY", "TRACE_UBO", "TRACE_UBO_OUT", "UBO_SNAPSHOT", "UPSCALER", "VK_DYN_VERTEX", "VK_NO_FLOAT64",
@@ -61,8 +61,8 @@ static const char *const known[] = {
 static const struct { const char *key, *section; } sections[] = {
     {"FULLSCREEN", "display"}, {"WINDOW_SIZE", "display"}, {"PERF_OVERLAY", "display"}, {"VK_PRESENT", "display"},
     {"GPU_INDEX", "display"}, {"UPSCALER", "display"}, {"HDR", "display"}, {"SHARPNESS", "display"}, {"PICTURE_FIT", "display"},
-    {"DEVICE_PROFILE", "display"}, {"RESOLUTION", "display"}, {"FRAMEGEN", "display"},
-    {"QUALITY", "graphics"}, {"ANISO", "graphics"}, {"TEX_QUALITY", "graphics"}, {"DETAIL_DISTANCE", "graphics"},
+    {"DEVICE_PROFILE", "display"}, {"FRAMEGEN", "display"},
+    {"QUALITY", "graphics"}, {"ANISO", "graphics"}, {"TEX_QUALITY", "graphics"},
     {"MENU_LANG", "language"}, {"LANG", "language"}, {"OPERATION_MODE", "language"}, {"LAN", "language"},
     {"VOLUME", "audio"}, {"AUDIO_CHANNELS", "audio"}, {"BACKGROUND_MUTE", "audio"},
     {"MOTION", "input"}, {"RUMBLE_STRENGTH", "input"}, {"RUMBLE_CURVE", "input"}, {"RUMBLE_TRIGGERS", "input"},
@@ -101,7 +101,6 @@ static const CfgMeta metas[] = {
     {"UPSCALER", "fsr", "fsr|bilinear", LIVE}, {"SHARPNESS", "80", "0..100", LIVE},
     {"PICTURE_FIT", "keep", "keep|stretch", LIVE}, {"HDR", "auto", "auto|off", LIVE},   // auto: HDR when the display is (hdr6c, 12/11/2026)
     {"DEVICE_PROFILE", "auto", "auto|desktop|deck", RESTART},
-    {"RESOLUTION", "original", "original|540|720|900|1080|1440|2160", RESTART},
     // Game
     {"LANG", "", "ja|en-US|fr|de|it|es|zh-CN|ko|nl|pt|ru|zh-TW|en-GB|fr-CA|es-419|zh-Hans|zh-Hant|pt-BR|pl|th|ca|gl|eu", RESTART},
     {"OPERATION_MODE", "docked", "docked|handheld", RESTART},
@@ -112,7 +111,6 @@ static const CfgMeta metas[] = {
     // Graphics: the console's look by default
     {"QUALITY", "console", "low|medium|console|high|ultra|custom", RESTART},   // the menu's presets; nothing reads it
     {"ANISO", "game", "game|2|4|8|16", RESTART}, {"TEX_QUALITY", "full", "full|half|quarter", RESTART},
-    {"DETAIL_DISTANCE", "2", "1|1.5|2|3|4", RESTART},
     // Sound, Controls, Menu
     {"VOLUME", "100", "0..100", LIVE}, {"AUDIO_CHANNELS", "auto", "auto|2|6", RESTART}, {"BACKGROUND_MUTE", "0", "0|1", LIVE},
     {"MOTION", "1", "0|1", LIVE}, {"RUMBLE_STRENGTH", "130", "0..300", LIVE}, {"RUMBLE_CURVE", "0.6", "0.2..1.5", LIVE},
@@ -224,13 +222,10 @@ int cfg_load(const char *path) {
 //
 // The Steam Deck (LCD Jupiter, OLED Galileo; 1280x800, 16:10, 4 Zen 2 cores, RDNA 2 with 8 CUs sharing 16 GB): a
 // window at the screen's 1280x800, fullscreen and vsync, as gamescope composes Game Mode.
-// RESOLUTION 720: with "original" the output already shrinks to the 720 lines a 16:9 picture gets on the 800-line
-// screen (patches.c output_size), but the 3D scene still renders at the console's docked 2560x1440 (romfs_res.c),
-// passes of that size taking 16 of the GPU's 42 ms a frame (ORBITALS_PASS_TIMING with ORBITALS_VK_RECORDER=0). With 720 they
-// go: race median 36.3 -> 23.4 ms (time trial, low quality preset, UMA 1 GB, 13/11/2026), 35.7 -> 24.6 ms without the
-// timing; a docked Deck on a large screen can pick a higher one in the menu.
+// TODO: a lower render resolution for the Deck, through Orbitals' own engine settings (the former 720-line setting
+// wrote the first game's RomFS parameters; docs/romfs-res-audit.md).
 static const struct { const char *key, *value; } DECK[] = {
-    {"FULLSCREEN", "1"}, {"WINDOW_SIZE", "1280x800"}, {"VK_PRESENT", "fifo"}, {"RESOLUTION", "720"},
+    {"FULLSCREEN", "1"}, {"WINDOW_SIZE", "1280x800"}, {"VK_PRESENT", "fifo"},
 };
 static int profile = -1;   // 0 none, 1 Steam Deck
 

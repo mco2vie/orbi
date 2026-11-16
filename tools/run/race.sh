@@ -19,9 +19,6 @@ if [ "${RACE_TT:-0}" = 1 ]; then
 else
   export ORBITALS_INPUT_SCRIPT=${ORBITALS_INPUT_SCRIPT:-tools/run/press-race.txt}
 fi
-export ORBITALS_ROMFS_PATCHES=${ORBITALS_ROMFS_PATCHES-build/romfs-res}
-# The overlay above is the 720 lines of the 660M; ORBITALS_RESOLUTION gives the game output the same lines (patches.c).
-export ORBITALS_RESOLUTION=${ORBITALS_RESOLUTION:-720}
 export ORBITALS_SPARSE_MIB=${ORBITALS_SPARSE_MIB:-768}
 export ORBITALS_SEQ_WATCH=${ORBITALS_SEQ_WATCH:-1} ORBITALS_SEQ_UNTIL=${ORBITALS_SEQ_UNTIL--WaitIntroMovie,IsSequenceFlag} ORBITALS_SEQ_EXIT=${ORBITALS_SEQ_EXIT-${RACE_SECS:-20}}
 # The world clock starts with the race: --seconds must not end the run before ORBITALS_SEQ_EXIT (01/11/2026: RACE_SECS=48

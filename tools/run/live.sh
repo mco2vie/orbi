@@ -34,8 +34,7 @@ avail=$(tools/run/avail.sh --wait "${MIN_AVAIL:-8500}")   # WAIT_MEM=<min>: wait
 mkdir -p build/run
 rm -f "build/run/$n.ctl"
 mkfifo "build/run/$n.ctl"
-export ORBITALS_CTL=$PWD/build/run/$n.ctl ORBITALS_ROMFS_PATCHES=${ORBITALS_ROMFS_PATCHES-build/romfs-res}
-export ORBITALS_RESOLUTION=${ORBITALS_RESOLUTION:-720}   # the overlay's lines for the game output too (patches.c)
+export ORBITALS_CTL=$PWD/build/run/$n.ctl
 # A run is never the start screen: a prepared player runtime (LIVE_BIN) opens it unless told otherwise (main.c
 # want_launcher; 14/11/2026: seq180d sat on the start screen).
 export ORBITALS_NO_LAUNCHER=1

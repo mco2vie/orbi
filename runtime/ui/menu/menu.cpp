@@ -541,27 +541,22 @@ static void perf_label(UiTextId label, const ImVec4 &c) {
 
 static float perf_gb(float mb) { return mb < 0 ? -1 : mb / 1024; }
 
-// The picture lines: the window, the game image the present shows, the resolution the game renders at inside it (the
-// ORBITALS_RESOLUTION applied at start, sdk/fs/romfs_res.c: the scene at those lines, 16:9), how the present scales the image to
-// the window (gfx_present.c, the last present) and the presentation mode in use.
+// The picture lines: the window, the game image the present shows, how the present scales the image to the window
+// (gfx_present.c, the last present) and the presentation mode in use.
 static void perf_picture(const MenuTarget *t, const ImVec4 &c) {
-    enum { N = 5 };
+    enum { N = 4 };
     char v[N][64];
     snprintf(v[0], sizeof v[0], menu_text(UI_MENU_OV_FMT_SIZE), t->width, t->height);
     snprintf(v[1], sizeof v[1], menu_text(UI_MENU_OV_FMT_SIZE), (unsigned)t->image_w, (unsigned)t->image_h);
-    int lines = romfs_resolution_lines();
-    if (lines > 0) snprintf(v[2], sizeof v[2], menu_text(UI_MENU_OV_FMT_SIZE), (unsigned)(lines * 16 / 9), (unsigned)lines);
-    else snprintf(v[2], sizeof v[2], "%s", menu_text(lines ? UI_MENU_OV_NONE : UI_MENU_RESOLUTION_ORIGINAL));
     if (t->scaler == 2) {
         int s = cfg_int("ORBITALS_SHARPNESS");
-        snprintf(v[3], sizeof v[3], menu_text(UI_MENU_OV_FMT_FSR), s < 0 ? 0 : s > 100 ? 100 : s);
+        snprintf(v[2], sizeof v[2], menu_text(UI_MENU_OV_FMT_FSR), s < 0 ? 0 : s > 100 ? 100 : s);
     } else {
-        snprintf(v[3], sizeof v[3], "%s", menu_text(t->scaler ? UI_MENU_OV_SCALE_BILINEAR : UI_MENU_OV_SCALE_NONE));
+        snprintf(v[2], sizeof v[2], "%s", menu_text(t->scaler ? UI_MENU_OV_SCALE_BILINEAR : UI_MENU_OV_SCALE_NONE));
     }
     const char *pm = settings_present_name(gfx_window_present_mode());
-    snprintf(v[4], sizeof v[4], "%s", pm ? pm : menu_text(UI_MENU_OV_NONE));
-    static const UiTextId labels[N] = {UI_MENU_OV_WINDOW, UI_MENU_OV_OUTPUT, UI_MENU_OV_INTERNAL, UI_MENU_OV_SCALING,
-                                       UI_MENU_OV_PRESENT};
+    snprintf(v[3], sizeof v[3], "%s", pm ? pm : menu_text(UI_MENU_OV_NONE));
+    static const UiTextId labels[N] = {UI_MENU_OV_WINDOW, UI_MENU_OV_OUTPUT, UI_MENU_OV_SCALING, UI_MENU_OV_PRESENT};
     if (!ImGui::BeginTable("##perfp", 2, ImGuiTableFlags_SizingFixedFit)) return;
     float vw = 0;
     for (auto &s : v) vw = fmaxf(vw, ImGui::CalcTextSize(s).x);

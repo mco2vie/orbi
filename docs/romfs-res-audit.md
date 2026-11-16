@@ -61,3 +61,10 @@ Orbitals, and leaves two menu rows (Resolution, Detail distance) that do nothing
 - `tools/romfs/byml.py` and `findbytes.py` are generic (a BYML reader, a byte search) and can stay.
 
 If the check finds the file, the decision changes to "keep and condition" and the code stays as it is.
+
+## Result (16/11/2026)
+
+`tools/analisis/romfs_check.py` (as `romfs_check.exe`) on `Orbitals Deluxe Edition [040032B023CA4000][v327680].nup`:
+54 RomFS files across the base (v65536), the update (v327680) and the add-on; top folders `Engine`, `Orbitals`,
+`__rom` and Unreal's manifests; 1 `.pak` and 4 `.utoc`/`.ucas`; no `.sarc.zs`, no `.bgyml`/`.byml`; `Gyml: []`.
+The file is absent, so `romfs_res.c` and what depends on it were removed, as decided above.
