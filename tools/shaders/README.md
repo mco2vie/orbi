@@ -21,6 +21,7 @@
 | `spv_fnv.py` | Program key from the SPIR-V hashes a dump gives (`sh_<hash>.spv`) | `python3 tools/shaders/spv_fnv.py HASH...` |
 | `retry_shas.py`, `retry_failed.py` | Translates specific programs of the census again, or the failed ones with a given reason | see their header |
 | `classify_missing.py` | Programs dumped by `ORBITALS_SPIRV_DUMP`: whether they are in the census | `python3 tools/shaders/classify_missing.py DIR` |
+| `handle_trace.py` | Programs dumped by `ORBITALS_SPIRV_DUMP` that `translate.py` failed for a handle or base "not traced": the decoded instructions before each texture access with its handle in a register and each global access with a uniform-register base, the writes of those registers marked | `python tools/shaders/handle_trace.py DUMP_DIR [--spec FILE]` |
 
 `nvdisasm` is neither versioned nor distributed. `sm86/spec/spec.py` (the SM86 spec) fetches what it needs; `census.py` and the checks also want
 `cuda_cudart` 12.8 from `developer.download.nvidia.com/compute/cuda/redist/`, unpacked in `scratchpad/nvidia/cuda/`.
