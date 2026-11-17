@@ -386,19 +386,34 @@ NVN_API(nvnCommandBufferMultiDrawElementsIndirectCount) {
 // zero, so every compute shader read zeros for them; Orbitals pushes about 12 a frame for 11 dispatches (run of
 // 17/11/2026). cmd_t fills the 0xa0 bytes NVN reserves, so the bytes live in a host table keyed by the command buffer; each
 // dispatch copies them into its record, which keeps the replay's chunks independent of the order they run in.
+// An entry lives while its command buffer records: dispatches read it at record time, so BeginRecording, EndRecording
+// and Finalize free it (nvn_cmd_push_reset). Kept until the next BeginRecording before 17/11/2026, entries of command
+// buffers Unreal no longer used filled the table after a few minutes of Orbitals, and every later command buffer's
+// dispatches read zeros for their constants, their storage buffers' addresses among them.
 #define PUSH_SLOTS 512
+#define PUSH_FREED ((const void *)1)   // a freed entry: lookups go on past it, an insert takes it
 static struct { const void *cmd; uint32_t n; uint8_t data[256]; } push_tab[PUSH_SLOTS];
 static PlatMutex push_lock = PLAT_MUTEX_INIT;
 
 static int push_slot(const void *cmd, int make) {   // under push_lock; -1 when absent (or the table is full)
     uint32_t h = (uint32_t)(((uintptr_t)cmd >> 4) * 0x9E3779B1u) % PUSH_SLOTS;
+    int freed = -1;
     for (uint32_t i = 0; i < PUSH_SLOTS; i++, h = (h + 1) % PUSH_SLOTS) {
         if (push_tab[h].cmd == cmd) return (int)h;
+        if (push_tab[h].cmd == PUSH_FREED) {
+            if (freed < 0) freed = (int)h;
+            continue;
+        }
         if (!push_tab[h].cmd) {
             if (!make) return -1;
-            push_tab[h].cmd = cmd, push_tab[h].n = 0;
-            return (int)h;
+            if (freed < 0) freed = (int)h;
+            break;
         }
+    }
+    if (make && freed >= 0) {
+        push_tab[freed].cmd = cmd, push_tab[freed].n = 0;
+        memset(push_tab[freed].data, 0, sizeof push_tab[freed].data);
+        return freed;
     }
     static int full;
     if (make && !full++) rt_log("nvn: more than %d command buffers with compute push constants: the rest are dropped", PUSH_SLOTS);
@@ -417,10 +432,11 @@ void nvn_cmd_push_compute(const void *cmd, uint32_t offset, uint32_t size, const
     plat_mutex_unlock(&push_lock);
 }
 
-void nvn_cmd_push_reset(const void *cmd) {   // BeginRecording: a new recording starts without the last one's constants
+// Begin/EndRecording and Finalize: a recording starts without the last one's constants, and ended ones need none.
+void nvn_cmd_push_reset(const void *cmd) {
     plat_mutex_lock(&push_lock);
     int k = push_slot(cmd, 0);
-    if (k >= 0) push_tab[k].n = 0, memset(push_tab[k].data, 0, sizeof push_tab[k].data);
+    if (k >= 0) push_tab[k].cmd = PUSH_FREED, push_tab[k].n = 0;
     plat_mutex_unlock(&push_lock);
 }
 
