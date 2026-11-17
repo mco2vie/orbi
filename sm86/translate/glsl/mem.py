@@ -125,13 +125,29 @@ class MemOps:
                 loads.append(self.cb_word(bank, self.ureg(i.v("URa")), addr + 4 * k))
             tmp = ", ".join(f"lw{k} = {w}" for k, w in enumerate(loads))
             return f"{{ uint {tmp}; {' '.join(f'ur{n + k} = lw{k};' for k in range(size))} }}"
+        sb = size == 2 and (bank == 0 or self.SB_BANKS[0] <= bank < self.SB_BANKS[1])
         for k in range(size):
             self.uregs.add(n + k)
-            out.append(f"ur{n + k} = {self.const(bank, addr + 4 * k, spec=not (size == 2 and bank == 0))};")
+            out.append(f"ur{n + k} = {self.const(bank, addr + 4 * k, spec=not sb)};")
             self.ur_const[n + k] = (bank, addr + 4 * k)   # a texture handle read through URc (tex.py tex_key)
-        if size == 2 and bank == 0:
-            self.ur_ssbo[n] = addr  # a storage buffer address: the driver keeps one per binding in bank 0
+        if sb:
+            # A storage buffer address: the driver keeps one per binding in bank 0. A user uniform block may hold one
+            # too: Orbitals (Unreal) loads LDG/STG bases with ULDC.64 c[3][...] in 50 programs it dumped (title,
+            # menu and character select backgrounds, 17/11/2026); the back end reads it from the block (ubo_ptr).
+            self.ur_ssbo[n] = self.sb_key(bank, addr)
         return " ".join(out)
+
+    # ---- storage buffer keys: the c[0] byte offset of a driver binding, or bank << 16 | byte offset for an address
+    # held in a user uniform block (banks 3..20 = NVN uniform slots 0..17, vk_exec_bind.c ubo_ptr_res)
+    SB_BANKS = (3, 21)
+
+    @staticmethod
+    def sb_key(bank: int, byte: int) -> int:
+        return bank << 16 | byte
+
+    def sb_word(self, key: int, extra: int = 0) -> str:
+        """The bank word at the storage buffer's address (+ extra bytes), plain: the traced bases subtract it."""
+        return self.const(key >> 16, (key & 0xFFFF) + extra, spec=False)
 
     # ---- global memory as storage buffers
     def global_mem(self, i: Insn) -> str:
@@ -203,11 +219,11 @@ class MemOps:
             slot = self.ur_derived[base]
             self.uregs.add(base)
             extra = f"{self.src_u(i, 'a')} + " if i.cls.endswith("Ra32") and ra != RZ else ""
-            rel = f"({extra}ur{base} - {self.const(0, slot, spec=False)} + {off:#x}u)"
+            rel = f"({extra}ur{base} - {self.sb_word(slot)} + {off:#x}u)"
         elif base is None and ("sImmOffset" in i.cls or "RaNonRZ" in i.cls) and ra in self.reg_ssbo:
             slot = self.reg_ssbo[ra]
             self.regs.add(ra)
-            rel = f"(r{ra} - {self.const(0, slot, spec=False)} + {off:#x}u)"
+            rel = f"(r{ra} - {self.sb_word(slot)} + {off:#x}u)"
         else:
             raise Unsupported(f"{i.cls}: base not a traced storage buffer")
         self.ssbos.add(slot)
@@ -251,7 +267,7 @@ class MemOps:
             self.ssbos_written |= self.ssbos
         find = []
         for k, o in enumerate(sorted(self.ssbos)):
-            lo, hi = self.const(0, o, spec=False), self.const(0, o + 4, spec=False)
+            lo, hi = self.sb_word(o), self.sb_word(o, 4)
             find.append(f"    r = usubBorrow(lo, {lo}, b); if (hi - {hi} - b == 0u && r < uint(sb{o:x}.d.length()) * 4u "
                         f"&& r < w) {{ w = r; s = {k}; }}")  # fmt: skip
         head = ["uint gfind(uint lo, uint hi, out int s) {", "    uint w = 0xffffffffu, r, b; s = -1;", *find,

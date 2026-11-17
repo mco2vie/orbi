@@ -122,7 +122,8 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         head.append(f"layout(std430, binding = {nb}) buffer SB{o:x} {{ uint d[]; }} sb{o:x};")
         # flags 1: the shader stores into it. The replay copies such a range back to guest memory and keeps the CPU's
         # writes out of it until then; every buffer marked so hid the HUD's glyph records (01/11/2026).
-        refl["sbufs"].append({"binding": nb, "slot": len(refl["sbufs"]), "cb_slot": 0, "cb_offset": o // 4,
+        # o: mem.py sb_key, the bank in the bits above 16 (0: the driver's c0 table; 3..: a user uniform block)
+        refl["sbufs"].append({"binding": nb, "slot": len(refl["sbufs"]), "cb_slot": o >> 16, "cb_offset": (o & 0xFFFF) // 4,
                               "flags": 1 if o in b.ssbos_written else 0})  # fmt: skip
         nb += 1
     for (bank, idx), t in sorted(b.textures.items()):
