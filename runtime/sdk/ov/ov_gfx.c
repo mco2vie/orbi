@@ -11,6 +11,7 @@
 #include "cfg.h"
 #include "gfx.h"
 #include "host.h"
+#include "kernel.h"
 #include "ov.h"
 #include "platform/platform.h"
 
@@ -257,10 +258,29 @@ static uint64_t history_cap(void) {
     return cap;
 }
 
+// ORBITALS_THREADS_AT=<frame> (diagnosis): once that many frames are presented, every guest thread's wait and call chain go
+// to the log (kern_threads_dump, otherwise written only at a fatal abort), to see what a game that presents frames but draws
+// black waits for. The flip tracker calls ListFrameHistory each frame, so it is the place that sees the count go by.
+static void threads_dump_at(uint64_t presented) {
+    static uint64_t at;
+    static int state;   // 0 unread, 1 armed, 2 done or off
+    if (state == 0) {
+        const char *v = cfg_get("ORBITALS_THREADS_AT");
+        at = v && *v ? strtoull(v, NULL, 10) : 0;
+        state = at ? 1 : 2;
+    }
+    if (state == 1 && presented >= at && __atomic_exchange_n(&state, 2, __ATOMIC_ACQ_REL) == 1) {
+        rt_log("threads: dump at frame %llu (ORBITALS_THREADS_AT=%llu)", (unsigned long long)presented,
+               (unsigned long long)at);
+        kern_threads_dump();
+    }
+}
+
 static void ov_frame_history(Cpu *c) {
     uint64_t out = arg_x(c, 0);
     int count = (int)arg_x(c, 1);
     uint64_t presented = gfx_stats().frames, cap = history_cap();
+    threads_dump_at(presented);
     uint64_t have = presented < cap ? presented : cap;
     uint64_t ret = 0, frame = 0, tick = 0;
     if (!out && count == 0) {

@@ -261,8 +261,9 @@ HOST_OVERRIDE("_ZN2nn5audio6detail29GetDefaultVirtualOutputDeviceEPNS0_15AudioDe
 // OutputStreamImpl, built at +8; the public functions read that pointer and call the impl. The impl keeps its state at +0x110
 // (GetOutputStreamState accepts 0..2: Start writes 2, Stop 1), its StreamFormat at +0x114 (12 bytes) and its capacity in frames
 // at +0x120. Every function main imports is replaced here, so only +0 is written (the open stream's impl address, as the SDK
-// does) and the rest lives in a host table. The open's first int is taken as the capacity in frames and the format's first word
-// as the sample rate (logged: both are readings, not documented); out-of-range values fall back to 4096 frames and 48 kHz.
+// does) and the rest lives in a host table. The open's first int is the capacity in frames and the format's third word the
+// sample rate: Orbitals opens with format {5, 2, 48000} and ints 2048, 1536 (run of 17/11/2026; 5 is read as the sample
+// format, 2 the channels). Out-of-range values fall back to 4096 frames and 48 kHz.
 // The SystemEvent of the event overload is created and signalled on every vsync (60 Hz), the rate the game's audio thread
 // gets woken at to write more; it stays bound after a close (gfx_vsync_bind has no unbind; the game opens one stream).
 // Statistics (24 bytes through x8) are zeros: what the SDK returns when the mixer has none.
@@ -303,7 +304,7 @@ static uint32_t stream_free(SilentStream *st) {
 
 static void stream_open(Cpu *c, uint64_t type, uint64_t ev, uint64_t format, int frames, int extra) {
     const uint32_t *f = (const uint32_t *)(uintptr_t)format;
-    uint32_t rate = f && f[0] >= 8000 && f[0] <= 192000 ? f[0] : 48000;
+    uint32_t rate = f && f[2] >= 8000 && f[2] <= 192000 ? f[2] : 48000;
     uint32_t capacity = frames > 0 && frames <= (1 << 20) ? (uint32_t)frames : 4096;
     plat_mutex_lock(&stream_lock);
     SilentStream *st = stream_find(type);
