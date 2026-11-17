@@ -67,6 +67,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.ssbos: set[int] = set()  # driver bank 0 offsets of the storage buffer addresses read
         self.ssbos_written: set[int] = set()  # those a STG, ATOMG or RED stores into (reflection flag 1)
         self.ur_ssbo: dict[int, int] = {}  # uniform register -> the c[0] offset its 64-bit value came from
+        self.ur_const: dict[int, tuple[int, int]] = {}  # uniform register -> (bank, byte) its ULDC word came from
         self.reg_ssbo: dict[int, int] = {}
         self.ur_derived: dict[
             int, int

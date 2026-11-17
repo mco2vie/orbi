@@ -113,7 +113,7 @@ class MemOps:
         bank, addr = (v for _, v in iv.slot_values)
         out = []
         for k in range(size):   # a new value: no longer what was traced (track_ssbo leaves ULDC to this)
-            self.ur_ssbo.pop(n + k, None), self.ur_derived.pop(n + k, None)
+            self.ur_ssbo.pop(n + k, None), self.ur_derived.pop(n + k, None), self.ur_const.pop(n + k, None)
         if i.has("URa") and i.v("URa") != URZ:
             # ULDC URd, c[bank][URa + offset]: a dynamic address. The index was dropped and every read took word
             # `offset`: the race's colour-grading LUT read the same table entry for all 32 slices (no blue, 31/10/2026).
@@ -127,6 +127,7 @@ class MemOps:
         for k in range(size):
             self.uregs.add(n + k)
             out.append(f"ur{n + k} = {self.const(bank, addr + 4 * k, spec=not (size == 2 and bank == 0))};")
+            self.ur_const[n + k] = (bank, addr + 4 * k)   # a texture handle read through URc (tex.py tex_key)
         if size == 2 and bank == 0:
             self.ur_ssbo[n] = addr  # a storage buffer address: the driver keeps one per binding in bank 0
         return " ".join(out)
@@ -291,6 +292,7 @@ class MemOps:
             # Any other write ends both: a base kept after `UIADD3 UR4, UR4, 0x100` lost the offset of the accesses
             # through it (115 programs, among them the cacti's draw arguments; tools/shaders/track_audit.py).
             n = i.v("URd")
+            self.ur_const.pop(n, None)
             src = None
             if i.op in ("UIADD3", "ULEA", "UMOV", "UIMAD"):
                 src = next((self.ur_ssbo.get(i.v(r), self.ur_derived.get(i.v(r))) for r in ("URa", "URb", "URc")

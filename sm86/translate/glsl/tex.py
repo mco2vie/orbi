@@ -9,11 +9,24 @@ from glsl.common import PT, RZ, Unsupported, reg
 
 
 class TexOps:
+    def tex_key(self, i: Insn) -> tuple[int, int]:
+        """(bank, word index) of the texture or image handle: c[bank5][tsPtrIdx * 4] in the bound forms. The forms with
+        the handle in a uniform register (classes ending _urc_, Unreal's programs in Orbitals: 56 of them failed with a
+        KeyError on bank5, 17/11/2026) take it from a ULDC of a constant word (mem.py uldc, ur_const), which names the
+        same binding: the handle that word holds. Another source is not traced."""
+        if i.has("bank5"):
+            return i.v("bank5"), i.v("tsPtrIdx")
+        for n in ("URc", "URb"):
+            if i.has(n) and i.v(n) in self.ur_const:
+                bank, byte = self.ur_const[i.v(n)]
+                return bank, byte // 4
+        raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
+
     def txq(self, i: Insn) -> str:
         """TXQ TEX_HEADER_DIMENSION: width, height, depth/layers, levels of the texture at lod Ra."""
         if i.sym("query") != "TEX_HEADER_DIMENSION":
             raise Unsupported(f"TXQ {i.sym('query')}")
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         self.textures.setdefault(key, "sampler2D")
         t = f"t{key[0]}_{key[1]}"
         # the sampler's type is final only after the whole program (a later TEX may make it an array): the size comes
@@ -49,7 +62,7 @@ class TexOps:
             self.regs.update(range(a, a + n))
         coords = [f"int({reg(a + k if a != RZ else RZ)})" for k in range(n)]
         vec = coords[0] if n == 1 else f"ivec{n}({', '.join(coords)})"
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         kind = "uimage" if i.op in ("SURED", "SUATOM") else "image"  # atomics need an integer image with a declared format
         if self.images.get(key, f"{kind}{name}") != f"{kind}{name}":
             raise Unsupported(f"{i.op}: image {key} used both as float and for atomics")
@@ -150,7 +163,7 @@ class TexOps:
             return f"uintBitsToFloat({reg(regs[n])})"
 
         coords = [f(f"c{k}") for k in range(ncoord)]
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         t = f"t{key[0]}_{key[1]}"
         if aoffi:  # 4-bit signed texel offsets per axis; GLSL wants them constant, so they move the coordinates
             lvl = f"int({f('lod')})" if lod == "LL" else "0"
@@ -253,7 +266,7 @@ class TexOps:
             [f"int({reg(regs['idx'])})"] if is_array else []
         )
         vec = ints[0] if len(ints) == 1 else f"ivec{len(ints)}({', '.join(ints)})"
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         self.textures.setdefault(key, f"sampler{name}")
         lv = f"int({reg(regs['ms' if ms else 'lod'])})" if ms or lod == "LL" else "0"
         call = f"texelFetch(t{key[0]}_{key[1]}, {vec}, {lv})"
@@ -272,7 +285,7 @@ class TexOps:
         coords = [f"uintBitsToFloat({reg(a + idx + k)})" for k in range(ncoord)]
         self.regs.update(r for r in range(a, a + idx + ncoord) if r != RZ)
         vec = coords[0] if ncoord == 1 else f"vec{ncoord}({', '.join(coords)})"
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         self.textures.setdefault(key, f"sampler{name}")
         t = f"t{key[0]}_{key[1]}"
         rd, rd2 = i.v("Rd"), i.v("Rd2")
