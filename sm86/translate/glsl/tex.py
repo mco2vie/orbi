@@ -24,11 +24,14 @@ class TexOps:
                 return bank, byte // 4
             if i.has(n) and i.v(n) in self.ur_or:
                 return self.or_key(i, self.ur_or[i.v(n)])
-        if i.has("Rb") and i.v("Rb") in self.r_const:   # tex_scr_b_noConst_: the handle in a general register
-            bank, byte = self.r_const[i.v("Rb")]
+        # tex_scr_b_noConst_: the handle in a general register, written under the guard this instruction runs under
+        # (or unguarded): another guard may have left another texture's handle there (mem.py track_handle)
+        g = self.pred_of(i)
+        if i.has("Rb") and i.v("Rb") in self.r_const and self.r_const[i.v("Rb")][1] in (None, g):
+            bank, byte = self.r_const[i.v("Rb")][0]
             return bank, byte // 4
-        if i.has("Rb") and i.v("Rb") in self.r_or:
-            return self.or_key(i, self.r_or[i.v("Rb")])
+        if i.has("Rb") and i.v("Rb") in self.r_or and self.r_or[i.v("Rb")][1] in (None, g):
+            return self.or_key(i, self.r_or[i.v("Rb")][0])
         raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
 
     def or_key(self, i: Insn, pair: tuple[tuple[int, int], tuple[int, int]]) -> tuple[int, int]:

@@ -115,7 +115,8 @@ def main() -> int:
                 if "noConst" not in i.cls or not i.has("Rb") or i.v("Rb") == RZ:
                     continue
                 chain = " <- ".join(origin(insns, k, "r", i.v("Rb"), a.depth))
-                shape = f"{i.op} {i.cls}: R <- {chain}"
+                guard = " predicated" if i.v("Pg", 7) != 7 or i.v("Pg@not", 0) else ""
+                shape = f"{i.op} {i.cls}{guard}: R <- {chain}"
             else:
                 base = next((i.v(f) for f in BASES if i.has(f)), None)
                 if base is None or base == URZ:

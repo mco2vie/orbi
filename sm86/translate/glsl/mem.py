@@ -365,27 +365,37 @@ class MemOps:
                 return bank, addr * 4 if slot.width == 14 else addr
         return None
 
+    @staticmethod
+    def pred_of(i: Insn) -> tuple[int, int] | None:
+        """The instruction's guard (Pg, negated), None when it always runs."""
+        g, neg = i.v("Pg", PT), i.v("Pg@not", 0)
+        return None if g == PT and not neg else (g, neg)
+
     def track_handle(self, i: Insn, n: int) -> None:
         """r_const / r_or after i writes Rd = n: `MOV Rn, c[b][x]` then `LOP3.LUT Rm, Rn, c[b][y], RZ, 0xfc` (a | b), the
         texture | sampler handle words in a general register (tex_scr_b_noConst_; tools/shaders/base_origin.py --tex on
-        Orbitals' dump: 8 programs, 17/11/2026). Any other write ends what n held."""
+        Orbitals' dump: 8 programs, 17/11/2026). Each entry keeps the guard of its writes: Orbitals picks the texture
+        with predicated MOV/LOP3 pairs (@P c[3][0x10], 0x18 or 0x20) and samples it under the same guard, so a TEX takes
+        the entry only when its own guard is the same (tex.py tex_key). Any other write ends what n held."""
+        g = self.pred_of(i)
         combo = None
         # a | b whatever the table says for c, which is RZ: the bits of c = 0 (0, 2, 4, 6) read 0, 1, 1, 1
         if (i.op == "LOP3" and i.v("imm8", 0) & 0x55 == 0x54 and i.v("Rc", RZ) == RZ and i.v("Ra", RZ) in self.r_const
                 and not i.v("Ra@not", 0) and not i.v("Rc@not", 0)):
             c = self.const_operand(i)
-            if c is not None and not self.predicated:
-                combo = (self.r_const[i.v("Ra")], c)
+            src, sg = self.r_const[i.v("Ra")]
+            if c is not None and sg in (None, g):
+                combo = (src, c)
         # MOV R, c[b][x], or IMAD.MOV.U32 R, RZ, RZ, c[b][x] (the form ptxas also writes)
         mov = i.op == "MOV" or (i.op == "IMAD" and i.v("Ra", 0) == RZ and i.v("Rb", 0) == RZ and "RRC" in i.cls)
-        konst = self.const_operand(i) if mov and not self.predicated else None
+        konst = self.const_operand(i) if mov else None
         wide = {i.sym(k) for k in ("sz", "wide", "fmt")} & {"64", "128", "WIDE", "U64", "S64"}
         for k in range(4 if "128" in wide else 2 if wide else 1):
             self.r_const.pop(n + k, None), self.r_or.pop(n + k, None)
         if konst is not None:
-            self.r_const[n] = konst
+            self.r_const[n] = (konst, g)
         if combo is not None:
-            self.r_or[n] = combo
+            self.r_or[n] = (combo, g)
 
     def ldc(self, i: Insn) -> str:
         """LDC c[bank][Ra + offset]: a constant read at a dynamic address; .U8/.S8/.U16/.S16 take the byte or halfword
