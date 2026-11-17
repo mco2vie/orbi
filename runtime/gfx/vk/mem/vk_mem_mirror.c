@@ -368,7 +368,7 @@ static int wb_merge_mode(void) {
     if (m < 0) {
         const char *e = cfg_get("ORBITALS_WB_MERGE");
         int v = !e || !*e ? 1 : !strcmp(e, "0") ? 0 : !strcmp(e, "none") ? 2 : 1;
-        rt_log("mem: storage texel buffer write-backs %s (ORBITALS_WB_MERGE)",
+        rt_log("mem: shader store write-backs (storage and texel buffers) %s (ORBITALS_WB_MERGE)",
                v == 2 ? "dropped (the GPU's stores stay in VRAM)" : v ? "merged by bytes on the CPU" : "copied back whole");
         m = v;
     }

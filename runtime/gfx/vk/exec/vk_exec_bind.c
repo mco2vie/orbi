@@ -314,7 +314,11 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
         // the end of the backing, and copied back whole it reverted the CPU's writes over the rest of the pool: with
         // the c[3] bases translated (933e676) Orbitals' render graph read 0x104 after the logos (17/11/2026). Only the
         // bytes the GPU changes go back (vk_mem_gpu_wrote_merged).
-        int wmode = written && !size ? unsized_mode() : written;
+        // Written with a size: the shader stores some of its words, the CPU may write others meanwhile (a storage
+        // buffer is guest memory both use). Copied back whole it could revert them as the texel views did: with
+        // texel write-backs off (WB_MERGE=none) the render graph still read 0x104 after the logos in 1 of 4 runs
+        // (17/11/2026). Only the bytes the GPU changes go back (vk_mem_gpu_wrote_merged; WB_MERGE=0 copies whole).
+        int wmode = !written ? 0 : !size ? unsized_mode() : 2;
         if (bind_range(ex, b->addr - lead, size, align, max, ubo ? VK_MUSE_UBO : VK_MUSE_SSBO,
                        wmode, &bi)) {
             if (written && bi.buffer != VK_NULL_HANDLE) note_written(ex, b->addr - lead, bi.range);
