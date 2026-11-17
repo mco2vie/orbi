@@ -380,6 +380,7 @@ static int create_device(void) {
     else if (!h->textureCompressionBC) miss = "textureCompressionBC";
     if (miss) { rt_log("vk: required feature missing on %s: %s", g_vk.props.deviceName, miss); free(c); return 0; }
     g_vk.has_buffer_device_address = c->f12.bufferDeviceAddress;
+    g_vk.has_storage8 = c->f12.storageBuffer8BitAccess;   // wb_merge.comp's byte stores (vk_mem_mirror.c)
     g_vk.has_placed = has_placed && c->placed.memoryMapPlaced && c->placed.memoryUnmapReserve;
     c->placed.memoryMapRangePlaced = VK_FALSE;   // whole allocations only
     g_vk.has_astc_ldr = h->textureCompressionASTC_LDR;

@@ -370,6 +370,7 @@ static void wm_make(void *arg) {
     VkShaderModuleCreateInfo mi = {.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof wb_merge_spv,
                                    .pCode = wb_merge_spv};
     VkShaderModule mod = VK_NULL_HANDLE;
+    if (!c->has_storage8) goto fail;   // the shader stores bytes
     if (vkCreateDescriptorSetLayout(c->device, &di, NULL, &wm_dsl) != VK_SUCCESS) goto fail;
     VkPipelineLayoutCreateInfo li = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1,
                                      .pSetLayouts = &wm_dsl, .pushConstantRangeCount = 1, .pPushConstantRanges = &pr};
@@ -604,15 +605,29 @@ void vk_mem_mirror_prologue(VkCommandBuffer cb) {
     mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
              VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT);
     if (npend) copy_ranges(cb, pend, npend, 1, &mrep.upload_bytes, &mrep.upload_copies);
-    if (nunbased) {   // the merge bases: the mirror once this part's copies are in, before the part runs
+    // The merge bases: the mirror once this part's copies are in, before the part runs. A range based by an earlier part
+    // takes this part's copies too: the CPU's bytes they bring into the mirror are not the GPU's, and merged back they
+    // reverted the CPU's later stores (the render graph's 0x104 read after the logos, 17/11/2026).
+    if (nunbased || (npend && nwbm)) {
         plat_mutex_lock(&use_lock);
         mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
                  VK_ACCESS_2_TRANSFER_READ_BIT);
         for (int i = 0; i < nwbm; i++) {
-            if (wbm[i].based) continue;
-            VkBufferCopy c = {wbm[i].lo, 0, wbm[i].hi - wbm[i].lo};
-            vkCmdCopyBuffer(cb, wbm[i].r->mbuf, wbm[i].base, 1, &c);
-            wbm[i].based = 1;
+            WbMerge *m = &wbm[i];
+            if (!m->based) {
+                VkBufferCopy c = {m->lo, 0, m->hi - m->lo};
+                vkCmdCopyBuffer(cb, m->r->mbuf, m->base, 1, &c);
+                m->based = 1;
+                continue;
+            }
+            for (int k = 0; k < npend; k++) {
+                if (pend[k].r != m->r) continue;
+                uint64_t a = pend[k].off > m->lo ? pend[k].off : m->lo;
+                uint64_t e = pend[k].off + pend[k].size < m->hi ? pend[k].off + pend[k].size : m->hi;
+                if (a >= e) continue;
+                VkBufferCopy c = {a, a - m->lo, e - a};
+                vkCmdCopyBuffer(cb, m->r->mbuf, m->base, 1, &c);
+            }
         }
         nunbased = 0;
         if (wbm_closed) nwbm = 0, wbm_closed = 0;   // vk_mem_mirror_end recorded their merges already
