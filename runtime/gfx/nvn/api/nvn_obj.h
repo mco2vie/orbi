@@ -150,7 +150,10 @@ typedef struct { float factor, units, clamp; } p_poly_offset;
 typedef struct { int32_t prim, first, count, base_instance, instances; } p_draw;
 typedef struct { int32_t first, count; } p_draw_mesh;                       // DrawMeshTasks: task groups first..first+count   // instances 0 = one instance (DrawArrays)
 typedef struct { int32_t prim, itype, count, base_vertex, base_instance, instances; uint64_t ibuf; } p_draw_idx;
-typedef struct { int32_t x, y, z; uint64_t caller; } p_dispatch;   // caller: return address of the game call site (to locate the dispatcher)
+// caller: return address of the game call site (to locate the dispatcher). push: the compute push constants of the command
+// buffer when the dispatch was recorded (nvnCommandBufferPushComputeConstants, nvn_api_state.c), push_n bytes of them; the
+// replay puts them at c0+0x10, ahead of the program's packed table (vk_exec_bind.c c0_info).
+typedef struct { int32_t x, y, z; uint64_t caller; uint32_t push_n; uint8_t push[256]; } p_dispatch;
 typedef struct { const dpool_t *pool; } p_set_pool;
 typedef struct { uint64_t src; const tex_t *tex; view_t view; uint8_t has_view; NVNcopyRegion r; int32_t flags; } p_copy_b2t;
 typedef struct { const tex_t *src, *dst; view_t sv, dv; uint8_t has_sv, has_dv; NVNcopyRegion sr, dr; int32_t flags; } p_copy_t2t;   // Reused for T2B: src stores the destination buffer address

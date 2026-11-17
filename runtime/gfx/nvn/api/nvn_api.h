@@ -18,6 +18,10 @@
     }                                                                                                                \
     static void nvn_impl_##n(Cpu *c)
 void nvn_called(uint8_t *seen, const char *name);          // the counting prologue of NVN_API
+// Compute push constants of a command buffer (nvn_api_state.c): set by nvnCommandBufferPushComputeConstants, cleared by
+// BeginRecording, copied into each dispatch record.
+void nvn_cmd_push_compute(const void *cmd, uint32_t offset, uint32_t size, const void *data);
+void nvn_cmd_push_reset(const void *cmd);
 #define NVN_LOG(...) do { if (rt_trace & RT_TRACE_GFX) rt_log("nvn: " __VA_ARGS__); } while (0)   // ORBITALS_TRACE=gfx
 // A wait for the GPU, the display or another thread gives the virtual core up until the end of the enclosing scope.
 #define NVN_BLOCKING() __attribute__((cleanup(kern_core_back))) int nvn_away_ = kern_core_away()

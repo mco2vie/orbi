@@ -278,7 +278,9 @@ static void op_dispatch(VkExec *ex, const p_dispatch *d) {
     bind_pipeline(ex, VK_PIPELINE_BIND_POINT_COMPUTE, p);
     recent_note(cs, NULL);
     c0_dim[0] = (uint32_t)d->x, c0_dim[1] = (uint32_t)d->y, c0_dim[2] = (uint32_t)d->z, c0_cs = cs;
+    c0_push = d->push_n ? d->push : NULL, c0_push_n = d->push_n;
     bind_resources(ex, info);
+    c0_push = NULL, c0_push_n = 0;
     int pt = vk_pt_enabled();
     if (vk_spec_census_on()) spec_census(ex, cs, NVN_STAGE_CS);
     if (pt && vk_pt_draw_mode()) vk_pt_draw(ex->cb, cs, NULL);

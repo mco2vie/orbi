@@ -53,7 +53,7 @@ typedef struct {
     VkBuffer c0_buf[3];
     VkDeviceSize c0_off[3];
     int c0_valid[3];
-    struct { p_bind_buf ssbo[16], ubo[16]; uint32_t dim[3], binst; uint8_t table[5]; uint64_t tex[128], img[32]; } c0_in[3];   // what vk_c0_fill read for c0[k]
+    struct { p_bind_buf ssbo[16], ubo[16]; uint32_t dim[3], binst; uint8_t table[5]; uint64_t tex[128], img[32]; uint32_t push_n; uint8_t push[256]; } c0_in[3];   // what vk_c0_fill read for c0[k]
     VkPipelineLayout ds_layout;          // graphics layout the sets below were last pushed or bound with
     VkDescriptorSet ds_bound[2];         // allocated set bound per set number (0: none or pushed since)
     VkDescriptorSet ds_last[2];          // last allocated and written set per set number, contents in DS
@@ -68,6 +68,8 @@ extern _Thread_local DrawB *dtl_b DRAW_SHARED;   // vk_exec_draw.c
 // shader, and a generation every bind op that writes ex->prog, ubo, ssbo, tex or img bumps.
 extern _Thread_local uint32_t c0_dim[3] DRAW_SHARED, c0_binst DRAW_SHARED;
 extern _Thread_local const GfxShader *c0_cs DRAW_SHARED;
+extern _Thread_local const uint8_t *c0_push DRAW_SHARED;   // the dispatch's compute push constants (p_dispatch), c0_push_n bytes
+extern _Thread_local uint32_t c0_push_n DRAW_SHARED;
 extern _Thread_local uint64_t bind_gen DRAW_SHARED;
 extern _Thread_local int pd_on DRAW_SHARED;            // ORBITALS_TRACE=draw timing (prepare_draw_ex sets it per draw)
 

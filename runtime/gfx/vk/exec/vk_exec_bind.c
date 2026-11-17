@@ -73,6 +73,8 @@ static _Thread_local const RsList *rs_last_l;
 
 _Thread_local uint32_t c0_dim[3], c0_binst;
 _Thread_local const GfxShader *c0_cs;
+_Thread_local const uint8_t *c0_push;
+_Thread_local uint32_t c0_push_n;
 _Thread_local uint64_t bind_gen = 1;
 
 // ---- descriptors
@@ -162,6 +164,10 @@ static VkDescriptorBufferInfo c0_info(VkExec *ex, int st) {
         if ((table = gfx_shader_cs_table(c0_cs))) {   // NVN2 packed table: its handles are part of the bank
             memcpy(in.table, table, 5);
             memcpy(in.tex, ex->tex[st], sizeof in.tex), memcpy(in.img, ex->img[st], sizeof in.img);
+            // the push constants, at 0x10 up to the table (4 * table[4] bytes)
+            uint32_t room = 4u * table[4], n = c0_push && c0_push_n < room ? c0_push_n : c0_push ? room : 0;
+            if (n > sizeof in.push) n = sizeof in.push;
+            if (n) in.push_n = n, memcpy(in.push, c0_push, n);
         }
     } else {
         in.binst = c0_binst;
@@ -171,6 +177,7 @@ static VkDescriptorBufferInfo c0_info(VkExec *ex, int st) {
     B.c0_in[k] = in;
     uint8_t tmp[VK_C0_BYTES];
     vk_c0_fill(tmp, st, ex->ssbo[st], ex->ubo[st], c0_dim, c0_binst, table, ex->tex[st], ex->img[st]);
+    if (in.push_n && 0x10 + in.push_n <= VK_C0_BYTES) memcpy(tmp + 0x10, in.push, in.push_n);
     if (!B.c0_valid[k] || memcmp(tmp, B.c0[k], VK_C0_BYTES)) {
         memcpy(scratch(ex, VK_C0_BYTES, &B.c0_buf[k], &B.c0_off[k]), tmp, VK_C0_BYTES);
         memcpy(B.c0[k], tmp, VK_C0_BYTES);
