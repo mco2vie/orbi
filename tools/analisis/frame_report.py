@@ -72,7 +72,9 @@ class Report:
     def __init__(self, db: sqlite3.Connection, exefs: Path) -> None:
         self.db = db
         self.exefs = exefs
-        self.base = {m: b for m, b in db.execute("SELECT name, base FROM module")}
+        # real sizes: main is large enough that sdk starts within main's first 256 MiB (a fixed span named sdk code main+...)
+        self.spans = db.execute("SELECT name, base, size FROM module ORDER BY base").fetchall()
+        self.base = {m: b for m, b, _ in self.spans}
         self.names: dict[int, str] = {}
         for addr, name in db.execute("SELECT addr, name FROM plt WHERE name IS NOT NULL"):
             self.names[addr] = name
@@ -87,8 +89,8 @@ class Report:
         self.lines.append(text)
 
     def rel(self, addr: int) -> str:
-        for mod, base in self.base.items():
-            if base <= addr < base + 0x10000000:
+        for mod, base, size in self.spans:
+            if base <= addr < base + size:
                 return f"{mod}+{addr - base:#x}"
         return f"{addr:#x}"
 
@@ -98,7 +100,7 @@ class Report:
         return self.images[mod]
 
     def module_of(self, addr: int) -> str:
-        return next(m for m, b in self.base.items() if b <= addr < b + 0x10000000)
+        return next(m for m, base, size in self.spans if base <= addr < base + size)
 
     def disasm(self, lo: int, hi: int, cap: int | None = None) -> None:
         mod = self.module_of(lo)
