@@ -18,9 +18,11 @@ def interp(b, stage: str, attr: int) -> str:
     return {1: "flat ", 3: "noperspective "}.get(modes.pop(), "") if len(modes) == 1 else ""
 
 def sampler_type(glsl_type: str) -> int:
-    """Ryujinx SamplerType (gfx_shader.c GfxShaderRes.type): 1 1D, 3 2D, 4 3D, 5 cube | 0x100 array, 0x200
+    """Ryujinx SamplerType (gfx_shader.c GfxShaderRes.type): 1 1D, 2 buffer, 3 2D, 4 3D, 5 cube | 0x100 array, 0x200
     multisample, 0x400 shadow."""
     base = glsl_type.removeprefix("sampler").removeprefix("u").removeprefix("image")
+    if base == "Buffer":
+        return 2
     ms = "MS" in base
     code = {"1D": 1, "2D": 3, "3D": 4, "Cube": 5}[base.removesuffix("Shadow").removesuffix("Array").replace("MS", "")]
     return code | (0x100 if "Array" in base else 0) | (0x200 if ms else 0) | (0x400 if base.endswith("Shadow") else 0)

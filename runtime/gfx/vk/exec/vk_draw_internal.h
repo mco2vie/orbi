@@ -27,7 +27,7 @@
 #define NVN_STAGE_FS 1
 #define NVN_STAGE_CS 5
 
-enum { W_PROGRAM, W_SHADER, W_PIPELINE, W_NO_VS, W_INDEX, W_UB, W_BIND, W_SSBO_ALIGN, W_SSBO_SLOT, W_RESTART, W_INDIRECT, W_LISTED_R32, W_COUNT };
+enum { W_PROGRAM, W_SHADER, W_PIPELINE, W_NO_VS, W_INDEX, W_UB, W_BIND, W_SSBO_ALIGN, W_SSBO_SLOT, W_RESTART, W_INDIRECT, W_LISTED_R32, W_TEXEL_FULL, W_TEXEL_FMT, W_TEXEL_ADDR, W_COUNT };
 void warn_once(int key, const char *fmt, ...);   // vk_exec_draw.c
 
 // ---- the recording thread's state (vk_exec_draw.c)

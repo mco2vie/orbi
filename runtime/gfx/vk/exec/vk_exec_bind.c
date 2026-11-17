@@ -335,6 +335,98 @@ static void tex_lock_once(int *locked) {
 }
 
 // locked: whether this thread holds the texture lock; taken here when a lookup needs it, released by the caller.
+// ---- buffer textures (NVN_TEXTURE_TARGET_BUFFER): texel buffer views over the guest memory they name. Until 17/11/2026
+// every UNIFORM/STORAGE_TEXEL_BUFFER binding got the zero view, so a shader that reads one read zeros and one that writes
+// one wrote nothing. Orbitals registers such textures as it loads a level (slots of fmt 0x2f, 128 texels, and fmt 0x1,
+// 65536 texels, logged just before the render thread read a null pointer at main+0x175dbd0 in both runs of 17/11/2026).
+// A view is made for (buffer, offset, range, format) once and kept until vk_texel_views_drop, which the pool code calls
+// before it destroys a buffer: the binding resolves the address the way storage buffers are (bind_range: the mirror, the
+// census and the written-range bookkeeping), so the view sees what the GPU and the CPU wrote there.
+#define TEXEL_VIEWS 4096
+typedef struct { VkBuffer buf; VkDeviceSize off, range; VkFormat fmt; VkBufferView view; } TexelView;
+static TexelView TVW[TEXEL_VIEWS];
+static int tvw_n;
+static PlatMutex tvw_lock = PLAT_MUTEX_INIT;
+
+void vk_texel_views_drop(VkBuffer b) {
+    if (!b) return;
+    plat_mutex_lock(&tvw_lock);
+    for (int i = 0; i < tvw_n;)
+        if (TVW[i].buf == b) {
+            vkDestroyBufferView(vk_ctx()->device, TVW[i].view, NULL);
+            TVW[i] = TVW[--tvw_n];
+        } else {
+            i++;
+        }
+    plat_mutex_unlock(&tvw_lock);
+}
+
+static VkBufferView texel_view_make(VkBuffer buf, VkDeviceSize off, VkDeviceSize range, VkFormat fmt) {
+    VkBufferView v = VK_NULL_HANDLE;
+    plat_mutex_lock(&tvw_lock);
+    for (int i = 0; i < tvw_n; i++)
+        if (TVW[i].buf == buf && TVW[i].off == off && TVW[i].range == range && TVW[i].fmt == fmt) {
+            v = TVW[i].view;
+            break;
+        }
+    if (!v && tvw_n < TEXEL_VIEWS) {
+        VkBufferViewCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO, .buffer = buf, .format = fmt,
+                                     .offset = off, .range = range};
+        if (vkCreateBufferView(vk_ctx()->device, &ci, NULL, &v) == VK_SUCCESS)
+            TVW[tvw_n++] = (TexelView){buf, off, range, fmt, v};
+        else
+            v = VK_NULL_HANDLE;
+    }
+    int full = !v && tvw_n >= TEXEL_VIEWS;
+    plat_mutex_unlock(&tvw_lock);
+    if (full) warn_once(W_TEXEL_FULL, "%d texel buffer views in use: further buffer textures bind the zero view", TEXEL_VIEWS);
+    return v;
+}
+
+// The view of the buffer texture with handle h (its slot id in the low 20 bits), or the zero view: an unregistered slot,
+// a slot that is not a buffer texture, a format without the texel buffer feature, or memory that is not backed.
+static VkBufferView texel_view(VkExec *ex, uint64_t h, int storage) {
+    uint64_t addr;
+    int fmt;
+    uint32_t texels;
+    if (!h || !vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels) || !addr || !texels) return Z.zview;
+    TexVkFormat f;
+    int bpb = nvn_fmt_bpb(fmt, NULL, NULL);
+    if (!tex_vk_format(fmt, &f) || f.ideal == VK_FORMAT_UNDEFINED || f.astc_bw || f.expand_rgb || bpb <= 0) {
+        warn_once(W_TEXEL_FMT, "buffer texture format %#x has no texel buffer format: the zero view is bound", fmt);
+        return Z.zview;
+    }
+    static VkFormatFeatureFlags feat[0x100];
+    static uint8_t feat_known[0x100];
+    if (!__atomic_load_n(&feat_known[fmt & 0xff], __ATOMIC_ACQUIRE)) {
+        VkFormatProperties fp;
+        vkGetPhysicalDeviceFormatProperties(vk_ctx()->phys, f.ideal, &fp);
+        feat[fmt & 0xff] = fp.bufferFeatures;
+        __atomic_store_n(&feat_known[fmt & 0xff], 1, __ATOMIC_RELEASE);
+    }
+    VkFormatFeatureFlags need = storage ? VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT : VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+    if (!(feat[fmt & 0xff] & need)) {
+        warn_once(W_TEXEL_FMT, "buffer texture format %#x is not a %s texel buffer format here: the zero view is bound", fmt,
+                  storage ? "storage" : "uniform");
+        return Z.zview;
+    }
+    const VkPhysicalDeviceLimits *l = &vk_ctx()->props.limits;
+    uint64_t max_texels = l->maxTexelBufferElements;
+    uint64_t n = (uint64_t)texels < max_texels ? texels : max_texels;
+    VkDescriptorBufferInfo bi;
+    uint64_t align = l->minTexelBufferOffsetAlignment ? l->minTexelBufferOffsetAlignment : 1;
+    if (!bind_range(ex, addr, n * (uint64_t)bpb, align, n * (uint64_t)bpb, VK_MUSE_SSBO, storage, &bi) || !bi.buffer) {
+        warn_once(W_TEXEL_ADDR, "buffer texture %#llx is not backed or not aligned: the zero view is bound",
+                  (unsigned long long)addr);
+        return Z.zview;
+    }
+    if (storage) note_written(ex, addr, bi.range);
+    VkDeviceSize range = bi.range - bi.range % (VkDeviceSize)bpb;
+    if (!range) return Z.zview;
+    VkBufferView v = texel_view_make(bi.buffer, bi.offset, range, f.ideal);
+    return v ? v : Z.zview;
+}
+
 static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, int separate, VkDescriptorImageInfo *out,
                      int *locked) {
     int td_on = td_mode();
@@ -891,10 +983,17 @@ void bind_resources(VkExec *ex, const VkPipeInfo *info) {
             int img = b->kind == GFX_RES_IMG;
             if (b->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER || b->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
                 kind = 2;
-                for (uint32_t k = 0; k < cnt; k++) {   // buffer textures are not replayed yet
+                for (uint32_t k = 0; k < cnt; k++) {   // the handle as for images and textures, then its view
+                    int slot = r->slot + (int)k;
+                    uint64_t h = 0;
+                    if (r->cbuf_slot >= 3)
+                        h = ubo_word(ex, st, r->cbuf_slot, r->handle + k) |
+                            (r->handle2 >= 0 ? ubo_word(ex, st, r->cbuf_slot, (uint32_t)r->handle2 + k) : 0);
+                    else if (img) h = slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
+                    else h = slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
                     o[k].w[0] = 0, o[k].w[1] = 0, o[k].w[2] = 0;
-                    o[k].view = Z.zview;
-                    if (need_w) bv[nd + k] = Z.zview;
+                    o[k].view = texel_view(ex, h, img);
+                    if (need_w) bv[nd + k] = o[k].view;
                 }
             } else if (xuse) {
                 kind = 1;

@@ -58,8 +58,12 @@ class TexOps:
     # Images: bound like textures (handle at c[bank5][tsPtrIdx * 4], named i<bank>_<idx>), declared without a format
     # (shaderStorageImageRead/WriteWithoutFormat) and as float images (hypothesis: an integer image would need its
     # format from the descriptor). Coordinates are integers from Ra, the array layer after the coordinates.
+    # 1D_BUFFER: a buffer texture (NVN_TEXTURE_TARGET_BUFFER) as an imageBuffer, bound as a storage texel buffer (the
+    # reflection's type 2, vk_pipe_layout.c descriptor_type). Orbitals: 10 programs store to one and 2 load from one
+    # (failed.tsv of 17/11/2026, "SUST 1D_BUFFER IGN", "SULD 1D_BUFFER IGN").
     IMG: ClassVar[dict[str, tuple[str, int]]] = {"1D": ("1D", 1), "2D": ("2D", 2), "3D": ("3D", 3),
-                                                 "1D_ARRAY": ("1DArray", 2), "2D_ARRAY": ("2DArray", 3)}  # fmt: skip
+                                                 "1D_ARRAY": ("1DArray", 2), "2D_ARRAY": ("2DArray", 3),
+                                                 "1D_BUFFER": ("Buffer", 1)}  # fmt: skip
 
     def image(self, i: Insn) -> tuple[str, str, int]:
         dim = i.sym("dim")

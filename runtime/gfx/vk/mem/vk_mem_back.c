@@ -324,6 +324,8 @@ void destroy_rec(VkCtx *c, PoolRec *r) {
             if (r->chunks[i].alloc) vk_guard_dead("physical pool chunk", (uint64_t)(uintptr_t)r->chunks[i].buf,
                                                   r->lo + i * phys_chunk(), r->chunks[i].use);
     }
+    vk_texel_views_drop(r->mbuf), vk_texel_views_drop(r->buf);   // views over them first (vk_exec_bind.c)
+    for (uint32_t i = 0; i < r->nchunks; i++) vk_texel_views_drop(r->chunks[i].buf);
     if (r->mbuf) vmaDestroyBuffer(c->vma, r->mbuf, r->malloc_);
     if (r->smap) mem_untrap(r->import_lo, r->import_hi - r->import_lo);   // trapped pages take their bytes from it
     if (r->salloc) vmaDestroyBuffer(c->vma, r->buf, r->salloc), r->buf = VK_NULL_HANDLE;
