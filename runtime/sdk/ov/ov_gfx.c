@@ -232,16 +232,40 @@ static void ov_latest_frame(Cpu *c) {
     if (out) *out = n;
     ret_x(c, out ? 0 : 1);
 }
-// int ListFrameHistory(FrameInfo *out, int count, const Layer *): no per-frame timing records kept
-static void ov_frame_history(Cpu *c) {
-    uint64_t k = __atomic_add_fetch(&g_history_calls, 1, __ATOMIC_RELAXED);
-    if (k <= 5 || !(k & (k - 1))) {
-        char lr[96];
-        rt_log("vi: ListFrameHistory #%llu count=%d out=%#llx (presented %llu) from %s", (unsigned long long)k,
-               (int)arg_x(c, 1), (unsigned long long)arg_x(c, 0), (unsigned long long)gfx_stats().frames,
-               ldr_describe(c->x[30] - 4, lr, sizeof lr));
+// int ListFrameHistory(FrameInfo *out, int count, const Layer *): no per-frame timing records kept.
+// Measured (run of 118 s): Unreal calls it from main+0x1540460 and main+0x15404c0 with out=0 and count=0, over 8192 times,
+// and gets 0 each time; GetLatestFrameNumber is called only 3 times. out=0 with count=0 reads as a size query ("how many
+// entries"). ORBITALS_FRAME_HISTORY=<cap> answers that query with min(frames presented, cap) instead of 0, to see whether the
+// game then asks for the entries (a call with out != 0 or count != 0 is logged, the first 20). Nothing is stored in a
+// buffer: the layout of FrameInfo is not known yet, so a call with a buffer still answers 0.
+static uint64_t g_history_real;
+
+static uint64_t history_cap(void) {
+    static uint64_t cap;
+    static int done;
+    if (!__atomic_load_n(&done, __ATOMIC_ACQUIRE)) {
+        const char *v = cfg_get("ORBITALS_FRAME_HISTORY");
+        cap = v && *v ? strtoull(v, NULL, 10) : 0;
+        __atomic_store_n(&done, 1, __ATOMIC_RELEASE);
     }
-    ret_x(c, 0);
+    return cap;
+}
+
+static void ov_frame_history(Cpu *c) {
+    uint64_t out = arg_x(c, 0);
+    int count = (int)arg_x(c, 1);
+    uint64_t presented = gfx_stats().frames, cap = history_cap();
+    uint64_t ret = (!out && count == 0) ? (presented < cap ? presented : cap) : 0;
+    uint64_t k = __atomic_add_fetch(&g_history_calls, 1, __ATOMIC_RELAXED);
+    int with_buffer = out || count;
+    uint64_t j = with_buffer ? __atomic_add_fetch(&g_history_real, 1, __ATOMIC_RELAXED) : 0;
+    if (k <= 5 || !(k & (k - 1)) || (with_buffer && j <= 20)) {
+        char lr[96];
+        rt_log("vi: ListFrameHistory #%llu count=%d out=%#llx -> %llu (presented %llu, cap %llu) from %s",
+               (unsigned long long)k, count, (unsigned long long)out, (unsigned long long)ret,
+               (unsigned long long)presented, (unsigned long long)cap, ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    }
+    ret_x(c, ret);
 }
 HOST_OVERRIDE("_ZN2nn2vi20GetLatestFrameNumberEPmPKNS0_5LayerE", ov_latest_frame);
 HOST_OVERRIDE("_ZN2nn2vi16ListFrameHistoryEPNS0_9FrameInfoEiPKNS0_5LayerE", ov_frame_history);
