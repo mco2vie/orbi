@@ -250,3 +250,27 @@ static void default_virtual_device(Cpu *c) {
     ret_x(c, 0);
 }
 HOST_OVERRIDE("_ZN2nn5audio6detail29GetDefaultVirtualOutputDeviceEPNS0_15AudioDeviceNameE", default_virtual_device);
+
+// nn::audio::OpenOutputStream (both overloads main imports, with and without a SystemEvent): no output stream, as a
+// console where the device cannot be opened. The SDK's code opens a console audio service over IPC (nn::sm::Initialize,
+// svc 0x1f at sdk+0x1a44ec, from main+0x6a45b90 in the game's audio output set-up), which the runtime does not serve:
+// the run stopped there about 20 s in. The runtime has the audio renderer (audren) and no output stream; failing the open
+// lets the caller take its own no-device path instead of the run ending. Whether this game has one is what the run tells:
+// it calls Start/Write/... of the stream afterwards only if it ignores the result. Module 153 is audio; the description
+// is a hypothesis, any failure says "not opened".
+#define AUDIO_R_STREAM_UNAVAILABLE (153u | (1u << 9))
+static void output_stream_unavailable(Cpu *c) {
+    static int logged;
+    if (!logged++) {
+        char lr[96];
+        rt_log("audio: OpenOutputStream -> %#x (no output stream) from %s", AUDIO_R_STREAM_UNAVAILABLE,
+               ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    }
+    ret_x(c, AUDIO_R_STREAM_UNAVAILABLE);
+}
+HOST_OVERRIDE("_ZN2nn5audio16OpenOutputStreamEPNS0_16OutputStreamTypeEPNS_2os11SystemEventEPvmRKNS0_15AudioDeviceNameERKNS0_"
+              "12StreamFormatEiiNS_4util10BitFlagSetILi32ENS0_16OutputStreamFlagEEE",
+              output_stream_unavailable);
+HOST_OVERRIDE("_ZN2nn5audio16OpenOutputStreamEPNS0_16OutputStreamTypeEPvmRKNS0_15AudioDeviceNameERKNS0_12StreamFormatEiNS_"
+              "4util10BitFlagSetILi32ENS0_16OutputStreamFlagEEE",
+              output_stream_unavailable);
