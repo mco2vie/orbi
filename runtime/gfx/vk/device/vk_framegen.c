@@ -1,4 +1,4 @@
-// Frame generation (MKW_FRAMEGEN=off|auto|2|3|4, off by default: the console does not do it): frames made between
+// Frame generation (ORBITALS_FRAMEGEN=off|auto|2|3|4, off by default: the console does not do it): frames made between
 // the game's, from its last two, so a game at 30 fps is shown at 60 (2x) and one at 60 at 120 on a fast display.
 // MKW hands out no motion vectors, so the motion comes from the pictures (optical flow), on the present thread and the
 // GPU only: nothing on the game thread or the replay thread (docs/roadmap.md).
@@ -62,7 +62,7 @@ static struct {
     float lambda, bias;
     // pacing (the present thread)
     uint64_t last_at, interval, frames, made_total;
-    int logged_mult, auto_m;   // auto_m: MKW_FRAMEGEN=auto's factor now (mult_now)
+    int logged_mult, auto_m;   // auto_m: ORBITALS_FRAMEGEN=auto's factor now (mult_now)
 } F;
 
 static VkPipeline make_pipeline(VkCtx *c, const uint32_t *code, size_t size, const int *spec, int nspec) {
@@ -83,7 +83,7 @@ static VkPipeline make_pipeline(VkCtx *c, const uint32_t *code, size_t size, con
     return p;
 }
 
-// MKW_FG_LAMBDA, MKW_FG_BIAS (tuning, with --probe-framegen): the search's cost per pixel of motion and for leaving
+// ORBITALS_FG_LAMBDA, ORBITALS_FG_BIAS (tuning, with --probe-framegen): the search's cost per pixel of motion and for leaving
 // zero, in mean luma difference per patch texel
 static float knob(const char *name, float def) {
     const char *e = cfg_get(name);
@@ -151,8 +151,8 @@ static int init(VkCtx *c) {
     if (vkAllocateCommandBuffers(c->device, &ai, F.cb) != VK_SUCCESS) return 0;
     for (int i = 0; i < SLOTS; i++)
         if (vkCreateFence(c->device, &fi, NULL, &F.fence[i]) != VK_SUCCESS) return 0;
-    F.lambda = knob("MKW_FG_LAMBDA", 0.0001f);
-    F.bias = knob("MKW_FG_BIAS", 0.003f);
+    F.lambda = knob("ORBITALS_FG_LAMBDA", 0.0001f);
+    F.bias = knob("ORBITALS_FG_BIAS", 0.003f);
     F.interval = 1000000000ull / 60;
     return F.ok = 1;
 }
@@ -329,7 +329,7 @@ int vk_fg_record(VkCommandBuffer cb, VkImage src, int sw, int sh, const int crop
 // The frames per game frame the setting asks for now: 0 off (also under the turbo, whose frames are dropped anyway),
 // else 1..VK_FG_MAX, at most what the swapchain has room for
 static int mult_now(void) {
-    const char *v = cfg_value("MKW_FRAMEGEN");
+    const char *v = cfg_value("ORBITALS_FRAMEGEN");
     if (!strcmp(v, "off") || turbo_speed() > 1) return 0;
     int m;
     if (!strcmp(v, "auto")) {
@@ -351,17 +351,17 @@ static int mult_now(void) {
     return m < 1 ? 1 : m;
 }
 
-int vk_fg_wanted(void) { return strcmp(cfg_value("MKW_FRAMEGEN"), "off") != 0; }
+int vk_fg_wanted(void) { return strcmp(cfg_value("ORBITALS_FRAMEGEN"), "off") != 0; }
 
-// MKW_FG_DUMP=<game frame> (checking, with MKW_FG_DUMP_DIR, default "."): from that game frame of frame generation on,
+// ORBITALS_FG_DUMP=<game frame> (checking, with ORBITALS_FG_DUMP_DIR, default "."): from that game frame of frame generation on,
 // four in a row as g<n>.png and the first frame made before each as m<n>.png, read back on the present thread (it
 // waits for the GPU then): tools/imagen/fg_check.py takes three g in a row (the made frame between the first and the
-// third against the second). MKW_SHOTS reads the game's pictures, black on some machines; these are what is shown.
+// third against the second). ORBITALS_SHOTS reads the game's pictures, black on some machines; these are what is shown.
 static struct { uint64_t at; VkBuffer buf; VmaAllocation alloc; void *map; VkDeviceSize size; } D;
 
 static int dump_record(VkCommandBuffer cb, const VkImage *out, int n, int w, int h) {
     if (!D.at) {
-        const char *e = cfg_get("MKW_FG_DUMP");
+        const char *e = cfg_get("ORBITALS_FG_DUMP");
         D.at = e && atoll(e) > 0 ? (uint64_t)atoll(e) : UINT64_MAX;
     }
     if (F.frames < D.at || F.frames >= D.at + 4 || (D.buf && D.size < (VkDeviceSize)w * h * 8)) return 0;
@@ -392,7 +392,7 @@ static void dump_write(VkFence fence, int n, int w, int h) {
     VkCtx *c = vk_ctx();
     vkWaitForFences(c->device, 1, &fence, VK_TRUE, 5000000000ull);
     vmaInvalidateAllocation(c->vma, D.alloc, 0, VK_WHOLE_SIZE);
-    const char *dir = cfg_get("MKW_FG_DUMP_DIR") ? cfg_get("MKW_FG_DUMP_DIR") : ".";
+    const char *dir = cfg_get("ORBITALS_FG_DUMP_DIR") ? cfg_get("ORBITALS_FG_DUMP_DIR") : ".";
     char path[1024];
     for (int k = 0; k < (n > 1 ? 2 : 1); k++) {
         snprintf(path, sizeof path, "%s/%c%llu.png", dir, k ? 'm' : 'g', (unsigned long long)F.frames);

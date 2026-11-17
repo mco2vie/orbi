@@ -162,7 +162,7 @@ static void wake(void) {
 }
 
 // A decoded picture as NV12 (w * h luma, then interleaved CbCr), made outside the lock: 5.5 MB a 2560x1440 frame, which
-// ReadDecoderOutputImageNv12 on the player's thread would otherwise wait for (MKW_HOST_TIME, live34).
+// ReadDecoderOutputImageNv12 on the player's thread would otherwise wait for (ORBITALS_HOST_TIME, live34).
 static uint8_t *nv12_of(const vpx_image_t *img) {
     uint32_t w = img->d_w, h = img->d_h, cw = (w + 1) / 2, ch = (h + 1) / 2;
     uint8_t *out = malloc((size_t)w * h + (size_t)cw * 2 * ch);
@@ -253,7 +253,7 @@ static void dec_main(void *arg) {
             }
             for (int k = 0; k < npics; k++) push_frame(d, pics[k], pw[k], ph[k], p.pts, 0);
         }
-        if (p.eos) push_frame(d, NULL, 0, 0, p.pts, 1), seqwatch_movie_end();
+        if (p.eos) push_frame(d, NULL, 0, 0, p.pts, 1);
         free(p.data);
         d->busy = 0;
         // a packet with no picture leaves room the player may be waiting for
@@ -404,7 +404,6 @@ static void ov_vp9_fini(Cpu *c) {
     memset(o + 8, 0, 8);
     rt_log("codec: VP9 decoder %u finalized", d->id);
     free(d);
-    skip_movie_closed();   // core/hacks/skip.c: MKW_SKIP_MOVIES stops pressing
     ret_x(c, 0);
 }
 

@@ -1,6 +1,6 @@
 // Catalog of the text the host shows the player (ui_text.h). One array per catalog language, indexed by UiTextId: a new
 // string gets an id in ui_text.h and an entry in every language that has one (a missing entry falls back to English).
-// Every language's array is generated from i18n/<lang>.po (tools/i18n/catalog.py, English from i18n/mkw.pot); the
+// Every language's array is generated from i18n/<lang>.po (tools/i18n/catalog.py, English from i18n/orbitals.pot); the
 // menu, the start screen and the setup page read them in the menu language, the software keyboard in the game's.
 #include <stdatomic.h>
 #include <string.h>
@@ -65,10 +65,10 @@ static const char *system_menu_lang(const char *tag) {
     return r ? r->lang : NULL;
 }
 
-// The menu language, re-read when cfg_version changes: MKW_MENU_LANG when it names a row, else the system UI language
+// The menu language, re-read when cfg_version changes: ORBITALS_MENU_LANG when it names a row, else the system UI language
 // when we have it, else English.
 static const char *resolve_menu_lang(void) {
-    const char *v = cfg_value("MKW_MENU_LANG");
+    const char *v = cfg_value("ORBITALS_MENU_LANG");
     const Row *r = v && *v ? find_row(v) : NULL;
     if (r) return r->lang;
     const char *sys = system_menu_lang(plat_ui_language());

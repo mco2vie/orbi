@@ -1,10 +1,10 @@
-// MKW_PASS_TIMING=1: where the GPU's time goes, by render pass size and compute program. The replay writes a GPU
+// ORBITALS_PASS_TIMING=1: where the GPU's time goes, by render pass size and compute program. The replay writes a GPU
 // timestamp before each pass begins and after it ends, around each dispatch and at the start of each submission; the
 // interval up to the next timestamp of the same submission counts for the pass's WxH or the dispatch's program, the
 // rest (copies, barriers and the idle wait for the next part of the submission) as "outside". A log line every 600 presents gives ms per frame for the
 // largest groups. A measurement: two timestamps and a query reset per pass. Off, its only cost is a branch.
 //
-// MKW_PASS_TIMING=draw also marks each draw and dispatch, inside passes too, and sums the interval up to the next mark
+// ORBITALS_PASS_TIMING=draw also marks each draw and dispatch, inside passes too, and sums the interval up to the next mark
 // by program pair (vertex or first mesh stage, fragment; compute alone): the log names the 40 costliest by their cache
 // keys (build/spirv/<key>.glsl). The end-of-pipe timestamps overlap draws, so a draw's interval is its share of the
 // time the GPU spent finishing it. The slots are reset on the host after each read (hostQueryReset), as a reset command
@@ -41,13 +41,13 @@ static struct { uint64_t ns, n; } pt_psum[PT_PAIRS];           // pt_lock
 int vk_pt_on(void) {
     if (pt_on >= 0) return pt_on;
     pt_on = 0;
-    const char *e = cfg_get("MKW_PASS_TIMING");
+    const char *e = cfg_get("ORBITALS_PASS_TIMING");
     if (!e || !*e || !strcmp(e, "0")) return 0;
     VkCtx *c = vk_ctx();
     VkQueryPoolCreateInfo qi = {.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, .queryType = VK_QUERY_TYPE_TIMESTAMP,
                                 .queryCount = PT_N};
     if (c->props.limits.timestampPeriod <= 0 || vkCreateQueryPool(c->device, &qi, NULL, &pt_pool) != VK_SUCCESS) {
-        rt_log("vk: MKW_PASS_TIMING: no timestamp query pool");
+        rt_log("vk: ORBITALS_PASS_TIMING: no timestamp query pool");
         return 0;
     }
     pt_period = c->props.limits.timestampPeriod;
@@ -60,10 +60,10 @@ int vk_pt_on(void) {
         vkResetQueryPool(c->device, pt_pool, 0, PT_N);
         pt_draws = !strcmp(e, "draw");
     } else if (!strcmp(e, "draw")) {
-        rt_log("vk: MKW_PASS_TIMING=draw needs hostQueryReset: timing by pass size only");
+        rt_log("vk: ORBITALS_PASS_TIMING=draw needs hostQueryReset: timing by pass size only");
     }
     pt_mask = ~0ull;   // the queue's valid bits: 64 on the devices measured; a wrap shows as one dropped interval
-    rt_log("vk: MKW_PASS_TIMING: GPU time by render pass size%s every 600 presents", pt_draws ? " and program pair" : "");
+    rt_log("vk: ORBITALS_PASS_TIMING: GPU time by render pass size%s every 600 presents", pt_draws ? " and program pair" : "");
     return pt_on = 1;
 }
 

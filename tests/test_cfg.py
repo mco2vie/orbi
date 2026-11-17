@@ -1,4 +1,4 @@
-"""Every setting the in-game menu writes to orbital.ini is a key the runtime reads back (runtime/core/base/cfg.c).
+"""Every setting the in-game menu writes to orbitals.ini is a key the runtime reads back (runtime/core/base/cfg.c).
 
 Why: HDR was in the menu's table but not in the list of known keys, so `HDR = off` written by the menu was dropped at
 the next start with "unknown key 'HDR'" (#168, 13/11/2026).

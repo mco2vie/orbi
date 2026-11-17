@@ -17,7 +17,7 @@
 void nvn_pool_invalidate(const pool_t *p, uint64_t off, uint64_t size) {
     if (!p->mem || nvn_gpu_only((uintptr_t)p->mem) || off >= p->size || !size) return;
     if (size > p->size - off) size = p->size - off;
-    mem_early_invalidate((uintptr_t)p->mem + off, size);   // MKW_EARLY_READ: no wait for other bytes of its pages
+    mem_early_invalidate((uintptr_t)p->mem + off, size);   // ORBITALS_EARLY_READ: no wait for other bytes of its pages
     gfx_backend()->guest_read((uintptr_t)p->mem + off, size);
 }
 
@@ -61,7 +61,7 @@ static uint64_t ticks_to_ns(uint64_t t) { return t * RT_TICK_NS; }
 // uint64_t nvnDeviceGetCurrentTimestampInNanoseconds(const NVNdevice *d)
 NVN_API(nvnDeviceGetCurrentTimestampInNanoseconds) { ret_x(c, ticks_to_ns(rt_ticks())); }
 // uint64_t nvnDeviceGetTimestampInNanoseconds(const NVNdevice *d, const NVNcounterData *counter)
-// The last value read is kept for MKW_FRAME_TRACE (game.c): the frame object reads its GPU end time with it.
+// The last value read is kept for ORBITALS_FRAME_TRACE (game.c): the frame object reads its GPU end time with it.
 volatile uint64_t nvn_timestamp_last;
 NVN_API(nvnDeviceGetTimestampInNanoseconds) {
     uint64_t t = ((const NVNcounterData *)arg_p(c, 1))->timestamp;

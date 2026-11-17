@@ -1,4 +1,4 @@
-// MKW_REUSE: the recorder ring's side (vk_rec_reuse.c) of reusing a draw's packets in a later frame (vk_exec_reuse.c).
+// ORBITALS_REUSE: the recorder ring's side (vk_rec_reuse.c) of reusing a draw's packets in a later frame (vk_exec_reuse.c).
 #pragma once
 #include <stdint.h>
 

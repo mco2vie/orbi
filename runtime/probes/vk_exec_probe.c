@@ -3,7 +3,7 @@
 // the completion thread; a guest-memory word a callback writes is visible once fence_wait returns; finish drains every
 // submission; a present of a cleared vk_texture.c image (layout GENERAL) reads back exactly through the swapchain
 // capture. Clear part: a hand-built op stream (SET_RT to an RGBA8 and a D32 texture, whole-target clears,
-// then scissored clears) through submit reads back exactly with read_texels. Rtstats part: MKW_RTSTATS's rules on
+// then scissored clears) through submit reads back exactly with read_texels. Rtstats part: ORBITALS_RTSTATS's rules on
 // cleared targets (test_rtstats). Target history part: which targets count as rendered recently (test_recent).
 #include <math.h>
 #include <stdio.h>
@@ -148,7 +148,7 @@ static int test_present(const GfxBackend *b, uint8_t *guest, int *w_out, int *h_
 
     uint64_t frames = gfx_stats().frames;
     // the exact colour check needs the bilinear blit: FSR's approximate reciprocals move a flat colour by 1/255
-    plat_setenv("MKW_UPSCALER", "bilinear");
+    plat_setenv("ORBITALS_UPSCALER", "bilinear");
     vk_present_capture(1);
     const int crop[4] = {0, 0, TEX_W, TEX_H};
     b->present(&t, crop, 0);
@@ -357,7 +357,7 @@ static int test_xfer(const GfxBackend *b, uint8_t *guest, int *bytes) {
     memcpy(&clv, cl, 4);
     for (int i = 0; i < XF_W * XF_H; i++) CHECK(px[i] == clv, "CLEAR_TEX texel %d is %08x, expected %08x", i, px[i], clv);
     CHECK(*event == 12, "event word is %u after WRITE 7 and ADD 5", *event);
-    // (MKW_REPORT_AT_SUBMIT, the default: the front end writes timestamp reports at the submit, which this stream skips)
+    // (ORBITALS_REPORT_AT_SUBMIT, the default: the front end writes timestamp reports at the submit, which this stream skips)
     if (nvn_report_at_submit())
         CHECK(ctr->counter == 99 && ctr->timestamp == 0, "a timestamp report the replay left alone is {%llu, %llu}",
               (unsigned long long)ctr->counter, (unsigned long long)ctr->timestamp);
@@ -465,7 +465,7 @@ static int test_pitch(const GfxBackend *b, uint8_t *guest, int *bytes) {
 }
 
 // A texture in a physical pool's memory that nothing wrote reads zero, as Switch pool memory starts zeroed
-// (MKW_FIX_ZERO; the driver may return zeros without it, then this is a guard).
+// (ORBITALS_FIX_ZERO; the driver may return zeros without it, then this is a guard).
 static int test_zero(const GfxBackend *b, uint8_t *guest, int *bytes) {
     pool_t phys = {.magic = NVN_POOL_MAGIC, .flags = 0x189, .mem = (uint8_t *)(uintptr_t)RT_GPU_VA_BASE, .size = 0x100000,
                    .game_mem = guest + 0xA00000};
@@ -638,7 +638,7 @@ static int test_mirror(const GfxBackend *b, uint8_t *guest, int *bytes) {
     return 0;
 }
 
-// MKW_RTSTATS (diag/vk_rtstats.c), on for this part only, every frame: an RGBA16F target cleared to grey with a NaN
+// ORBITALS_RTSTATS (diag/vk_rtstats.c), on for this part only, every frame: an RGBA16F target cleared to grey with a NaN
 // rectangle cleared in a pass breaks the nan rule and not the constant one; the same target cleared twice to grey
 // breaks the constant one. Each rule is counted from what the part adds.
 static int test_rtstats(const GfxBackend *b, uint8_t *guest) {
@@ -679,10 +679,10 @@ static int test_rtstats(const GfxBackend *b, uint8_t *guest) {
 
 int probe_vkexec(void) {
     main_tid = plat_thread_id();
-    // The exact colour checks need the plain picture, whatever orbital.ini says: the SDR swapchain (HDR10, MKW_HDR auto on an
+    // The exact colour checks need the plain picture, whatever orbitals.ini says: the SDR swapchain (HDR10, ORBITALS_HDR auto on an
     // HDR screen, encodes them in PQ) and no performance overlay (it draws over the top right corner)
-    plat_setenv("MKW_HDR", "off");
-    plat_setenv("MKW_PERF_OVERLAY", "off");
+    plat_setenv("ORBITALS_HDR", "off");
+    plat_setenv("ORBITALS_PERF_OVERLAY", "off");
     const GfxBackend *b = &gfx_vulkan_backend;
     uint64_t heap = 0;
     CHECK(mem_set_heap_size(16ull << 20, &heap) == 0 && heap, "SetHeapSize 16 MiB");
@@ -731,9 +731,9 @@ int probe_vkexec(void) {
            "Downsample 64x64 -> 32x32 within 1 of the 2x2 average, stencil view aspect of D24S8, %d bytes compared)\n",
            nvnx_bytes);
     printf("probe-vkexec: c0 and zero parts passed (c0 tables, dispatch size, point size and base instance at their offsets, "
-           "unbound slots zero; %d bytes of an unwritten physical-pool texture read zero, MKW_FIX_ZERO=%s)\n",
-           zero_bytes, cfg_value("MKW_FIX_ZERO"));
-    printf("probe-vkexec: rtstats part passed (MKW_RTSTATS: a NaN rectangle in a %dx%d RGBA16F target hit the nan rule "
+           "unbound slots zero; %d bytes of an unwritten physical-pool texture read zero, ORBITALS_FIX_ZERO=%s)\n",
+           zero_bytes, cfg_value("ORBITALS_FIX_ZERO"));
+    printf("probe-vkexec: rtstats part passed (ORBITALS_RTSTATS: a NaN rectangle in a %dx%d RGBA16F target hit the nan rule "
            "only, the same target all grey the constant rule only, no inf)\n", TEX_W, TEX_H);
     printf("probe-vkexec: target history part passed (a target rendered the frame before and a layer rendered 12 frames "
            "before are recent; one last rendered 60 frames before and one never rendered are not)\n");

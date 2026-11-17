@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mkw-recomp\nLanguage: eu\nMIME-Version: 1.0\nContent-Type: text/plain; "
+"Project-Id-Version: orbitals-recomp\nLanguage: eu\nMIME-Version: 1.0\nContent-Type: text/plain; "
 "charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.
@@ -80,14 +80,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "Zenbat aldiz azkarrago. PC motel batek ezin du lortu."
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "Saltatu bideoak"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "Kopen eta zirkuituen sarrerak saltatzen ditu hasi bezain pronto."
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "Ausazkotasun bera beti"
@@ -111,40 +103,6 @@ msgid ""
 msgstr ""
 "F3k jokoa pantailako fotogramaren gainean gelditzen du eta berriro abiarazten du; F4k fotograma "
 "bat aurreratzen du. Une bat hurbiletik begiratzeko."
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Desblokeatu dena"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Gidari eta jantzi guztiak, ibilgailuak eta pegatinak, Kopa Berezia eta Ispilua. Jokoak gordetzen "
-"duenean zure partidan sartzen da: itzaltzeak ez ditu berriro blokeatzen."
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Zuzenean hona"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Hasieran menuetatik bere kabuz pasatzen da. Denbora-proba: Mario, kart estandarra eta jokoak "
-"proposatzen duen zirkuitua («Ausazkotasun bera beti» aukerarekin beti bera), aurkaririk gabe. "
-"Ibilaldi librea: mundu irekia. Agintea erabiltzen jarraitu dezakezu."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Denbora-proba"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Ibilaldi librea"
 
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
@@ -187,18 +145,6 @@ msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
 msgid "Quarter"
 msgstr "Laurdena"
 
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "Xehetasun-distantzia"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"Objektuek eredu xehatuak noraino mantentzen dituzten, soilagoetara pasatu aurretik. Kontsola "
-"Switch 2-rena da. Fotograma-maiztasunean eragina: txikia."
-
 msgctxt "UI_MENU_DETAIL_LOW"
 msgid "Low"
 msgstr "Baxua"
@@ -218,19 +164,6 @@ msgstr "Altua"
 msgctxt "UI_MENU_DETAIL_ULTRA"
 msgid "Very high"
 msgstr "Oso altua"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "Itzalen kalitatea"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"Jokoak itzalak marrazteko erabiltzen duen mapa-tamaina. Txikiagoa arinagoa da txartel "
-"grafikoarentzat, itzalen ertzak lausoagoak izanik. Kontsolan 3072 da dockean eta 2048 eskuko "
-"moduan. Fotograma-maiztasunean eragina: txikia."
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -307,39 +240,6 @@ msgctxt "UI_MENU_QUALITY_CUSTOM"
 msgid "Custom"
 msgstr "Pertsonalizatua"
 
-msgctxt "UI_MENU_RESOLUTION"
-msgid "Internal resolution"
-msgstr "Barne-bereizmena"
-
-msgctxt "UI_MENU_RESOLUTION_DESC"
-msgid ""
-"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
-"integrated graphics. Original is the console's (up to 1440p)."
-msgstr ""
-"Jokoak eszenak errenderizatzen dituen lerro kopurua, gero leihora eskalatua. Baxuagoa azkarragoa "
-"da: 720p grafiko integratuentzat egokia da. Jatorrizkoa kontsolarena da (1440p arte)."
-
-msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
-msgid "Original"
-msgstr "Jatorrizkoa"
-
-msgctxt "UI_MENU_ASPECT"
-msgid "Aspect ratio"
-msgstr "Aspektu-erlazioa"
-
-msgctxt "UI_MENU_ASPECT_DESC"
-msgid ""
-"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
-"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
-msgstr ""
-"16:9 baino zabalagoak zirkuituaren alboak gehiago erakusten ditu, pantaila ultrazabaletarako. "
-"16:9 kontsolarena da; Leihoak leihoaren edo monitorearen forma hartzen du. Menuak luzatuta "
-"geratzen dira oraingoz."
-
-msgctxt "UI_MENU_ASPECT_WINDOW"
-msgid "Window"
-msgstr "Leihoa"
-
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
 msgstr "Aurkezpena"
@@ -411,19 +311,6 @@ msgstr "%.0f fps"
 msgctxt "UI_PERF_LINE_FPS_FG"
 msgid "%.0f/%.0f fps"
 msgstr "%.0f/%.0f fps"
-
-msgctxt "UI_MENU_FPS"
-msgid "Frame rate"
-msgstr "Fotograma-maiztasuna"
-
-msgctxt "UI_MENU_FPS_DESC"
-msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
-msgstr ""
-"Jokoak lortu nahi duen segundoko fotograma kopurua. Automatikoa kontsolarena da: 60, edo 30 "
-"fotograma batek luze irauten duenean. Zure ordenagailuak 60 eutsi ezin badio, aukeratu 30, "
-"lasterketak benetako abiaduran joan dadin."
 
 msgctxt "UI_MENU_FPS_AUTO"
 msgid "Automatic"
@@ -549,13 +436,10 @@ msgstr "LAN jokoa"
 
 msgctxt "UI_MENU_LAN_DESC"
 msgid ""
-"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
-"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
-"the next start."
+"Lets the game reach other PCs on the same local network when it asks for a local network "
+"connection, for local network play. It only reaches local network addresses, never the internet. "
+"Applies at the next start."
 msgstr ""
-"Izenburu-menuko haririk gabeko jokoa LAN joko bihurtzen da, sare lokal bereko beste PC batzuekin "
-"lasterketak egiteko (49152 eta 35000 UDP atakak). Sare lokaleko helbideetara bakarrik iristen da, "
-"inoiz ez internetera. Hurrengo abiaraztean aplikatzen da."
 
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
@@ -1664,10 +1548,6 @@ msgctxt "UI_MENU_OV_OUTPUT"
 msgid "Game image"
 msgstr "Jokoaren irudia"
 
-msgctxt "UI_MENU_OV_INTERNAL"
-msgid "Internal resolution"
-msgstr "Barne-bereizmena"
-
 msgctxt "UI_MENU_OV_SCALING"
 msgid "Scaling"
 msgstr "Eskalatzea"
@@ -1762,13 +1642,10 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Orbitals with its update, dumped "
+"from your console (a .nup package, or the exefs and romfs folders). The setup checks its build "
+"and builds the game code on this computer."
 msgstr ""
-"Jokoa ez dator portarekin: zure kontsolatik atera duzun Mario Kart World 1.0.0/1.8.0-ren zure "
-"kopia behar da (exefs eta romfs karpetak). Konfigurazioak bertsioa egiaztatzen du, jokoaren kodea "
-"ordenagailu honetan eraikitzen du eta shaderrak itzultzen ditu."
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1836,10 +1713,8 @@ msgstr "%s enkriptatuta dago: jokoaren exefs desenkriptatuta egon behar da"
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid ""
-"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
+msgid "the game is not a supported build of Orbitals (build id %s)"
 msgstr ""
-"jokoa ez da Mario Kart World 1.0.0/1.8.0 (build id %s): 1.0.0/1.8.0 bertsioa soilik onartzen da"
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"
@@ -2050,88 +1925,6 @@ msgctxt "UI_MOD_ERR_UNPACK"
 msgid "Cannot open this archive: .rar and .7z need bsdtar (libarchive) installed"
 msgstr "Ezin da artxibo hau ireki: .rar eta .7z fitxategiek bsdtar (libarchive) behar dute"
 
-#. The Mods page's two tabs: the player's mods, and GameBanana's.
-msgctxt "UI_MOD_TAB_INSTALLED"
-msgid "Installed"
-msgstr "Instalatuta"
-
-msgctxt "UI_MOD_TAB_FIND"
-msgid "Find on GameBanana"
-msgstr "Bilatu GameBananan"
-
-#. Shown above the GameBanana list: the project hosts no mods.
-msgctxt "UI_GB_NOTE"
-msgid ""
-"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
-"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
-"mods. Each mod has its own license."
-msgstr ""
-"Modak egileek sortzen dituzte eta instalatzean GameBananatik deskargatzen dira. Proiektu hau ez "
-"dago GameBananarekin ezta moden egileekin lotuta, eta ez ditu modak ostatatzen, berrikusten edo "
-"onartzen. Mod bakoitzak bere lizentzia du."
-
-msgctxt "UI_GB_SEARCH"
-msgid "Search"
-msgstr "Bilatu"
-
-msgctxt "UI_GB_SORT_DOWNLOADS"
-msgid "Most downloaded"
-msgstr "Deskargatuenak"
-
-msgctxt "UI_GB_SORT_NEW"
-msgid "Newest"
-msgstr "Berrienak"
-
-msgctxt "UI_GB_SORT_LIKES"
-msgid "Most liked"
-msgstr "Gustukoenak"
-
-msgctxt "UI_GB_LOADING"
-msgid "Loading..."
-msgstr "Kargatzen..."
-
-msgctxt "UI_GB_NONE"
-msgid "No mods found"
-msgstr "Ez da modrik aurkitu"
-
-#. %s: the mod's author on GameBanana.
-msgctxt "UI_GB_BY"
-msgid "by %s"
-msgstr "egilea: %s"
-
-#. %s: the mod's license, e.g. "CC BY-NC-ND 4.0".
-msgctxt "UI_GB_LICENSE"
-msgid "License: %s"
-msgstr "Lizentzia: %s"
-
-msgctxt "UI_GB_OPEN"
-msgid "Open its GameBanana page"
-msgstr "Ireki bere GameBanana orria"
-
-#. %s: the file's name.
-msgctxt "UI_GB_INSTALL"
-msgid "Install %s"
-msgstr "Instalatu %s"
-
-#. First %s: the file's name; second %s: its author.
-msgctxt "UI_GB_CONFIRM"
-msgid "Download %s by %s from GameBanana and install it?"
-msgstr "%s (egilea: %s) GameBananatik deskargatu eta instalatu?"
-
-msgctxt "UI_GB_UNSAFE"
-msgid "Not offered: GameBanana's virus scan has not marked this file clean"
-msgstr "Ez da eskaintzen: GameBananaren birus-azterketak ez du fitxategi hau garbi gisa markatu"
-
-#. %d: this page; %d: how many pages.
-msgctxt "UI_GB_PAGE"
-msgid "Page %d of %d"
-msgstr "%d. orria, %d orritik"
-
-#. %s: what failed (an English detail from the network).
-msgctxt "UI_GB_ERROR"
-msgid "GameBanana did not answer: %s"
-msgstr "GameBananak ez du erantzun: %s"
-
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
 msgid ""
@@ -2214,9 +2007,9 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
 msgstr ""
-"Azken partida errore batengatik gelditu zen. logs/orbital.log erantsita jakinarazteak konpontzen "
+"Azken partida errore batengatik gelditu zen. logs/orbitals.log erantsita jakinarazteak konpontzen "
 "laguntzen du."
 
 #. printf format: keep every %... conversion, in the same order.
@@ -2333,10 +2126,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "Steam-en zain"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "steam_appid behar du orbital.ini-n"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "steam_appid behar du orbitals.ini-n"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2413,14 +2206,15 @@ msgstr "Steam aplikazioaren IDa"
 
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
-"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"The Steam game orbitals-recomp runs as for Remote Play Together. Automatic: the game whose launch "
+"options start orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you "
+"own with Remote Play Together works. Another number: steam_appid in orbitals.ini. Takes effect at "
+"the next start."
 msgstr ""
-"mkw Remote Play Together-erako zein Steam jokotzat exekutatzen den. Automatikoa: "
-"abiarazte-aukerek mkw abiarazten duten jokoa (\"C:\\...\\mkw.exe\" %command%); beraz, Remote Play "
-"Together duen zure edozein Steam jokok balio du. Beste zenbaki bat: steam_appid orbital.ini "
-"fitxategian. Hurrengo abiaraztean aplikatzen da."
+"orbitals-recomp Remote Play Together-erako zein Steam jokotzat exekutatzen den. Automatikoa: "
+"abiarazte-aukerek orbitals-recomp abiarazten duten jokoa (\"C:\\...\\orbitals-recomp.exe\" "
+"%command%); beraz, Remote Play Together duen zure edozein Steam jokok balio du. Beste zenbaki "
+"bat: steam_appid orbitals.ini fitxategian. Hurrengo abiaraztean aplikatzen da."
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2432,8 +2226,8 @@ msgstr "Automatikoa (Steam-ek abiarazitako jokoa)"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
+msgstr "%s (orbitals.ini)"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2443,14 +2237,14 @@ msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
-"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"press Enter or A. orbitals-recomp runs as that game from the next start, and the Steam App ID row "
+"above keeps it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "Idatzi teklatuko zenbaki-teklekin Remote Play Together duen eta zurea den Steam joko baten "
 "aplikazio-IDa (jokoaren dendako helbideko zenbakia da, store.steampowered.com/app/<number>/), eta "
-"sakatu Sartu edo A. Hurrengo abiaraztetik aurrera mkw joko horren gisa exekutatzen da, eta goiko "
-"Steam aplikazioaren IDa errenkadak bere zerrendan gordetzen du (steam_appids orbital.ini "
-"fitxategian). Atzera teklak zifra bat ezabatzen du."
+"sakatu Sartu edo A. Hurrengo abiaraztetik aurrera orbitals-recomp joko horren gisa exekutatzen "
+"da, eta goiko Steam aplikazioaren IDa errenkadak bere zerrendan gordetzen du (steam_appids "
+"orbitals.ini fitxategian). Atzera teklak zifra bat ezabatzen du."
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

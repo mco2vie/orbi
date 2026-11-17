@@ -1,4 +1,4 @@
-// MKW_REUSE (vk_exec_reuse.c): a draw whose replay state equals one
+// ORBITALS_REUSE (vk_exec_reuse.c): a draw whose replay state equals one
 // recorded in an earlier frame gets that draw's packets again instead of being replayed. The hooks the rest of the
 // replay calls: the state hash's writers, the draw, and what a captured draw resolves.
 #pragma once
@@ -8,7 +8,7 @@
 #include "vk.h"
 #include "vk_exec.h"
 
-extern int ru_on;   // MKW_REUSE: 0 off, 1 on, 2 check (every hit also replayed and compared); set at the first submission
+extern int ru_on;   // ORBITALS_REUSE: 0 off, 1 on, 2 check (every hit also replayed and compared); set at the first submission
 
 void ru_submission(VkExec *ex);   // vk_exec_record, before the walk
 
@@ -16,7 +16,7 @@ void ru_submission(VkExec *ex);   // vk_exec_record, before the walk
 // it, then calls ru_draw_end.
 int ru_draw(VkExec *ex, uint32_t op, const void *payload);
 void ru_draw_end(VkExec *ex);
-void ru_log(void);   // MKW_TRACE=perf: hits, misses by cause
+void ru_log(void);   // ORBITALS_TRACE=perf: hits, misses by cause
 
 // What a draw being captured resolves (ru_cap is set only then, on the replay thread).
 typedef struct RuCap RuCap;

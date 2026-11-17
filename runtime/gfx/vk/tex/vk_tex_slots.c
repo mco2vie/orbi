@@ -145,7 +145,7 @@ static void unresolved_note(int id, const TexSlot *s) {
            id, (unsigned long long)(uintptr_t)s->t.mem, d->format, d->target, d->width, d->height, d->depth, d->levels, d->flags);
 }
 
-// MKW_REG_LATE=1 (a measurement, with MKW_REG_QUEUED off): the replay resolving a slot that the game registered again
+// ORBITALS_REG_LATE=1 (a measurement, with ORBITALS_REG_QUEUED off): the replay resolving a slot that the game registered again
 // after the submission being recorded was made. Registrations apply at once on the game's thread while the replay
 // records a few submits behind: such a lookup gets what the game put there for a later frame (vk_backend.c reg_queued;
 // Hookshot's "MKW shadows in bands for a frame"; candados-lectura, the kart's shadow). One line a frame with the count
@@ -204,7 +204,7 @@ const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view) {
 }
 
 // Whether slot id had its freshness check in submit epoch ep (vk_texture_epoch) on an entry still current, so that
-// vk_texture_by_id_locked would only repeat it: the chunks of MKW_REPLAY_PAR skip the texture lock for the first binding
+// vk_texture_by_id_locked would only repeat it: the chunks of ORBITALS_REPLAY_PAR skip the texture lock for the first binding
 // of a slot another chunk already checked (each thread's descriptor memo is its own). Unlocked; a registration since
 // clears it, and an entry created, dropped or released at the slot's address moves its agen.
 int vk_texture_checked(int id, uint32_t ep) {
@@ -316,11 +316,11 @@ static VkSampler make_sampler(VkCtx *c, const samp_par *d) {
     if (si.maxLod < si.minLod) si.maxLod = si.minLod;
     float lim = c->props.limits.maxSamplerLodBias;
     si.mipLodBias = fmaxf(-lim, fminf(lim, d->lod_bias));
-    // MKW_ANISO=N (Graphics tab; "game" by default): at least N-times anisotropic
+    // ORBITALS_ANISO=N (Graphics tab; "game" by default): at least N-times anisotropic
     // filtering on mipmapped samplers with linear filtering, on top of what the game asks.
     float aniso = d->aniso;
     static float aniso_min = -1;
-    if (aniso_min < 0) aniso_min = (float)atof(cfg_value("MKW_ANISO"));   // "game": 0
+    if (aniso_min < 0) aniso_min = (float)atof(cfg_value("ORBITALS_ANISO"));   // "game": 0
     if (mf >= NVN_MIN_FILTER_NEAREST_MIPMAP_NEAREST && si.minFilter == VK_FILTER_LINEAR && aniso < aniso_min) aniso = aniso_min;
     if (aniso > 1) {
         si.anisotropyEnable = VK_TRUE;

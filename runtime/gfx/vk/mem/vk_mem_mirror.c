@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------- VRAM mirror of buffer-bound pools
 // An imported pool keeps vertices, indices, constants
 // and storage buffers in system memory, so a discrete GPU reads them over PCIe on every draw (GTX 1050 Ti and RTX
-// 3090 Ti: about 110 ms of GPU time per frame in the field). In mirror mode (device class discrete, MKW_MEMORY) an
+// 3090 Ti: about 110 ms of GPU time per frame in the field). In mirror mode (device class discrete, ORBITALS_MEMORY) an
 // imported pool gets a device-local buffer over its imported range the first time the replay uses it as a vertex,
 // index, uniform, storage or indirect buffer (vk_mem_use). From then on those bindings, and the buffer copies, fills
 // and uniform updates that touch the pool (vk_mem_pick), use the mirror at the same offsets. Guest memory stays what
@@ -29,7 +29,7 @@
 // - GPU -> guest: what the replay writes into a mirror (storage buffers its shaders write, buffer copies, fills,
 //   uniform updates, texture-to-buffer copies: vk_mem_gpu_wrote) goes back into the imported buffer at the end of the
 //   submission, exact byte ranges, before the fence signals (vk_mem_mirror_end).
-// - MKW_MEMORY=verify: every submission also copies up to VERIFY_BYTES of mirror pages, round robin, into host memory;
+// - ORBITALS_MEMORY=verify: every submission also copies up to VERIFY_BYTES of mirror pages, round robin, into host memory;
 //   at its fence the pages the CPU has not written since their sync are compared with guest memory.
 // A pool stays imported when its mirror would not fit the VRAM budget, its range is not write-watched, it overlaps
 // another pool or the allocation fails.
@@ -41,7 +41,7 @@ enum { MR_BUDGET, MR_UNTRACKED, MR_OVERLAP, MR_ALLOC, MR_N };
 int vk_mirror_on;
 int mirror_verify;
 int mirror_gap = 2;             // pre-snap: hot pools at most this many 2 MiB regions apart share one query
-int mirror_cpu_gen = 1;         // MKW_MIRROR_CPU_GEN (default 1; "ab"): sync by the CPU stamps only (vk_mem_gen.c)
+int mirror_cpu_gen = 1;         // ORBITALS_MIRROR_CPU_GEN (default 1; "ab"): sync by the CPU stamps only (vk_mem_gen.c)
 static PoolRec **mlist;                // pool_lock: mirrored pools by import_lo
 static int nm, mcap;
 static uint32_t msub;                  // replay: number of the submission being recorded
@@ -49,7 +49,7 @@ static uint32_t mepoch;                // replay: its write-watch snapshot epoch
 typedef struct { PoolRec *r; uint64_t off, size; } MRange;
 static MRange *pend, *wbl;             // replay: copies for the next prologue; GPU writes into mirrors this submission
 static int npend, cpend, nwbl, cwbl;
-// MKW_MIRROR_REUP=1 (diagnosis, replay only): the GPU writes of the last submission, to count the pages the next sync
+// ORBITALS_MIRROR_REUP=1 (diagnosis, replay only): the GPU writes of the last submission, to count the pages the next sync
 // uploads again although only the GPU wrote them since (NX2navi 6c971b7 saved 57 of 60 MiB a frame that way; here the
 // write-back is a GPU copy that stamps no page, so the count should stay near zero; mir-reup, 14/11/2026).
 static MRange *wbprev;
@@ -300,7 +300,7 @@ static void mirror_sync(PoolRec *r) {
     mrep.sync_t += qpc() - t0;
 }
 
-// The replay's chunks record on several threads (MKW_REPLAY_PAR): a pool's first access of the submission (creation,
+// The replay's chunks record on several threads (ORBITALS_REPLAY_PAR): a pool's first access of the submission (creation,
 // sync) and the write-back list go under use_lock; a pool already synced in this submission is read without it.
 static PlatMutex use_lock = PLAT_MUTEX_INIT;
 
@@ -534,7 +534,7 @@ int vk_mem_mirror_end(VkCommandBuffer cb, uint64_t fence) {
         mrep.wb_ranges += (uint64_t)nwbl;
         rec += copy_ranges(cb, wbl, nwbl, 0, &mrep.wb_bytes, &mrep.wb_copies) + 2;
         if (reup_diag < 0) {
-            const char *e = cfg_get("MKW_MIRROR_REUP");
+            const char *e = cfg_get("ORBITALS_MIRROR_REUP");
             reup_diag = e && *e && strcmp(e, "0") != 0;
         }
         if (reup_diag) {
@@ -556,7 +556,7 @@ int vk_mem_mirror_end(VkCommandBuffer cb, uint64_t fence) {
     return rec;
 }
 
-// One summary line: with MKW_TRACE=perf every 60 frames, else at frames 600 and 1800.
+// One summary line: with ORBITALS_TRACE=perf every 60 frames, else at frames 600 and 1800.
 void mirror_log(uint64_t frame) {
     static uint64_t last;
     ww_log(frame);
@@ -577,7 +577,7 @@ void mirror_log(uint64_t frame) {
            "%lld, overlapping %lld, failed %lld; per frame: submits %.2f, syncs %.1f, upload %.3f MiB in %.1f ranges, "
            "first use %.2f pools %.3f MiB, write-back %.3f MiB in %.1f ranges, flush calls %.1f (%.3f MiB), queries "
            "%.1f pre-snap (%.1f MiB) + %.1f sync, prologues %.2f, tracking cpu %.3f ms (pre-snap %.3f, syncs %.3f)%s"
-           "; GPU-written kept %.3f MiB%s%.3f MiB uploaded again after only the GPU wrote them (MKW_MIRROR_REUP)",
+           "; GPU-written kept %.3f MiB%s%.3f MiB uploaded again after only the GPU wrote them (ORBITALS_MIRROR_REUP)",
            (unsigned long long)frame, (long long)m_live_n, m_live_bytes / M, (long long)m_refused_n[MR_BUDGET],
            m_refused_bytes[MR_BUDGET] / M, (long long)m_refused_n[MR_UNTRACKED], (long long)m_refused_n[MR_OVERLAP],
            (long long)m_refused_n[MR_ALLOC], a.subs / f, a.syncs / f, a.upload_bytes / f / M, a.upload_copies / f,

@@ -129,7 +129,7 @@ class SimdC:
 
     def fp16_misc2(self, w):
         """AdvSIMD two-register miscellaneous (FP16): FABS and FNEG only, the sign bit of each 16-bit lane, exact with
-        no half-precision arithmetic (MKW 1.8.0's sdk has four FNEG v.8h, the first FP16 vector instructions met)."""
+        no half-precision arithmetic (the first game's 1.8.0 sdk has four FNEG v.8h, the first FP16 vector instructions met)."""
         Q, U, opc, n, d = bits(w, 30, 1), bits(w, 29, 1), bits(w, 12, 5), bits(w, 5, 5), bits(w, 0, 5)
         if opc != 0b01111:
             raise Unsupported('fp16 misc')

@@ -39,10 +39,6 @@ uint32_t romfs_entry_type(int *out, const char *path);
 uint32_t romfs_list(const char *path, int (*add)(const char *name, int is_dir, uint64_t size, void *ctx), void *ctx);
 uint64_t romfs_file_count(void);                           // files in the index (fs_init first)
 int romfs_has_language(const char *lang);                  // the index has Mals/<region><lang>/ ("pl", "th"): 1.5.0 and 1.7.0
-// ---- romfs_res.c
-const char *romfs_resolution_overlay(void);   // MKW_RESOLUTION's overlay, NULL for the game's own
-void romfs_resolution_external(void);         // the overlay came from MKW_ROMFS_PATCHES instead
-int romfs_resolution_lines(void);             // lines applied at start: 0 the game's own, -1 MKW_ROMFS_PATCHES's
 const char *romfs_entry(uint64_t i, uint64_t *offset, uint64_t *size);   // path, image offset and size of index row i
 // The host file holding row i's bytes (the row's own file under the loose RomFS, or the .nup package), overlays aside;
 // NULL when buf is too small or the row is stored compressed in the package
@@ -53,7 +49,7 @@ uint8_t *romfs_read_top(const char *path, uint64_t *size);   // through the over
 int romfs_original_sha(const char *path, char hex[65]);      // the RomFS's own file's SHA-256; 0 when it has none
 size_t romfs_overlay_count(void);
 const char *romfs_overlay(size_t k, const char **file, uint64_t *size, int *is_added);   // RomFS path of overlay k
-void fs_trace(const char *what, const char *path);         // MKW_TRACE=fs: one line per open
+void fs_trace(const char *what, const char *path);         // ORBITALS_TRACE=fs: one line per open
 
 // ---- fs_host.c
 void fs_host_set_profile(const char *dir);                 // profile directory; before the first storage mount only

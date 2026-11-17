@@ -6,8 +6,8 @@ param(
     [switch] $AllThreads
 )
 
-# Read-only Windows PowerShell analyzer for Orbitals Recomp orbital.log.
-# Usage: .\Analyze-Timeout.ps1 .\logs\orbital.log [-AllThreads]
+# Read-only Windows PowerShell analyzer for Orbitals Recomp orbitals.log.
+# Usage: .\Analyze-Timeout.ps1 .\logs\orbitals.log [-AllThreads]
 $ErrorActionPreference = 'Stop'
 
 try {
@@ -61,8 +61,8 @@ $backendLines = @($lines | Where-Object { $_ -match '\[host\].*vk: using gpu' } 
 if ($backendLines.Count -gt 0) {
     Write-Output "`nVulkan backend evidence (from the log):"
     foreach ($line in $backendLines) { Write-Output ('  ' + $line.Trim()) }
-} elseif ($lines -match 'MKW_GPU\s*=\s*null') {
-    Write-Output "`nFound a log line mentioning MKW_GPU=null; confirm this is the current run's log."
+} elseif ($lines -match 'ORBITALS_GPU\s*=\s*null') {
+    Write-Output "`nFound a log line mentioning ORBITALS_GPU=null; confirm this is the current run's log."
 } else {
     Write-Output "`nNo 'vk: using gpu' line found in the log. This alone does not prove which backend was selected."
 }

@@ -1,5 +1,5 @@
 """Runs a straight-line translated fragment shader (build/spirv/<key>.glsl) on the CPU for one pixel, with the UBO
-values a MKW_DUMP_UBO dump (passes.txt) or a MKW_TRACE_UBO trace printed for one pass: glsl_cpu.py KEY FILE PASS X Y,
+values a ORBITALS_DUMP_UBO dump (passes.txt) or a ORBITALS_TRACE_UBO trace printed for one pass: glsl_cpu.py KEY FILE PASS X Y,
 PASS a dump's pass number or a trace's "<frame>-<n>". Compiles it as C (gcc). Why: a shader whose GPU output is wrong
 runs here on the same inputs; the same result points at the runtime, a different one at the translation."""
 import re

@@ -123,7 +123,7 @@ void *cmd_rec(cmd_t *o, uint32_t op, size_t payload) {
 
 // Only what the view sets: the game builds views on its stack, and the fields of a part it does not set (and the
 // padding) hold whatever was there, different every frame. Every reader checks the set_ flags; caches that compare
-// views by their bytes (MKW_REUSE's key: 1.5 % of render-target states repeated two frames later, ru10) need the rest
+// views by their bytes (ORBITALS_REUSE's key: 1.5 % of render-target states repeated two frames later, ru10) need the rest
 // zero.
 void cmd_copy_view(view_t *dst, uint8_t *has, const NVNtextureView *v) {
     *has = v != NULL;
@@ -486,10 +486,10 @@ NVN_API(nvnCommandBufferUpdateUniformBuffer) {
 // their arguments too (p_draw_idx_ind.snap): the console's GPU reads them right after the submit, the replay later.
 static uint64_t def_reads, def_changed, n_clones;
 // What the submission being prepared holds (game thread, under the front end's submit lock): samples-passed counter
-// reports, other reports and event signals, for MKW_SUBMIT_CATCHUP=report and its census (nvn_api_core.c).
+// reports, other reports and event signals, for ORBITALS_SUBMIT_CATCHUP=report and its census (nvn_api_core.c).
 uint32_t nvn_sub_sp_reports, nvn_sub_reports, nvn_sub_events, nvn_sub_waits;
 
-// MKW_REPORT_AT_SUBMIT (default 1; "ab"): counter reports other than samples passed (timestamps) are written
+// ORBITALS_REPORT_AT_SUBMIT (default 1; "ab"): counter reports other than samples passed (timestamps) are written
 // at the submit, on the game thread, and not again at the fence. Ours went in at the fence with the host time, about a
 // frame late and with every report of a submission at nearly the same time; a game that times the GPU with them reads
 // old or equal ones (hypothesis for the dark trees, 06/11/2026: the CPU picks another instance set for one frame).
@@ -499,9 +499,9 @@ uint32_t nvn_sub_sp_reports, nvn_sub_reports, nvn_sub_events, nvn_sub_waits;
 int nvn_report_at_submit(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_REPORT_AT_SUBMIT");
+        const char *e = cfg_get("ORBITALS_REPORT_AT_SUBMIT");
         on = e && !strcmp(e, "2") ? 2 : rt_knob("REPORT_AT_SUBMIT", "1");
-        rt_log("nvn: timestamp reports written %s (MKW_REPORT_AT_SUBMIT=%d)", on ? "at the submit" : "at the fence", on);
+        rt_log("nvn: timestamp reports written %s (ORBITALS_REPORT_AT_SUBMIT=%d)", on ? "at the submit" : "at the fence", on);
     }
     return on;
 }
@@ -509,7 +509,7 @@ volatile uint32_t *nvn_sub_event_val[64];   // the first 64 events the submissio
 sync_t *nvn_sub_sync[64];
 uint32_t nvn_sub_syncs;
 
-// MKW_EARLY_READ (core/memory/memory_early.c): what this submit's GPU work writes in CPU-visible memory, listed by the walk
+// ORBITALS_EARLY_READ (core/memory/memory_early.c): what this submit's GPU work writes in CPU-visible memory, listed by the walk
 // below and watched from the submit (nvnQueueSubmitCommands) with its fence. Under the submit lock.
 NvnEarlyDst nvn_sub_dst[NVN_EARLY_MAX];
 int nvn_sub_ndst;

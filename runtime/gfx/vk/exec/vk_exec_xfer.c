@@ -100,7 +100,7 @@ static void write_counter(uint64_t addr, uint64_t counter) {
     memcpy((void *)(uintptr_t)addr, rec, sizeof rec);
 }
 
-// MKW_REPORT_GPU_END (default 1; "ab"): the timestamps written at the submit move, at the fence, by the time from the
+// ORBITALS_REPORT_GPU_END (default 1; "ab"): the timestamps written at the submit move, at the fence, by the time from the
 // fence's last one to the fence's completion, so the last report of a submit reads its GPU end, as the console's GPU
 // writes it, and the gaps between reports stay. The game's frame object takes the larger of its CPU time and that end
 // (main+0x13e174) to pick the present interval; with the submit's time it saw ~17 of 34 ms, stayed at interval 1 and
@@ -114,7 +114,7 @@ static int gpu_end_mode(void) {
     static int mode = -1;
     if (mode < 0) {
         mode = rt_knob("REPORT_GPU_END", "1");
-        rt_log("vk: timestamp reports moved to their GPU end at the fence %s (MKW_REPORT_GPU_END)",
+        rt_log("vk: timestamp reports moved to their GPU end at the fence %s (ORBITALS_REPORT_GPU_END)",
                mode == 2 ? "in the B blocks" : mode ? "on" : "off");
     }
     return mode;
@@ -302,7 +302,7 @@ static void oq_report(VkExec *ex, uint64_t addr) {
     if (!oq_keep) oq_counting = 0;
 }
 
-// MKW_REPLAY_PAR: a chunk recorded a second time (vk_exec_xfer_again) leaves its events and counter reports to the
+// ORBITALS_REPLAY_PAR: a chunk recorded a second time (vk_exec_xfer_again) leaves its events and counter reports to the
 // first recording's callbacks, already queued: signalled twice, an ADD event would count twice.
 static _Thread_local int again;
 void vk_exec_xfer_again(int on) { again = on; }
@@ -327,7 +327,7 @@ static void report_counter(VkExec *ex, const p_report_counter *p) {
         rt_fatal("vk: counter report at %#llx is in no memory pool", (unsigned long long)p->addr);
     vk_mem_count(m.cls, VK_MUSE_GPU_WRITE, sizeof(NVNcounterData));
     if (samples) oq_report(ex, p->addr);
-    plat_mutex_lock(&pending_lock);   // chunks record timestamp reports on several threads (MKW_REPLAY_PAR)
+    plat_mutex_lock(&pending_lock);   // chunks record timestamp reports on several threads (ORBITALS_REPLAY_PAR)
     if (!samples) {
         ReportCb *r = malloc(sizeof *r);
         if (!r) rt_fatal("vk: out of memory");
@@ -367,7 +367,7 @@ static int counter_word(uint64_t addr, uint64_t *v) {
     return 1;
 }
 
-// MKW_COND_TRACE=<lines> (diagnosis, default 0): each condition's counter words and verdict, and the draws it skips
+// ORBITALS_COND_TRACE=<lines> (diagnosis, default 0): each condition's counter words and verdict, and the draws it skips
 // (vk_exec_ops.c), with the frame. Found for the title's flickering trees (06/11/2026).
 int vk_cond_trace = -1;
 
@@ -386,7 +386,7 @@ static int cond_enabled(const p_render_cond *c) {
     uint64_t x, y;
     int rx, ry, on = cond_eval(c, &x, &y, &rx, &ry);
     if (vk_cond_trace < 0) {
-        const char *e = cfg_get("MKW_COND_TRACE");
+        const char *e = cfg_get("ORBITALS_COND_TRACE");
         vk_cond_trace = e ? atoi(e) : 0;
     }
     if (vk_cond_trace > 0) {
@@ -398,7 +398,7 @@ static int cond_enabled(const p_render_cond *c) {
     return on;
 }
 
-// MKW_REPLAY_PAR: the conditions of a submission decided in op order by the light walk, before any chunk records. A
+// ORBITALS_REPLAY_PAR: the conditions of a submission decided in op order by the light walk, before any chunk records. A
 // report of the same submission earlier in the walk is not recorded yet, so it is taken as the serial replay would see
 // it: pending (a timestamp reads 0, samples passed is unknown). The chunks then use the walk's decisions
 // (vk_exec_cond_use), whatever thread recorded the reports.
@@ -440,7 +440,7 @@ static int cond_planned(const void *payload) {
 }
 
 // The render-enable ops' effect on the replay state alone, without the trace: 1 when op is one (the light walk of
-// vk_exec.c, MKW_REPLAY_WALK).
+// vk_exec.c, ORBITALS_REPLAY_WALK).
 int vk_exec_xfer_state(VkExec *ex, uint32_t op, const void *payload) {
     uint64_t x, y;
     int rx, ry;
@@ -619,7 +619,7 @@ static void copy_t2t(VkExec *ex, const p_copy_t2t *p) {
     Sub s, d;
     static int trace = -1;
     static volatile int32_t ntrace;
-    if (trace < 0) trace = cfg_get("MKW_SPARSE_TRACE") != NULL;
+    if (trace < 0) trace = cfg_get("ORBITALS_SPARSE_TRACE") != NULL;
     if (trace && p->src && p->dst && ((p->src->d.flags | p->dst->d.flags) & NVN_TEXTURE_FLAGS_SPARSE) &&
         plat_inc32(&ntrace) <= 8192)
         rt_log("sparse: copy %ux%ux%u fmt %#x flags %#x lv%u [%d,%d,%d %dx%dx%d] -> %#llx %ux%ux%u fmt %#x [%d,%d,%d "

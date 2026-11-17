@@ -1,12 +1,12 @@
-// MKW_CS_HASH=<hex caller>[,...] (diagnosis): each dispatch whose game call site (p_dispatch.caller) is one of those
+// ORBITALS_CS_HASH=<hex caller>[,...] (diagnosis): each dispatch whose game call site (p_dispatch.caller) is one of those
 // logs a hash of every input it reads, once before it runs and its storage buffers again after it: storage buffers and
 // indirect arguments copied on the GPU around the dispatch, uniform blocks as the replay binds them (the snapshot of
 // vk_usnap.c, else guest memory). One "csh:" line per dispatch and phase. For the cacti: in the
 // frame of a cactus the culling dispatch (caller 0x70004613a8, cs e14ec507360d43ac) writes other records for the same
 // instances (ks1, ks2); this says which of its inputs differed from the frames around it. Its arguments come from the
-// dispatch at 0x7000461784, which can be listed too. Buffers over MKW_CS_HASH_MAX KiB (default 8192) are skipped.
+// dispatch at 0x7000461784, which can be listed too. Buffers over ORBITALS_CS_HASH_MAX KiB (default 8192) are skipped.
 // Each storage buffer's guest memory at record time is hashed too (":g<hash>" when it differs from the GPU's copy),
-// to tell a buffer the CPU rewrites from one the GPU wrote. MKW_CS_HASH_DUMP=<dir>: the pre copies written as
+// to tell a buffer the CPU rewrites from one the GPU wrote. ORBITALS_CS_HASH_DUMP=<dir>: the pre copies written as
 // <dir>/f<frame>-<caller>-s<slot>.bin, to see which words changed in a frame.
 
 #include <stdio.h>
@@ -46,12 +46,12 @@ static uint64_t fnv(const uint8_t *p, uint64_t n) {
 int vk_cs_hash_wanted(uint64_t caller) {
     if (ncaller < 0) {
         ncaller = 0;
-        for (const char *p = cfg_get("MKW_CS_HASH"); p && *p && strcmp(p, "0") && ncaller < NCALLER;
+        for (const char *p = cfg_get("ORBITALS_CS_HASH"); p && *p && strcmp(p, "0") && ncaller < NCALLER;
              p = strchr(p, ',') ? strchr(p, ',') + 1 : NULL)
             callers[ncaller++] = strtoull(p, NULL, 16);
-        const char *m = cfg_get("MKW_CS_HASH_MAX");
+        const char *m = cfg_get("ORBITALS_CS_HASH_MAX");
         max_bytes = (m && *m ? strtoull(m, NULL, 10) : 8192) << 10;
-        if (ncaller) vk_usnap_host_wanted = 1, rt_log("vk: inputs of %d dispatch call sites hashed (MKW_CS_HASH)", ncaller);
+        if (ncaller) vk_usnap_host_wanted = 1, rt_log("vk: inputs of %d dispatch call sites hashed (ORBITALS_CS_HASH)", ncaller);
     }
     for (int i = 0; i < ncaller; i++)
         if (callers[i] == caller) return 1;
@@ -63,7 +63,7 @@ static void done(void *arg) {   // completion thread
     vmaInvalidateAllocation(vk_ctx()->vma, c->alloc, 0, VK_WHOLE_SIZE);
     char s[NBUF * 52 + 18 * 40];
     int o = 0;
-    const char *dir = c->post ? NULL : cfg_get("MKW_CS_HASH_DUMP");
+    const char *dir = c->post ? NULL : cfg_get("ORBITALS_CS_HASH_DUMP");
     for (int k = 0; k < NBUF; k++) {
         if (!c->sz[k]) continue;
         uint32_t h = (uint32_t)fnv(c->map + c->at[k], c->sz[k]);
@@ -101,7 +101,7 @@ static void barrier(VkExec *ex, VkPipelineStageFlags2 src, VkAccessFlags2 sa, Vk
 void vk_cs_hash(VkExec *ex, uint64_t caller, uint64_t ind, int post) {
     if (!vk_cs_hash_wanted(caller)) return;
     CsCopy *c = calloc(1, sizeof *c);
-    if (!c) rt_fatal("vk: out of memory (MKW_CS_HASH)");
+    if (!c) rt_fatal("vk: out of memory (ORBITALS_CS_HASH)");
     if (!post) {
         if (seq_frame != vk_exec_presented + 1) seq_frame = vk_exec_presented + 1, seq = 0;
         seq++;

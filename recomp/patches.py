@@ -188,8 +188,8 @@ def load_mods(table, mods_dir, bases):
                 for k in ("set", "env", "module", "off", "words"):
                     if k not in sp:
                         raise PatchError(f'{where}: span misses "{k}"')
-                if not sp["env"].startswith("MKW_"):
-                    raise PatchError(f'{where}: env switch {sp["env"]} needs its MKW_ prefix')
+                if not sp["env"].startswith("ORBITALS_"):
+                    raise PatchError(f'{where}: env switch {sp["env"]} needs its ORBITALS_ prefix')
                 if sp["set"] in index:
                     if table.sets[index[sp["set"]]][1] != sp["env"]:
                         raise PatchError(f'{where}: set {sp["set"]} has two env switches')
@@ -222,8 +222,8 @@ def load_mods(table, mods_dir, bases):
             for k in ("set", "env", "module", "off", "orig", "repl"):
                 if k not in st:
                     raise PatchError(f'{where}: site misses "{k}"')
-            if not st["env"].startswith("MKW_"):
-                raise PatchError(f'{where}: env switch {st["env"]} needs its MKW_ prefix')
+            if not st["env"].startswith("ORBITALS_"):
+                raise PatchError(f'{where}: env switch {st["env"]} needs its ORBITALS_ prefix')
             if st["set"] in index:
                 if table.sets[index[st["set"]]][1] != st["env"]:
                     raise PatchError(f'{where}: set {st["set"]} has two env switches')

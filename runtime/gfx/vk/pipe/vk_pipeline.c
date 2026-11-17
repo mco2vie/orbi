@@ -33,7 +33,7 @@
 // binding strides only); and, where VK_EXT_extended_dynamic_state3 offers them, depth clamp, polygon mode, blend enables,
 // equations, write masks and alpha to coverage. The key holds the rest: shaders, target formats, sample count, topology
 // class, depth clip mode, logic op and what is not dynamic on the GPU. The VkPipelineCache persists to
-// pipeline-cache.bin next to mkw (MKW_PIPELINE_CACHE overrides the path).
+// pipeline-cache.bin next to mkw (ORBITALS_PIPELINE_CACHE overrides the path).
 //
 // Provenance: the NVN -> Vulkan enum mappings (blend factors and equations, compare functions, stencil ops), the vertex
 // format table with its 3-component fallback and the pipeline cache file handling follow LAS Recomp
@@ -77,7 +77,7 @@ uint64_t key_hash(const void *k, size_t n) { return nvn_hm_hash(k, (uint32_t)n);
 // The cache file lives in the selected game folder, so every installation (the main build and each private fork) has its own:
 // forks that shared build\v121's cache broke each other's runs (2026-10-22).
 static void cache_path_init(void) {
-    const char *cfg_path = cfg_get("MKW_PIPELINE_CACHE");
+    const char *cfg_path = cfg_get("ORBITALS_PIPELINE_CACHE");
     if (cfg_path && *cfg_path && strlen(cfg_path) < sizeof P.cache_path) {
         strcpy(P.cache_path, cfg_path);
         return;
@@ -138,28 +138,28 @@ int ensure_init(void) {
     VkPhysicalDeviceProperties2 p2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &pd};
     vkGetPhysicalDeviceProperties2(c->phys, &p2);
     P.max_push = pd.maxPushDescriptors;
-    // MKW_DRAW_CACHE=1: descriptor sets are kept across frames by their contents (vk_exec_dcache.c). A frame binds
+    // ORBITALS_DRAW_CACHE=1: descriptor sets are kept across frames by their contents (vk_exec_dcache.c). A frame binds
     // the same descriptors as the last one but for its uniform blocks' addresses (recdiff.py), so uniform buffers are
     // dynamic and their offsets go with the bind; sets are allocated, as push sets cannot be kept.
-    P.draw_cache = cfg_get("MKW_DRAW_CACHE") && atoi(cfg_get("MKW_DRAW_CACHE"));
+    P.draw_cache = cfg_get("ORBITALS_DRAW_CACHE") && atoi(cfg_get("ORBITALS_DRAW_CACHE"));
     P.max_dyn_ubo = p2.properties.limits.maxDescriptorSetUniformBuffersDynamic;
-    // MKW_VK_SHARED_LIMIT=<bytes>: less workgroup memory than the device has, to check spirv_clamp_shared's cut and
+    // ORBITALS_VK_SHARED_LIMIT=<bytes>: less workgroup memory than the device has, to check spirv_clamp_shared's cut and
     // wrap on a desktop GPU as on Adreno 7xx's 32 KiB
     uint32_t sdev = p2.properties.limits.maxComputeSharedMemorySize;
-    const char *sl = cfg_get("MKW_VK_SHARED_LIMIT");
+    const char *sl = cfg_get("ORBITALS_VK_SHARED_LIMIT");
     P.smem_limit = sl && *sl && (uint32_t)atoi(sl) && (uint32_t)atoi(sl) < sdev ? (uint32_t)atoi(sl) : sdev;
     if (P.smem_limit != sdev)
-        rt_log("vk_pipeline: workgroup memory limited to %u bytes (MKW_VK_SHARED_LIMIT; the device has %u)", P.smem_limit,
+        rt_log("vk_pipeline: workgroup memory limited to %u bytes (ORBITALS_VK_SHARED_LIMIT; the device has %u)", P.smem_limit,
                sdev);
     if (P.draw_cache)
-        rt_log("vk_pipeline: draw cache on (MKW_DRAW_CACHE): sets kept across frames, up to %u dynamic uniform buffers "
+        rt_log("vk_pipeline: draw cache on (ORBITALS_DRAW_CACHE): sets kept across frames, up to %u dynamic uniform buffers "
                "a layout", P.max_dyn_ubo);
     P.indep = vk_caps.gpl;
     P.gpl = vk_caps.gpl;
     rt_log(P.gpl ? "vk_pipeline: graphics pipeline library on: a draw whose pipeline is building gets a fast-linked one, "
                    "the optimised build replaces it when done"
                  : "vk_pipeline: graphics pipeline library off: draws wait for or skip pipelines that are building");
-    const char *ps = cfg_get("MKW_PUSH_STAGE"), *vo = cfg_get("MKW_VS_OUTS");
+    const char *ps = cfg_get("ORBITALS_PUSH_STAGE"), *vo = cfg_get("ORBITALS_VS_OUTS");
     P.push_stage = ps && !strcmp(ps, "fs") ? GFX_STAGE_FS : GFX_STAGE_VS;
     P.vs_outs_all = vo && !strcmp(vo, "all");
     if (P.indep) rt_log("vk_pipeline: stage-independent layouts: vertex set 0, fragment set 1, %s set pushed; vertex outputs: %s",
@@ -179,7 +179,7 @@ int ensure_init(void) {
         VkPhysicalDeviceVulkan13Properties p13 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES};
         VkPhysicalDeviceProperties2 q2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &p13};
         vkGetPhysicalDeviceProperties2(c->phys, &q2);
-        P.sg32_stages = vk_caps.sg_pin_stages;   // vk_caps.c: 32 unless MKW_VK_SUBGROUP; 0 without the pin
+        P.sg32_stages = vk_caps.sg_pin_stages;   // vk_caps.c: 32 unless ORBITALS_VK_SUBGROUP; 0 without the pin
         rt_log("vk_pipeline: subgroup size %u-%u, requiredSubgroupSizeStages %#x, pinning %u on %#x", p13.minSubgroupSize,
                p13.maxSubgroupSize, (unsigned)p13.requiredSubgroupSizeStages, vk_caps.sg_size, (unsigned)P.sg32_stages);
     }
@@ -191,9 +191,9 @@ int ensure_init(void) {
     PROC(push, "vkCmdPushDescriptorSetKHR");
     // Descriptor update templates (core 1.1; the push variant comes with VK_KHR_push_descriptor on 1.1): the driver
     // walks a layout prepared when the layout is made instead of parsing write structs every draw (DXVK does so for the
-    // same reason). MKW_DESC_TEMPLATE=0 keeps the write structs.
-    if (!cfg_bool("MKW_DESC_TEMPLATE")) {
-        rt_log("vk_pipeline: descriptor update templates off (MKW_DESC_TEMPLATE=0)");
+    // same reason). ORBITALS_DESC_TEMPLATE=0 keeps the write structs.
+    if (!cfg_bool("ORBITALS_DESC_TEMPLATE")) {
+        rt_log("vk_pipeline: descriptor update templates off (ORBITALS_DESC_TEMPLATE=0)");
     } else if (c->props.apiVersion >= VK_API_VERSION_1_1 && PROC(tpl_create, "vkCreateDescriptorUpdateTemplate") &&
                PROC(tpl_destroy, "vkDestroyDescriptorUpdateTemplate") && PROC(tpl_update, "vkUpdateDescriptorSetWithTemplate")) {
         P.tpl = 1;
@@ -202,15 +202,15 @@ int ensure_init(void) {
     } else {
         rt_log("vk_pipeline: descriptor update templates unavailable: sets are written with write structs");
     }
-    // MKW_VK_DYN_VERTEX=0/1 forces dynamic vertex input off or on. Default off on Intel's frozen Windows driver for its
+    // ORBITALS_VK_DYN_VERTEX=0/1 forces dynamic vertex input off or on. Default off on Intel's frozen Windows driver for its
     // older integrated GPUs (UHD 630, Ice Lake: Vulkan 1.3.215 and older), which draws nothing with it; LAS Recomp
     // turns it off there for the same reason.
-    const char *dv = cfg_get("MKW_VK_DYN_VERTEX");   // no fixed default: it depends on the GPU, see above
+    const char *dv = cfg_get("ORBITALS_VK_DYN_VERTEX");   // no fixed default: it depends on the GPU, see above
     int intel_legacy = c->props.vendorID == 0x8086 && c->props.apiVersion <= VK_MAKE_API_VERSION(0, 1, 3, 215);
     int dv_on = dv && *dv ? strcmp(dv, "0") != 0 : !intel_legacy;
     P.dyn_vi = dv_on && c->has_vertex_input_dynamic_state && PROC(set_vi, "vkCmdSetVertexInputEXT");
     if (!dv_on && c->has_vertex_input_dynamic_state)
-        rt_log("vk_pipeline: dynamic vertex input off (%s)", dv && *dv ? "MKW_VK_DYN_VERTEX=0" : "Intel's older Windows driver draws nothing with it");
+        rt_log("vk_pipeline: dynamic vertex input off (%s)", dv && *dv ? "ORBITALS_VK_DYN_VERTEX=0" : "Intel's older Windows driver draws nothing with it");
     if (c->has_eds3) {
         P.dyn_clamp = e3.extendedDynamicState3DepthClampEnable && P.f_depth_clamp && PROC(set_clamp, "vkCmdSetDepthClampEnableEXT");
         P.dyn_poly = e3.extendedDynamicState3PolygonMode && PROC(set_poly, "vkCmdSetPolygonModeEXT");
@@ -334,7 +334,7 @@ static VkFormatFeatureFlags format_features(VkFormat f, int optimal) {
     static uint8_t have[2][256];
     VkCtx *c = vk_ctx();
     if (!c) return 0;
-    // MKW_REPLAY_PAR's chunk threads look formats up at once: known is written before have is published
+    // ORBITALS_REPLAY_PAR's chunk threads look formats up at once: known is written before have is published
     if ((unsigned)f < 256 && __atomic_load_n(&have[optimal][f], __ATOMIC_ACQUIRE)) return known[optimal][f];
     VkFormatProperties p;
     vkGetPhysicalDeviceFormatProperties(c->phys, f, &p);
@@ -448,10 +448,10 @@ void vk_pipe_state_defaults(VkPipeState *s) {
 
 // The colour targets' types: the fragment shader writes raw bits through float outputs, as SM86 does, and a float
 // output into a UINT/SINT target is undefined in Vulkan (the race's mesh draws into R8_UINT, issue #64 on Intel Arc).
-// MKW_INT_OUTPUTS=0 keeps the float outputs (to compare).
+// ORBITALS_INT_OUTPUTS=0 keeps the float outputs (to compare).
 void vk_pipeline_answers(const VkPipeState *s, int stage, GfxShaderAnswers *a) {
     static int outs = -1;
-    if (outs < 0) outs = !cfg_get("MKW_INT_OUTPUTS") || strcmp(cfg_get("MKW_INT_OUTPUTS"), "0") != 0;
+    if (outs < 0) outs = !cfg_get("ORBITALS_INT_OUTPUTS") || strcmp(cfg_get("ORBITALS_INT_OUTPUTS"), "0") != 0;
     if (stage == GFX_STAGE_FS) {
         for (int i = 0; outs && i < 8; i++)
             if (s->color_fmt[i]) a->out_type[i] = (uint8_t)vk_format_numeric(target_format(s->color_fmt[i], NULL, NULL));
@@ -708,10 +708,10 @@ uint32_t vs_union_missing(const VkPipeState *s, GfxShaderIo fin[32]) {
     return missing;
 }
 
-// MKW_FS_SOLID=<hash>[,<hash>...] (diagnosis): fragment shaders with that SPIR-V hash (the dump's sh_<hash>, FNV-1a
+// ORBITALS_FS_SOLID=<hash>[,<hash>...] (diagnosis): fragment shaders with that SPIR-V hash (the dump's sh_<hash>, FNV-1a
 // of the module's bytes) are replaced by solid.frag, which writes magenta; "all" replaces every fragment shader.
 static int solid_fs(const GfxShader *fs) {
-    const char *e = cfg_get("MKW_FS_SOLID");
+    const char *e = cfg_get("ORBITALS_FS_SOLID");
     if (!e || !*e || !fs) return 0;
     if (!strcmp(e, "all")) return 1;
     uint64_t words = 0, h = 0xcbf29ce484222325ull;
@@ -818,12 +818,12 @@ out:
     return pipe;
 }
 
-// MKW_SPEC_ISA=KEY,KEY (with MKW_SPEC_STATS=1): the driver's internal representations (RADV: NIR, ACO IR and the final
+// ORBITALS_SPEC_ISA=KEY,KEY (with ORBITALS_SPEC_STATS=1): the driver's internal representations (RADV: NIR, ACO IR and the final
 // RDNA assembly) of each executable whose pipeline has a shader key starting with one of those hex prefixes, to
 // build/isa/<vs>_<fs>_<executable>.txt: where a translated shader's instructions come from.
 static void log_isa(const VkPipelineExecutableInfoKHR *ei, const char *who, const char *exe) {
     static PFN_vkGetPipelineExecutableInternalRepresentationsKHR irs;
-    const char *keys = cfg_get("MKW_SPEC_ISA");
+    const char *keys = cfg_get("ORBITALS_SPEC_ISA");
     if (!keys || !*keys) return;
     int hit = 0;
     for (const char *k = keys; *k && !hit;) {
@@ -859,7 +859,7 @@ static void log_isa(const VkPipelineExecutableInfoKHR *ei, const char *who, cons
     for (uint32_t i = 0; i < nr; i++) free(ir[i].pData);
 }
 
-// MKW_SPEC_STATS=1: one log line per executable of an optimised graphics pipeline with the driver's statistics
+// ORBITALS_SPEC_STATS=1: one log line per executable of an optimised graphics pipeline with the driver's statistics
 // (RADV: instructions, VGPRs, SGPRs, ...) and the shaders' keys, each with the key of its generic shader when it is a
 // specialized variant (vk_spec.c): the variant and its generic pipeline compared on the same state. Compute pipelines
 // pass their shader as vs and none as fs (vk_pipe_keys.c compute_create).
@@ -908,15 +908,15 @@ void log_stats(VkPipeline pipe, const VkPipeState *s) {
     }
 }
 
-// MKW_PIPE_STALL=<hex prefix>[:ms] (a test, never set for players): a pipeline or stage library build whose vertex or
+// ORBITALS_PIPE_STALL=<hex prefix>[:ms] (a test, never set for players): a pipeline or stage library build whose vertex or
 // fragment shader key starts with the prefix sleeps ms (60000) before it starts, as a driver build that does not
-// return (issue #36). With MKW_PIPE_SYNC=0 a capture replay shows what a waiting draw does then.
+// return (issue #36). With ORBITALS_PIPE_SYNC=0 a capture replay shows what a waiting draw does then.
 void pipe_test_stall(const GfxShader *vs, const GfxShader *fs) {
     static char pre[65];
     static uint32_t ms;
     static int ready = -1;
     if (ready < 0) {
-        const char *e = cfg_get("MKW_PIPE_STALL");
+        const char *e = cfg_get("ORBITALS_PIPE_STALL");
         const char *c = e ? strchr(e, ':') : NULL;
         size_t n = e ? (c ? (size_t)(c - e) : strlen(e)) : 0;
         if (n >= sizeof pre) n = sizeof pre - 1;
@@ -932,7 +932,7 @@ void pipe_test_stall(const GfxShader *vs, const GfxShader *fs) {
         if (!id) continue;
         for (int j = 0; j < 32; j++) snprintf(hex + 2 * j, 3, "%02x", id[j]);
         if (strncmp(hex, pre, strlen(pre))) continue;
-        rt_log("vk_pipeline: MKW_PIPE_STALL: a build with shader %.16s sleeps %u ms", hex, ms);
+        rt_log("vk_pipeline: ORBITALS_PIPE_STALL: a build with shader %.16s sleeps %u ms", hex, ms);
         plat_sleep_ms(ms);
         return;
     }
@@ -989,7 +989,7 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
             fcode = fpatched = r;
         }
         // A bound colour target outside the shader's output map gets write mask 0 (target_wmask)
-        if (fcode && solid_fs(s->fs)) {   // MKW_FS_SOLID diagnosis
+        if (fcode && solid_fs(s->fs)) {   // ORBITALS_FS_SOLID diagnosis
             free(fpatched), fpatched = NULL;
             fcode = solid_spv, fw = sizeof solid_spv / 4;
         }
@@ -1067,7 +1067,7 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
     if (k->fbl & 1) pi.flags |= VK_PIPELINE_CREATE_COLOR_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT;
     if (k->fbl & 2) pi.flags |= VK_PIPELINE_CREATE_DEPTH_STENCIL_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT;
     if (vk_ctx()->has_exec_stats) pi.flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
-    if (vk_ctx()->has_exec_stats && cfg_get("MKW_SPEC_ISA")) pi.flags |= VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR;
+    if (vk_ctx()->has_exec_stats && cfg_get("ORBITALS_SPEC_ISA")) pi.flags |= VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR;
     uint64_t p0 = perf_begin();
     VkResult r = vkCreateGraphicsPipelines(P.device, P.cache, 1, &pi, NULL, &pipe);
     perf_end(PERF_PIPE, p0);   // counts on the render thread only, so background builds stay out of it

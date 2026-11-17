@@ -176,7 +176,7 @@ int plat_mem_poke(uint64_t addr, const void *src, size_t n) {
     return fd >= 0 && pwrite(fd, src, n, (off_t)addr) == (ssize_t)n;
 }
 
-// Reads through the page protection, as plat_mem_poke writes: the runtime copying a page MKW_EARLY_READ watches.
+// Reads through the page protection, as plat_mem_poke writes: the runtime copying a page ORBITALS_EARLY_READ watches.
 int plat_mem_peek(void *dst, uint64_t addr, size_t n) {
     int fd = self_mem();
     return fd >= 0 && pread(fd, dst, n, (off_t)addr) == (ssize_t)n;
@@ -323,7 +323,7 @@ static void fault_handler(int sig, siginfo_t *si, void *uc) {
         PlatCrash c = {sig == SIGSEGV ? "access violation" : sig == SIGBUS ? "bus error"
                        : sig == SIGILL ? "illegal instruction" : "arithmetic exception",
                        (uint32_t)sig, rip, in_module ? rip - (uintptr_t)at.dli_fbase : rip, -1, 0,
-                       !in_module ? "no module" : ours_exe ? "mkw" : "orbitalgame", 0};
+                       !in_module ? "no module" : ours_exe ? "orbitals-recomp" : "orbitalgame", 0};
 #if defined(__aarch64__)
         if (!in_module) c.ret = (uintptr_t)UC_RET(u);   // a wild call left its return address in x30
 #else

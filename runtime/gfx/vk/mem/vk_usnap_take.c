@@ -1,11 +1,11 @@
-// MKW_USNAP_AT_SUBMIT (default 0; "ab"): the uniform snapshot's bytes taken at the submit, on the game's thread, instead
+// ORBITALS_USNAP_AT_SUBMIT (default 0; "ab"): the uniform snapshot's bytes taken at the submit, on the game's thread, instead
 // of where the replay starts recording the submission (vk_usnap.c). With the replay ~3 submits behind the game, the
 // game is already writing the next frame's per-object blocks when the snapshot reads them: an object drawn with
 // another's matrix for one frame, the flickering cacti and bushes (16 in 2 400 race frames
-// without MKW_SUBMIT_CATCHUP, pop0p). The take collects the submission's uniform ranges as vk_usnap_begin does, merges
+// without ORBITALS_SUBMIT_CATCHUP, pop0p). The take collects the submission's uniform ranges as vk_usnap_begin does, merges
 // them and copies their bytes; vk_usnap_begin pops it in submit order and copies regions from it. Costs the game's
 // thread the walk and the copy (~0.3-1 ms a submission, the snapshot's own cost when it ran there, vk_usnap.c).
-// MKW_USNAP_CMP=1 (a measurement, without MKW_USNAP_AT_SUBMIT): taken, but the snapshot still copies guest memory where
+// ORBITALS_USNAP_CMP=1 (a measurement, without ORBITALS_USNAP_AT_SUBMIT): taken, but the snapshot still copies guest memory where
 // the recording starts; vk_usnap.c counts
 // per frame the ranges whose bytes changed in between (the replay drawing with the next frame's uniforms or handles,
 // Hookshot's "MKW shadows in bands for a frame"; candados-lectura, the kart's shadow).
@@ -38,9 +38,9 @@ static int mode(void) {
     static int m = -1;
     if (m < 0) {
         m = rt_knob("USNAP_AT_SUBMIT", "0");
-        cmp_on = !m && cfg_get("MKW_USNAP_CMP") && atoi(cfg_get("MKW_USNAP_CMP")) > 0;
+        cmp_on = !m && cfg_get("ORBITALS_USNAP_CMP") && atoi(cfg_get("ORBITALS_USNAP_CMP")) > 0;
         if (cmp_on) m = 1, rt_log("vk_usnap: uniform ranges the game rewrites between its submit and the recording "
-                                  "counted per frame (MKW_USNAP_CMP)");
+                                  "counted per frame (ORBITALS_USNAP_CMP)");
     }
     return m;
 }

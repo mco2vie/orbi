@@ -2,8 +2,8 @@
 // and the name the main page's profile row shows. Discussion #288 asked for a name other than "Local"; a player is a
 // console user here, with its own save (core/base/players.h).
 //
-// Test hooks (with MKW_LAUNCHER_SHOT=<frame>:players): MKW_LAUNCHER_PLAYER_NEW=<name> makes that player once, as the
-// New profile button does; MKW_LAUNCHER_PLAYER_PICK=<id> picks it once, as its Play as button does.
+// Test hooks (with ORBITALS_LAUNCHER_SHOT=<frame>:players): ORBITALS_LAUNCHER_PLAYER_NEW=<name> makes that player once, as the
+// New profile button does; ORBITALS_LAUNCHER_PLAYER_PICK=<id> picks it once, as its Play as button does.
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +32,7 @@ static struct {
 } P = {};
 
 static const char *active_id(void) {
-    const char *id = cfg_get("MKW_PLAYER");
+    const char *id = cfg_get("ORBITALS_PLAYER");
     return id ? id : "";
 }
 
@@ -43,7 +43,7 @@ static void refresh(void) {
 }
 
 static void pick(const char *id) {
-    cfg_set("MKW_PLAYER", id);
+    cfg_set("ORBITALS_PLAYER", id);
     cfg_save();
     rt_log("players: the next start plays player '%s'", id);
 }
@@ -61,7 +61,7 @@ void launcher_player_dir(char *out, size_t cap) {
     player_active_dir(P.base, out, cap);
 }
 
-// The player the next start plays, as player_active_dir resolves it: MKW_PLAYER without a folder means the first one.
+// The player the next start plays, as player_active_dir resolves it: ORBITALS_PLAYER without a folder means the first one.
 static const Player *active(void) {
     if (!P.n) refresh();
     const char *id = active_id();
@@ -133,11 +133,11 @@ void launcher_players_page(float scale, float bottom) {
     if (!tested) {
         tested = 1;
         char id[sizeof(Player::id)];
-        if (const char *t = getenv("MKW_LAUNCHER_PLAYER_NEW"); t && player_create(P.base, t, id, sizeof id)) {
+        if (const char *t = getenv("ORBITALS_LAUNCHER_PLAYER_NEW"); t && player_create(P.base, t, id, sizeof id)) {
             pick(id);
             refresh();
         }
-        if (const char *t = getenv("MKW_LAUNCHER_PLAYER_PICK")) pick(t);
+        if (const char *t = getenv("ORBITALS_LAUNCHER_PLAYER_PICK")) pick(t);
     }
     ImGui::BeginChild("##players_body", ImVec2(0, -bottom), ImGuiChildFlags_NavFlattened);
     ImGui::PushTextWrapPos(0);

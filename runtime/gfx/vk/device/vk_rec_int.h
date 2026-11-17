@@ -53,7 +53,7 @@ typedef struct { void *fn; uint32_t first, n; const void *v; } A_Targets;
 
 extern VkCommandBuffer rec_cb;   // the part being recorded (set while the recorder is idle)
 extern int rec_live;             // producer: rec_begin started the recorder for rec_cb
-extern uint32_t lz[256];         // MKW_REC_DIFF: words of the packet being built hashed as zero in the loose hash
+extern uint32_t lz[256];         // ORBITALS_REC_DIFF: words of the packet being built hashed as zero in the loose hash
 extern int nlz;
 #define OWNED(cb) (rec_live && (cb) == rec_cb)
 #define A8(x) (((x) + 7) & ~(size_t)7)

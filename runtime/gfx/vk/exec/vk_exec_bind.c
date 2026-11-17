@@ -39,9 +39,9 @@ _Thread_local DrawBS BS = {-1};
 #define RS_BYTES (MAX_BINDINGS * sizeof(((VkExec *)0)->ssbo[0]) + MAX_DESC * sizeof(p_bind_buf))
 typedef struct { int cls, use; uint64_t bytes; } RsCount;
 typedef struct {
-    int on;                              // MKW_BIND_SKIP: 1 skip (default), 2 check, 0 off
+    int on;                              // ORBITALS_BIND_SKIP: 1 skip (default), 2 check, 0 off
     uint32_t hn;                         // words of h the last signature filled; 0: none
-    int why;                             // MKW_BIND_STATS: the first input that differed (BS.miss)
+    int why;                             // ORBITALS_BIND_STATS: the first input that differed (BS.miss)
     uint64_t h[24];                      // generations, feedback images, support inputs, base instance
     const VkPipeInfo *info;              // the pipeline whose RsList ranges body holds, as of bind op generation gen
     uint64_t gen;
@@ -63,7 +63,7 @@ static _Thread_local DrawRS *dtl_rs;
 // loads from a user uniform block; the address read from the block counts too. ok 0: never skipped (too many
 // descriptors or such buffers).
 #define RS_PTRS 4
-typedef struct { uint32_t off, len, uniform; } RsRange;   // uniform: a user uniform block's binding (MKW_BIND_XF skips it)
+typedef struct { uint32_t off, len, uniform; } RsRange;   // uniform: a user uniform block's binding (ORBITALS_BIND_XF skips it)
 typedef struct { int st; const GfxShaderRes *res; } RsPtr;
 typedef struct { uint32_t n, bytes; uint8_t sup, c0, ok, np; RsPtr p[RS_PTRS]; RsRange r[]; } RsList;
 static nvn_hmap rs_lists;                // VkPipeInfo pointer -> RsList, until shutdown; rs_lock
@@ -124,10 +124,10 @@ static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, 
     RS.volatile_ = 1;
     if (ru_cap) ru_note_bad(RUB_VOLATILE);   // bytes copied at record time
     memcpy(scratch(ex, n, &b, &o), (const void *)(uintptr_t)addr, n);
-    // MKW_TRACE_SCRATCH=1 (diagnosis): each copy at record time, with its replay position and a hash of the bytes: two
+    // ORBITALS_TRACE_SCRATCH=1 (diagnosis): each copy at record time, with its replay position and a hash of the bytes: two
     // recording orders of a capture told apart by what such a copy found (the title's order fault, grabacion-paralela).
     static int trace_scratch = -1;
-    if (trace_scratch < 0) trace_scratch = cfg_get("MKW_TRACE_SCRATCH") && atoi(cfg_get("MKW_TRACE_SCRATCH"));
+    if (trace_scratch < 0) trace_scratch = cfg_get("ORBITALS_TRACE_SCRATCH") && atoi(cfg_get("ORBITALS_TRACE_SCRATCH"));
     if (trace_scratch) {
         uint64_t h = 0xcbf29ce484222325ull;
         for (uint64_t i = 0; i < n; i++) h = (h ^ ((const uint8_t *)(uintptr_t)addr)[i]) * 0x100000001b3ull;
@@ -140,10 +140,10 @@ static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, 
     return 1;
 }
 
-static int c0_on(void) {   // MKW_FIX_C0=0: c0 reads zeros instead of the driver constants
+static int c0_on(void) {   // ORBITALS_FIX_C0=0: c0 reads zeros instead of the driver constants
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("MKW_FIX_C0");
+        on = cfg_bool("ORBITALS_FIX_C0");
     }
     return on;
 }
@@ -189,7 +189,7 @@ void limits_init(void) {
     __atomic_store_n(&LIM.ubo_max, l->maxUniformBufferRange, __ATOMIC_RELEASE);
 }
 
-static _Thread_local int ubo_kind;   // MKW_REUSE: what gave ubo_info's last answer (RUK_*)
+static _Thread_local int ubo_kind;   // ORBITALS_REUSE: what gave ubo_info's last answer (RUK_*)
 
 static VkDescriptorBufferInfo ubo_info(VkExec *ex, int st, int slot) {
     ubo_kind = RUK_STABLE;
@@ -292,8 +292,8 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
 // with its hash probe and the sampler lookup. Storage images, which note their binding per submission, are
 // not kept. Direct-mapped, per recording thread; a hit is checked against the generations and the slot token, all read
 // atomically, so it takes no lock: only a miss or the submission's first binding of a slot takes the texture lock (the
-// chunks of MKW_REPLAY_PAR bind on several threads, and the lock around every draw's textures made them wait on it).
-// MKW_TEX_MEMO=0 turns it off; =check computes every hit again and stops on a difference.
+// chunks of ORBITALS_REPLAY_PAR bind on several threads, and the lock around every draw's textures made them wait on it).
+// ORBITALS_TEX_MEMO=0 turns it off; =check computes every hit again and stops on a difference.
 #define TD_N 8192
 typedef struct {
     uint64_t h, tok;
@@ -333,10 +333,10 @@ static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage,
         slot_still(&m->gen, m->tok, h, gen)) {
         td_stat[0]++;
         if (m->epoch != ep) {   // the slot's first binding in this submission: only its storage check is due
-            // unless another thread (a chunk of MKW_REPLAY_PAR, lpc1) already made it in this submission;
-            // MKW_TEX_CHECKED=0 takes the lock every time, to measure
+            // unless another thread (a chunk of ORBITALS_REPLAY_PAR, lpc1) already made it in this submission;
+            // ORBITALS_TEX_CHECKED=0 takes the lock every time, to measure
             static int chk = -1;
-            if (chk < 0) chk = !cfg_get("MKW_TEX_CHECKED") || strcmp(cfg_get("MKW_TEX_CHECKED"), "0") != 0;
+            if (chk < 0) chk = !cfg_get("ORBITALS_TEX_CHECKED") || strcmp(cfg_get("ORBITALS_TEX_CHECKED"), "0") != 0;
             if (!chk || !vk_texture_checked((int)(h & 0xfffff), ep)) {
                 tex_lock_once(locked);
                 vk_texture_by_id_locked((int)(h & 0xfffff), NULL, NULL);
@@ -410,7 +410,7 @@ static void support_fill(uint8_t *b, float w, float h, float point_size) {
     for (int i = 0; i < 73; i++) memcpy(b + 192 + 16 * i, &one, 4);   // render scale 1: the host renders at guest size
 }
 
-// MKW_BIND_STATS=1: bindings and descriptors per draw of each stage (Task 2.2's choice of the pushed stage), and how
+// ORBITALS_BIND_STATS=1: bindings and descriptors per draw of each stage (Task 2.2's choice of the pushed stage), and how
 // often a draw repeats the previous one, logged every 4000 draws (a capture holds ~12000): pushes recorded and skipped,
 // allocated sets written
 // and reused, draws with the previous draw's program, bound state
@@ -431,7 +431,7 @@ static void bind_stats(const VkPipeInfo *info) {
                "same program and state as the draw before %.3f, also same buffers %.3f; descriptor builds skipped %.3f",
                BS.push / d, BS.push_skip / d, BS.set_new / d, BS.set_reuse / d, BS.same_prog / d,
                BS.same_all / d, BS.bind_skip / d);
-        rt_log("vk_exec: per draw: rebinds with new uniform block offsets only %.3f (MKW_UBO_SKIP)", BS.ubo_skip / d);
+        rt_log("vk_exec: per draw: rebinds with new uniform block offsets only %.3f (ORBITALS_UBO_SKIP)", BS.ubo_skip / d);
         rt_log("vk_exec: per draw, builds not skipped by the first input that differed: pipeline %.3f, program %.3f, "
                "texture slots or epoch %.3f, samplers or feedback count %.3f, memory or uniform snapshot generation %.3f, "
                "feedback images, support, base instance or uniform-read addresses %.3f, bound slots %.3f, only user "
@@ -441,17 +441,17 @@ static void bind_stats(const VkPipeInfo *info) {
     }
 }
 
-static int push_skip_on(void) {   // MKW_PUSH_SKIP=0: every graphics draw pushes its set again
+static int push_skip_on(void) {   // ORBITALS_PUSH_SKIP=0: every graphics draw pushes its set again
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("MKW_PUSH_SKIP");
+        on = cfg_bool("ORBITALS_PUSH_SKIP");
     }
     return on;
 }
 
 // A graphics draw whose descriptor inputs equal the previous graphics draw's in this command buffer skips building its
 // sets: every write would be the same, the push would be skipped and the allocated set reused without a bind (about a
-// quarter of field and monsters2 draws, MKW_BIND_STATS). The inputs, compared and stored in place, are what
+// quarter of field and monsters2 draws, ORBITALS_BIND_STATS). The inputs, compared and stored in place, are what
 // bind_resources and its helpers read beyond the pipeline info's fixed bindings and Z's stand-ins:
 // - the info (bindings, layouts), the program and its serial (the compiler-constant range of UBO slot 1);
 // - vk_texture_slots_gen, vk_texture_epoch (a slot's image, view and once-per-submit storage check), vk_sampler_gen;
@@ -466,11 +466,11 @@ static int push_skip_on(void) {   // MKW_PUSH_SKIP=0: every graphics draw pushes
 // the views cached per submission. The census counts are added again. A build that copied guest bytes into transient
 // memory (an unaligned host range) is never skipped after: the copy may differ. B.res_valid says the sets bound hold
 // the last build; vk_exec_draw_new_cb's memset clears it, and every build clears it until it ends.
-// MKW_BIND_SKIP=0 builds every draw; =check builds every draw and stops when a draw with equal inputs gets other
+// ORBITALS_BIND_SKIP=0 builds every draw; =check builds every draw and stops when a draw with equal inputs gets other
 // writes, census counts or descriptor commands.
 static int bind_skip_on(void) {
     if (RS.on < 0) {
-        const char *e = cfg_value("MKW_BIND_SKIP");
+        const char *e = cfg_value("ORBITALS_BIND_SKIP");
         RS.on = !strcmp(e, "check") ? 2 : strcmp(e, "0") != 0;
         if (RS.on != 1) rt_log("vk_exec: descriptor build skip %s", RS.on ? "check" : "off");
     }
@@ -580,7 +580,7 @@ static int bind_sig(const VkExec *ex, const VkPipeInfo *info) {
     if (fast && RS.on != 2) return !diff;
     const uint8_t *e = (const uint8_t *)ex;
     uint8_t *d = RS.body;
-    int bd = 0, bdu = 1;   // bdu: only user uniform blocks' bindings differ (MKW_BIND_STATS)
+    int bd = 0, bdu = 1;   // bdu: only user uniform blocks' bindings differ (ORBITALS_BIND_STATS)
     for (uint32_t i = 0; i < l->n; i++) {
         const RsRange *r = &l->r[i];
         if (!bd && memcmp(d, e + r->off, r->len)) bd = 1, bdu = r->uniform;
@@ -594,7 +594,7 @@ static int bind_sig(const VkExec *ex, const VkPipeInfo *info) {
     return !diff && !bd;
 }
 
-// MKW_BIND_XF: the draw's inputs as one key (the pipeline, the bound-slot bytes its descriptors read and the storage
+// ORBITALS_BIND_XF: the draw's inputs as one key (the pipeline, the bound-slot bytes its descriptors read and the storage
 // addresses taken from uniform blocks); 0 when they are not known or targets are in the feedback layout. The uniform
 // blocks' own bindings are left out: their addresses move every frame (a linear allocator; 10 % equal frame to frame,
 // recdiff.py) and their descriptors are resolved on every draw anyway.
@@ -635,7 +635,7 @@ static void write_set(const VkPipeInfo *info, uint32_t s, VkDescriptorSet set, c
 // graphics push equal to the last one at its set number, with no other layout or bind between, is not recorded.
 // The descriptors go into one packed array d, a VkDescSlot per descriptor in binding order, which a set's update
 // template reads directly (VkPipeInfo.tpl); write structs are filled only when a set has no template.
-// MKW_TRACE=draw: bind_resources by stage (TSC ticks), printed with prepare_draw's stages.
+// ORBITALS_TRACE=draw: bind_resources by stage (TSC ticks), printed with prepare_draw's stages.
 static _Thread_local uint64_t br_t;
 _Thread_local uint64_t br_tsc[BR_N];
 static _Thread_local int br_on;
@@ -709,12 +709,12 @@ static VkDescriptorSet dc_bind(VkExec *ex, const VkPipeInfo *info, uint32_t s, V
     return set;
 }
 
-// MKW_TRACE_BINDS=1 (diagnosis): per draw, its replay position, program and what each binding names in terms stable
+// ORBITALS_TRACE_BINDS=1 (diagnosis): per draw, its replay position, program and what each binding names in terms stable
 // from one run to the next (a buffer's guest address and range, a texture's game handle and the layout given), so two
 // recording orders of a capture show the first draw that binds something else (grabacion-paralela, the title's fault).
 static void trace_binds(const VkExec *ex, const VkPipeInfo *info, const VkDescSlot *d) {
     static int on = -1;
-    if (on < 0) on = cfg_get("MKW_TRACE_BINDS") && atoi(cfg_get("MKW_TRACE_BINDS"));
+    if (on < 0) on = cfg_get("ORBITALS_TRACE_BINDS") && atoi(cfg_get("ORBITALS_TRACE_BINDS"));
     if (!on) return;
     char b[2048];
     uint64_t ph = 0xcbf29ce484222325ull;   // the NVN-side pipeline state (dynamic state included), stable across runs
@@ -744,19 +744,19 @@ static void trace_binds(const VkExec *ex, const VkPipeInfo *info, const VkDescSl
     rt_log("%s", b);
 }
 
-// MKW_UBO_SKIP (default 1; "ab"), with MKW_DRAW_CACHE: ubo_rebind below.
+// ORBITALS_UBO_SKIP (default 1; "ab"), with ORBITALS_DRAW_CACHE: ubo_rebind below.
 static int ubo_skip_on(void) {
     static int mode = -1;
     if (mode < 0) {
         mode = vk_pipeline_draw_cache() ? rt_knob("UBO_SKIP", "1") : 0;
         if (vk_pipeline_draw_cache())
-            rt_log("vk_exec: draws that change only their uniform blocks rebind the last sets %s (MKW_UBO_SKIP)",
+            rt_log("vk_exec: draws that change only their uniform blocks rebind the last sets %s (ORBITALS_UBO_SKIP)",
                    mode == 2 ? "in the B blocks" : mode ? "on" : "off");
     }
     return RT_KNOB_ON(mode);
 }
 
-// MKW_DRAW_CACHE: a graphics draw whose descriptor inputs equal the previous draw's but for its user uniform blocks'
+// ORBITALS_DRAW_CACHE: a graphics draw whose descriptor inputs equal the previous draw's but for its user uniform blocks'
 // bindings (bind_sig, RS.why 7: 46-49 % of the race's draws, bs3) rebinds the sets dc_bind bound last with the blocks'
 // new dynamic offsets, when each block lies in the same buffer with the same range; 0: nothing recorded, build.
 static int ubo_rebind(VkExec *ex, const VkPipeInfo *info) {
@@ -1006,7 +1006,7 @@ void bind_resources(VkExec *ex, const VkPipeInfo *info) {
     }
     if (skip) {
         RS.rec = 0;
-        // An equal next draw records nothing when every push set holds its push (MKW_PUSH_SKIP on) and nothing made
+        // An equal next draw records nothing when every push set holds its push (ORBITALS_PUSH_SKIP on) and nothing made
         // the build unrepeatable; allocated sets are always bound to the one written last.
         int valid = !RS.volatile_ && !RS.cnt_over && RS.hn;
         for (uint32_t s = 0; s < n_sets; s++)
@@ -1050,7 +1050,7 @@ void vk_exec_bind_shutdown(void) {
     rs_last = NULL, rs_last_l = NULL;
 }
 
-// ---- MKW_REUSE (vk_exec_reuse.c): a reused draw's sets bound again
+// ---- ORBITALS_REUSE (vk_exec_reuse.c): a reused draw's sets bound again
 
 int ru_ubo_ok(VkExec *ex, int st, int slot) {
     if (!__atomic_load_n(&LIM.ubo_max, __ATOMIC_ACQUIRE)) limits_init();

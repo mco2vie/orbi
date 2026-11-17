@@ -1,7 +1,7 @@
 // Turbo: the game runs `speed` times faster, to get through menus, movies and loads sooner.
-// MKW_TURBO = off (default) | hold (while F2 is held) | toggle (F2 turns it on and off) | on (the whole run, for the
-// scripts) | until (on until MKW_SEQ_UNTIL's event, for the run scripts: what they measure goes at normal speed);
-// MKW_TURBO_SPEED = 2..8 (default 4). Both are read live, once per present.
+// ORBITALS_TURBO = off (default) | hold (while F2 is held) | toggle (F2 turns it on and off) | on (the whole run, for the
+// scripts);
+// ORBITALS_TURBO_SPEED = 2..8 (default 4). Both are read live, once per present.
 //
 // Three clocks pace the game and all three go `speed` times faster: the present pacer (nvn_api_obj.c present_period),
 // the 60 Hz vsync thread (gfx_present.c vsync_main) and the guest clock the game reads with nn::os::GetSystemTick
@@ -53,7 +53,7 @@ static void clock_rate(int mul) {
 int turbo_speed(void) { return atomic_load_explicit(&speed, memory_order_relaxed); }
 
 void turbo_poll(void) {
-    const char *mode = cfg_value("MKW_TURBO");
+    const char *mode = cfg_value("ORBITALS_TURBO");
     int key = 0;
     if (!strcmp(mode, "hold") || !strcmp(mode, "toggle")) {
         int down = input_hack_key(HACK_KEY_TURBO);
@@ -61,15 +61,15 @@ void turbo_poll(void) {
         key_was = down;
         key = mode[0] == 'h' ? down : toggled;
     }
-    int on = !strcmp(mode, "on") || key || (!strcmp(mode, "until") && seqwatch_since_us() < 0);
-    int want = on ? cfg_int("MKW_TURBO_SPEED") : 1;
+    int on = !strcmp(mode, "on") || key;
+    int want = on ? cfg_int("ORBITALS_TURBO_SPEED") : 1;
     if (want < 1) want = 1;
     if (want > 8) want = 8;
     int had = atomic_load_explicit(&speed, memory_order_relaxed);
     if (want == had) return;
     clock_rate(want);
     atomic_store_explicit(&speed, want, memory_order_relaxed);
-    rt_log("turbo: x%d (MKW_TURBO=%s)", want, mode);
+    rt_log("turbo: x%d (ORBITALS_TURBO=%s)", want, mode);
 }
 
 int turbo_drop_present(uint64_t now) {

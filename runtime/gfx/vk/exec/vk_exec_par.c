@@ -1,7 +1,7 @@
-// MKW_REPLAY_PAR (default 0; "ab": in the B blocks): one submission's replay recorded on several threads. The game
+// ORBITALS_REPLAY_PAR (default 0; "ab": in the B blocks): one submission's replay recorded on several threads. The game
 // sends a race frame as one NVN command buffer of 2,500-3,100 draws, and one thread records it in 16-23 ms
 //. Here a light walk follows the replay state through the submission's ops
-// without recording (0.5 ms a race frame, walk1) and cuts them into chunks of MKW_REPLAY_PAR_DRAWS draws and
+// without recording (0.5 ms a race frame, walk1) and cuts them into chunks of ORBITALS_REPLAY_PAR_DRAWS draws and
 // dispatches, keeping a copy of the state (VkExec) at each cut. The chunks are recorded at once, each on a thread with
 // its copy into a command buffer of its own (vk_exec_chunk_begin starts it as a split does: nothing bound), the
 // replay thread taking chunks too. The replay thread sends the chunks to the queue in order as they are ready
@@ -21,7 +21,7 @@
 //   their replay position (vk_usnap.c), and the join records again, in order, each chunk that bound a copy at a
 //   position after a drop (fix_order). Dropping the recently written regions ahead instead made the draws before the
 //   write read guest memory: black as well (img-rev2).
-// MKW_REPLAY_WALK=1 (diagnosis): the walk alone, timed, without chunks.
+// ORBITALS_REPLAY_WALK=1 (diagnosis): the walk alone, timed, without chunks.
 #include <stdlib.h>
 #include <string.h>
 
@@ -52,7 +52,7 @@ typedef struct {
     VkCommandBuffer cb;
     uint64_t drops;       // uniform snapshot drops it made
     VkCompletionList done; // its completion callbacks, added in chunk order once every chunk is recorded
-    VkExecFrame counters;  // its MKW_TRACE=gfx frame counters, summed into vk_exec_frame_all at the join
+    VkExecFrame counters;  // its ORBITALS_TRACE=gfx frame counters, summed into vk_exec_frame_all at the join
     VkUsnapLog ulog;       // the uniform snapshot regions it bound from the copy and those it dropped
 } Chunk;
 
@@ -69,9 +69,9 @@ enum { WHY_REPORT, WHY_RESET, WHY_COND, WHY_QUEUE, WHY_FEW, WHY_BUSY, WHY_N };
 
 static struct {
     int mode, walk_diag, threads, chunk_draws, first_draws, reverse, warm, depth_off;
-    int order[MAX_CHUNKS], norder;   // MKW_REPLAY_PAR_ORDER=a,b,c...: the first chunks taken in that order
-    int cut, cut_op;                 // MKW_REPLAY_PAR_CUT, MKW_REPLAY_PAR_CUT_OP
-    int oplog[2];                    // MKW_REPLAY_PAR_OPLOG
+    int order[MAX_CHUNKS], norder;   // ORBITALS_REPLAY_PAR_ORDER=a,b,c...: the first chunks taken in that order
+    int cut, cut_op;                 // ORBITALS_REPLAY_PAR_CUT, ORBITALS_REPLAY_PAR_CUT_OP
+    int oplog[2];                    // ORBITALS_REPLAY_PAR_OPLOG
     uint64_t subs;
     // the plan of the submission being recorded
     Chunk ch[MAX_CHUNKS];
@@ -106,7 +106,7 @@ static struct {
     uint64_t t_job, first_ns;   // when the chunks were handed out; summed: until the first send (the GPU starts there)
     uint64_t n_par, n_serial[WHY_N], n_chunks, n_draws, walk_ns, rec_ns, max_rec_ns, drops_early, w_subs, w_frames0, n_cond, n_again;
     uint64_t n_inpass;    // chunks cut inside a pass (at twice their draws without a target change)
-    int inpass;           // MKW_REPLAY_PAR_INPASS (default 1): those cuts made
+    int inpass;           // ORBITALS_REPLAY_PAR_INPASS (default 1): those cuts made
 } P;
 
 
@@ -160,7 +160,7 @@ static void chunk_add(const Pos *p, const VkExec *st) {
     P.nch++;
 }
 
-// Draws of chunk k: the first ones grow from MKW_REPLAY_PAR_FIRST (64, doubling) up to C, so the GPU starts about as
+// Draws of chunk k: the first ones grow from ORBITALS_REPLAY_PAR_FIRST (64, doubling) up to C, so the GPU starts about as
 // early as with the serial replay's 64-draw parts. With C draws from the first chunk the GPU waited for the whole
 // first chunk, ~3-4 ms with every thread recording (pab2/pab2i: fence wait +3.5 ms, GPU busy +0.8).
 static int chunk_size(int k, int C) {
@@ -208,7 +208,7 @@ static int plan(const VkExec *ex0, const uint64_t *handles, int n, int C) {
                 w->rt = *(const p_set_rt *)a, w->rt_resolved = 0;
                 // The targets' images, made now as the pass would make them (vk_texture_get): a chunk recorded before
                 // the one rendering a target samples it, and a target the game registers anew each frame had no image
-                // yet: the title's shadow map bound as a 32x32 stand-in, Mario lit wrong (dp01/dp10, MKW_DUMP).
+                // yet: the title's shadow map bound as a 32x32 stand-in, Mario lit wrong (dp01/dp10, ORBITALS_DUMP).
                 for (int i = 0; i < w->rt.n && i < 8; i++)
                     if (w->rt.color[i]) vk_texture_get(w->rt.color[i]);
             }
@@ -367,56 +367,56 @@ static void worker_main(void *arg) {
 
 static void setup(void) {
     P.mode = rt_knob("REPLAY_PAR", "0");
-    const char *e = cfg_get("MKW_REPLAY_WALK");
+    const char *e = cfg_get("ORBITALS_REPLAY_WALK");
     P.walk_diag = e && atoi(e) > 0;
-    e = cfg_get("MKW_REPLAY_PAR_DRAWS");
+    e = cfg_get("ORBITALS_REPLAY_PAR_DRAWS");
     P.chunk_draws = e && atoi(e) > 0 ? atoi(e) : 384;
-    // MKW_REPLAY_PAR_WARM (120): submissions replayed serially first, so the lazily set up switches and caches settle.
+    // ORBITALS_REPLAY_PAR_WARM (120): submissions replayed serially first, so the lazily set up switches and caches settle.
     // mkw --replay sets 0: a capture holds 12-16 submissions, and with 120 none was ever recorded in chunks.
-    e = cfg_get("MKW_REPLAY_PAR_WARM");
+    e = cfg_get("ORBITALS_REPLAY_PAR_WARM");
     P.warm = e ? atoi(e) : 120;
-    e = cfg_get("MKW_REPLAY_PAR_FIRST");   // the first chunk's draws, doubling up to MKW_REPLAY_PAR_DRAWS; 0: all equal
+    e = cfg_get("ORBITALS_REPLAY_PAR_FIRST");   // the first chunk's draws, doubling up to ORBITALS_REPLAY_PAR_DRAWS; 0: all equal
     P.first_draws = e ? atoi(e) : 64;
-    // MKW_REPLAY_PAR_INPASS=0 (a measurement): no cut inside a pass, only where the target changes. Those cuts store
+    // ORBITALS_REPLAY_PAR_INPASS=0 (a measurement): no cut inside a pass, only where the target changes. Those cuts store
     // and load the pass's targets again behind a full barrier (pab3); with them the GPU went +1.6-1.9 ms a frame on the
     // 660M (cut2) and +3 on the GTX 1050 Ti (wpar1).
     P.inpass = rt_knob("REPLAY_PAR_INPASS", "1") != 0;
-    e = cfg_get("MKW_REPLAY_PAR_THREADS");   // threads besides the replay thread
+    e = cfg_get("ORBITALS_REPLAY_PAR_THREADS");   // threads besides the replay thread
     uint32_t cpus = plat_cpu_count();
     P.threads = e ? atoi(e) : cpus >= 8 ? 3 : cpus >= 4 ? 2 : 1;
     if (P.threads < 0) P.threads = 0;   // 0: the chunks in order on the replay thread (a check of the chunking alone)
-    // MKW_REPLAY_PAR_DEPTH=0 (a measurement): as before 07/11/2026, chunks after the first clear depth layer by layer
+    // ORBITALS_REPLAY_PAR_DEPTH=0 (a measurement): as before 07/11/2026, chunks after the first clear depth layer by layer
     // and are cut between the layers of one depth image.
-    e = cfg_get("MKW_REPLAY_PAR_DEPTH");
+    e = cfg_get("ORBITALS_REPLAY_PAR_DEPTH");
     P.depth_off = e && !atoi(e);
-    // MKW_REPLAY_PAR_ORDER=reverse (diagnosis): chunks taken last first; with no threads, out of order without any
+    // ORBITALS_REPLAY_PAR_ORDER=reverse (diagnosis): chunks taken last first; with no threads, out of order without any
     // concurrency: whether a fault comes from the order chunks are recorded in or from threads racing.
-    e = cfg_get("MKW_REPLAY_PAR_ORDER");
+    e = cfg_get("ORBITALS_REPLAY_PAR_ORDER");
     P.reverse = e && !strcmp(e, "reverse");
-    // MKW_REPLAY_PAR_CUT=X (diagnosis): two chunks, cut after the submission's X-th draw. With ORDER=1,0 and no threads
+    // ORBITALS_REPLAY_PAR_CUT=X (diagnosis): two chunks, cut after the submission's X-th draw. With ORDER=1,0 and no threads
     // a fault from the recording order shows for X between the op that changes some state and the one reading it:
     // two searches over X find both.
-    // MKW_REPLAY_PAR_OPLOG=from,to (diagnosis): the walk logs every op after draw `from` up to draw `to`.
-    e = cfg_get("MKW_REPLAY_PAR_OPLOG");
+    // ORBITALS_REPLAY_PAR_OPLOG=from,to (diagnosis): the walk logs every op after draw `from` up to draw `to`.
+    e = cfg_get("ORBITALS_REPLAY_PAR_OPLOG");
     if (e) P.oplog[0] = atoi(e), P.oplog[1] = strchr(e, ',') ? atoi(strchr(e, ',') + 1) : P.oplog[0];
-    e = cfg_get("MKW_REPLAY_PAR_CUT");
+    e = cfg_get("ORBITALS_REPLAY_PAR_CUT");
     P.cut = e ? atoi(e) : 0;
-    // MKW_REPLAY_PAR_CUT_OP=X (diagnosis): as CUT, cut before the submission's X-th op (OPLOG numbers them): the op that
+    // ORBITALS_REPLAY_PAR_CUT_OP=X (diagnosis): as CUT, cut before the submission's X-th op (OPLOG numbers them): the op that
     // changes some state and the one that reads it, not just their draws.
-    e = cfg_get("MKW_REPLAY_PAR_CUT_OP");
+    e = cfg_get("ORBITALS_REPLAY_PAR_CUT_OP");
     P.cut_op = e ? atoi(e) : 0;
-    e = cfg_get("MKW_REPLAY_PAR_ORDER");
-    // MKW_REPLAY_PAR_ORDER=1,0,2 (diagnosis): the first chunks of each submission taken in that order, the rest in
+    e = cfg_get("ORBITALS_REPLAY_PAR_ORDER");
+    // ORBITALS_REPLAY_PAR_ORDER=1,0,2 (diagnosis): the first chunks of each submission taken in that order, the rest in
     // order; with no threads it tells which pair of chunks a fault from the recording order lies in.
     for (const char *s = e; s && !P.reverse && *s && P.norder < MAX_CHUNKS; s += strcspn(s, ","), s += *s == ',')
         P.order[P.norder++] = atoi(s);
     if (P.threads > MAX_THREADS) P.threads = MAX_THREADS;
-    if (P.walk_diag) rt_log("vk: light walk of each submission before its replay (MKW_REPLAY_WALK, a measurement)");
+    if (P.walk_diag) rt_log("vk: light walk of each submission before its replay (ORBITALS_REPLAY_WALK, a measurement)");
     if (!P.mode) return;
     plat_cond_init(&P.work), plat_cond_init(&P.finished);
     for (int t = 1; t <= P.threads; t++)
         if (!plat_thread_spawn(worker_main, (void *)(intptr_t)t, "vk chunks", 0)) rt_fatal("vk: cannot start a replay chunk thread");
-    rt_log("vk: replay in chunks of %d draws on %d threads besides the replay thread%s (MKW_REPLAY_PAR)", P.chunk_draws,
+    rt_log("vk: replay in chunks of %d draws on %d threads besides the replay thread%s (ORBITALS_REPLAY_PAR)", P.chunk_draws,
            P.threads, P.mode == 2 ? ", in the B blocks" : "");
 }
 
@@ -470,8 +470,8 @@ int vk_exec_par(VkExec *ex, const uint64_t *handles, int n, int diag) {
         if (d > P.max_rec_ns) P.max_rec_ns = d;
         return 0;
     }
-    // A frame dump (MKW_DUMP) records its copies into the command buffer being recorded: with chunk threads that is
-    // several at once, so it stays serial; with none (MKW_REPLAY_PAR_THREADS=0) the chunks may be dumped, in their order
+    // A frame dump (ORBITALS_DUMP) records its copies into the command buffer being recorded: with chunk threads that is
+    // several at once, so it stays serial; with none (ORBITALS_REPLAY_PAR_THREADS=0) the chunks may be dumped, in their order
     // (diag, which a dump also sets, still keeps them serial: the next step for the title's order fault).
     if (!P.mode || !RT_KNOB_ON(P.mode) || diag || (vk_dump_armed && P.threads) || P.subs <= (uint64_t)P.warm) return 0;
     if (vk_exec_oq_busy()) return P.n_serial[WHY_BUSY]++, 0;
@@ -515,7 +515,7 @@ void vk_exec_par_log(void) {
                "(under 2 chunks) %llu (counting on); in-order ops: report %llu reset %llu cond %llu queues %llu; per frame walk %.3f ms, chunks %.3f ms (max %.3f a submission); "
                "first send %.2f ms after the chunks start (a submission); "
                "uniform snapshot drops before the last chunk %llu, chunks recorded again for them %llu; conditions decided by the walk %llu; "
-               "cuts inside a pass %.1f a submission (MKW_REPLAY_PAR_INPASS)", (unsigned long long)P.n_par,
+               "cuts inside a pass %.1f a submission (ORBITALS_REPLAY_PAR_INPASS)", (unsigned long long)P.n_par,
                P.n_par ? (double)P.n_chunks / (double)P.n_par : 0, P.n_par ? (double)P.n_draws / (double)P.n_par : 0,
                (unsigned long long)(P.n_serial[WHY_REPORT] + P.n_serial[WHY_RESET] + P.n_serial[WHY_COND] +
                                     P.n_serial[WHY_QUEUE]),

@@ -20,7 +20,7 @@
 //   queried for written pages; pages stamped after a pool's sgen are copied in by the CPU.
 // - GPU -> guest: the GPU's writes stay pending from record time to their fence (vk_mem_wback.c); the CPU copies skip
 //   them meanwhile, or merge them by bytes where the range has a base (vk_mem_merge.c).
-// MKW_SHADOW=1/0 forces the mode on or off; the default is on for Linux.
+// ORBITALS_SHADOW=1/0 forces the mode on or off; the default is on for Linux.
 int shadow_on;                                    // shadow mode: imported pools get shadow storage (vk_mem_class_log)
 PlatMutex shadow_lock = PLAT_MUTEX_INIT;          // after pool_lock; before gen_lock
 // Pools resolved since the last sync, under a lock of their own: the recording threads add to it while the early
@@ -35,10 +35,10 @@ static int cbatch;
 int64_t s_live_n, s_live_bytes;            // shadow_lock
 static uint8_t *strack;                           // vk_mem_shadow_sync: tracked flag of each touched pool
 static int cstrack;
-int vk_dirty_census;                              // MKW_DIRTY_CENSUS with MKW_TRACE=perf (vk.h)
+int vk_dirty_census;                              // ORBITALS_DIRTY_CENSUS with ORBITALS_TRACE=perf (vk.h)
 // Pages whose only stamp since the shadow's sync is a GPU write-back (vk_gpu_written_stamp) are not copied in: the
 // write-back took those bytes from this shadow, so it holds them (sh-reup, 14/11/2026: 57 of 262 MiB copied in over
-// build/cap/race). MKW_SHADOW_CPU_GEN (default 1; "ab") switches it; s_gpu_only counts them either way.
+// build/cap/race). ORBITALS_SHADOW_CPU_GEN (default 1; "ab") switches it; s_gpu_only counts them either way.
 int shadow_cpu_gen = 1;
 static uint64_t s_gpu_only;       // shadow_lock: bytes with only a GPU write-back since (skipped when the knob is on)
 static uint64_t s_syncs, s_copied, s_queries, s_untracked, s_ticks;   // shadow_lock: since the last log
@@ -94,7 +94,7 @@ int shadow_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
 // submission must see came before it was submitted, and the first sync copied them. Writes made meanwhile by another
 // thread are not ordered with it; the next submission's sync takes them. Syncing again at every part took 116-133 ms
 // per s of wall clock in a race (rt-i2: 4.4 parts per submission).
-// Early syncs (MKW_SHADOW_EARLY, default 1; "ab"; se-ab3: -0.5 ms a frame; off until 08/11/2026 for the cacti it
+// Early syncs (ORBITALS_SHADOW_EARLY, default 1; "ab"; se-ab3: -0.5 ms a frame; off until 08/11/2026 for the cacti it
 // brought back, pse1 6 in 1,800 race frames, which were a translator race fixed in 9129803: tse1 0 in 2,400): a pool first touched while a submission is recorded is synced
 // right away on a thread of its own ("vk shadow"), while the replay goes on recording; the sync before the part's
 // submit only waits for the one in progress and takes what is left. The game submitted that submission before the
@@ -148,7 +148,7 @@ void shadow_forget(PoolRec *r) {
 
 static uint64_t sync_fence;   // shadow_lock: the submission vk_mem_shadow_sync is syncing for
 
-// 1 when a pending GPU write over [a, b) belongs to a submission before the one being synced (MKW_SHADOW_LOST).
+// 1 when a pending GPU write over [a, b) belongs to a submission before the one being synced (ORBITALS_SHADOW_LOST).
 static int spend_old(uint64_t a, uint64_t b) {
     for (int i = 0; i < nspend; i++)
         if (spend[i].lo < b && spend[i].hi > a && spend[i].fence != sync_fence) return 1;
@@ -173,7 +173,7 @@ static int shadow_merge(PoolRec *r, uint64_t lo, uint64_t hi, const uint8_t *src
         if (e->lazy && lazy_check(e->lazy)) bases[n] = lazy_check(e->lazy), blo[n++] = e->lo;   // kept alike
     }
     shadow_inval(r, lo, hi);   // merge_in compares the GPU's bytes with the bases
-    uint8_t *old = race_on > 0 ? merge_base(r, lo, hi) : NULL;   // MKW_SHADOW_RACE: the shadow's bytes before
+    uint8_t *old = race_on > 0 ? merge_base(r, lo, hi) : NULL;   // ORBITALS_SHADOW_RACE: the shadow's bytes before
     uint64_t over = merge_over, m = merge_in(r, lo, hi, bases, blo, n, src);
     if (m) shadow_flush(r, lo, hi);
     if (watch_hi && merge_over != over) watch_event("merge-in over the GPU's", lo, hi, sync_fence, merge_over - over);
@@ -229,7 +229,7 @@ static void shadow_copy(PoolRec *r, uint64_t a, uint64_t b, int i, const uint8_t
         if (t) continue;
         if (race_on > 0) race_wait(race_check(r, x, y, sync_fence, NULL));
         if (watch_hi) watch_copy(r, x, y, sync_fence);
-        mem_copy_out(r->smap + (x - r->import_lo), x, y - x);   // MKW_EARLY_READ's watched pages stay watched
+        mem_copy_out(r->smap + (x - r->import_lo), x, y - x);   // ORBITALS_EARLY_READ's watched pages stay watched
         shadow_flush(r, x, y);
         s_copied += y - x;
         if (n_early_base) base_follow(r, x, y);
@@ -301,7 +301,7 @@ static void shadow_newer_runs(PoolRec *r, int tracked) {
 // shadow_lock held: a captured run of r into the shadow (vk_mem_capture.c).
 void shadow_apply_run(PoolRec *r, uint64_t a, uint64_t b, const uint8_t *src) { shadow_copy(r, a, b, 0, src); }
 
-// Hot pools (MKW_SHADOW_HOT, default 1; "ab" in the B blocks): a query protects the written pages again, so the CPU's
+// Hot pools (ORBITALS_SHADOW_HOT, default 1; "ab" in the B blocks): a query protects the written pages again, so the CPU's
 // next write faults and the next query finds and protects the page once more, ~2 us a page on the replay (rt-x4: 790
 // written pages and 1.7 ms of queries a frame) plus the game's fault. A pool written in at least 4 of its last 8 syncs
 // is queried without protecting for its next 32: its written pages are copied at every sync. Then one normal query
@@ -360,7 +360,7 @@ static void sync_pools(PoolRec **rs, int n, uint64_t fence, uint64_t sub) {
 static void take_base(int i) {
     SRange *e = &spend[i];
     e->btried = 1;
-    // Lazy (MKW_LAZY_BASE) when no pending write of another part is over it: its GPU bytes would be in the shadow and
+    // Lazy (ORBITALS_LAZY_BASE) when no pending write of another part is over it: its GPU bytes would be in the shadow and
     // not in guest memory yet.
     int alone = e->pool && lazy_base_on();
     for (int j = 0; j < nspend && alone; j++)
@@ -376,7 +376,7 @@ static void take_base(int i) {
 // was synced for the submission and no GPU write of another part is pending over it. Until the submit the shadow there
 // changes only by copy-ins (base_follow keeps the base with them): the GPU runs no part that writes it, and the pool is
 // not synced again for this submission. The sync before the submit took 1.7 ms a frame for them (sh1).
-// MKW_EARLY_BASE_ANY (default 1; "ab"): the pool need not be synced for the submission first; base_follow keeps a base
+// ORBITALS_EARLY_BASE_ANY (default 1; "ab"): the pool need not be synced for the submission first; base_follow keeps a base
 // taken before the pool's copy-ins with them. A pool the submission never touches is never synced for it, and its
 // ranges' bases all went to the sync before the submit: ~300 MiB per 60 frames, ~290 more of pools not reached yet (ebd3).
 // Taken with shadow_lock, the replay's sync waits for them (ebn2: its wait 49-54 -> 66-70 ms per 60 frames while its
@@ -388,7 +388,7 @@ static int any_mode = -1;
 static void early_bases(void) {   // shadow_lock held
     if (any_mode < 0) {
         any_mode = rt_knob("EARLY_BASE_ANY", "1");
-        rt_log("mem: early merge bases before the pool's sync %s (MKW_EARLY_BASE_ANY)",
+        rt_log("mem: early merge bases before the pool's sync %s (ORBITALS_EARLY_BASE_ANY)",
                any_mode == 2 ? "in the B blocks" : any_mode ? "on" : "off");
     }
     int any = RT_KNOB_ON(any_mode);
@@ -467,7 +467,7 @@ void vk_mem_shadow_sync(uint64_t fence) {
         race_level();
         watch_init();
         hot_mode = rt_knob("SHADOW_HOT", "1");
-        rt_log("mem: hot shadow pools %s (MKW_SHADOW_HOT)", hot_mode == 2 ? "in the B blocks" : hot_mode ? "on" : "off");
+        rt_log("mem: hot shadow pools %s (ORBITALS_SHADOW_HOT)", hot_mode == 2 ? "in the B blocks" : hot_mode ? "on" : "off");
     }
     if (early_mode < 0) {
         int m = rt_knob("SHADOW_EARLY", "1");
@@ -475,7 +475,7 @@ void vk_mem_shadow_sync(uint64_t fence) {
             plat_cond_init(&touch_cv);
             if (!plat_thread_spawn(early_main, NULL, "vk shadow", 0)) rt_fatal("vk: cannot start the shadow thread");
         }
-        rt_log("mem: early shadow syncs %s (MKW_SHADOW_EARLY)", m == 2 ? "in the B blocks" : m ? "on" : "off");
+        rt_log("mem: early shadow syncs %s (ORBITALS_SHADOW_EARLY)", m == 2 ? "in the B blocks" : m ? "on" : "off");
         __atomic_store_n(&early_mode, m, __ATOMIC_RELEASE);
     }
     uint64_t sub = __atomic_load_n(&vk_replay_submit, __ATOMIC_RELAXED);

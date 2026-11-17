@@ -20,14 +20,12 @@
 #include "version.h"
 
 #define SYM_INIT_START "_ZN2nn4init5StartEmmPFvvES2_S2_"
-// The first nvnBootstrapLoader call (version.c nvn_ret: 1.0.0 main+0xcf3a5c in the graphics bring-up main+0xcf39b4,
-// 1.8.0 main+0xdd07c8 in main+0xdd0720). MKW 1.0.0 does not call SetFocusHandlingMode before it (its calls sit at
-// main+0x1d5a44 and main+0xc782e0), so that checkpoint is only logged when it comes.
+// The first nvnBootstrapLoader call is checked against version.c nvn_ret when the row has one; without it, where it
+// comes from is logged and the run goes on.
 #define CTOR_DONE 2                      // a module's constructor flag after its DT_INIT ran the init_array
 
-// The init_array sizes of the game version (version.c inits: DT_INIT_ARRAYSZ, measured by --probe-loader on 1.0.0,
-// read from the NSOs for 1.8.0); a different count means a different game build. Every module of the version runs
-// its DT_INIT, in load order (1.8.0: main, subsdk0, subsdk1, sdk).
+// The init_array sizes of the game version (version.c inits: DT_INIT_ARRAYSZ, measured by --probe-loader); a
+// different count means a different game build. Every module of the version runs its DT_INIT, in load order.
 
 static volatile int32_t inits_done, checkpoint_seen;
 uint64_t rt_guest_start_ns;
@@ -43,7 +41,8 @@ static uint32_t ctor_state(const RtLoaded *m) { return LD32(m->ctor_flag); }
 static const char *caller(const Cpu *c, char *buf, int n) { return ldr_describe(c->x[30] - 4, buf, n); }
 
 // main.npdm META: the main thread's priority (+0xE), core (+0xF) and stack size (+0x1C). kernel.c builds the main
-// thread with the 1.2.1 values; a different npdm means a different game build.
+// thread with fixed values (44, core 0, 1 MiB); a game whose npdm asks for others is told in the log.
+// TODO: kernel.c should build the main thread with the npdm's values.
 static void check_npdm(void) {
     size_t n;
     uint8_t *npdm = ldr_read_verified(rt_config()->exefs, "main.npdm", &n);
@@ -52,14 +51,9 @@ static void check_npdm(void) {
     memcpy(&stack, npdm + 0x1C, 4);
     int prio = npdm[0xE], core = npdm[0xF];
     free(npdm);
-    if ((prio != 44 || core != 0 || stack != 0x100000) && rt_version()->number == 0) {   // another game: say so, go on
-        rt_log("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000 (MKW's)",
-               prio, core, stack);
-        return;
-    }
     if (prio != 44 || core != 0 || stack != 0x100000)
-        rt_fatal("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000", prio,
-                 core, stack);
+        rt_log("boot: main.npdm asks for priority %d, core %d, stack %#x; kernel.c builds 44, 0, 0x100000", prio, core,
+               stack);
 }
 
 // ---- the three callbacks of nn::init::Start (rtld's job on hardware)
@@ -75,7 +69,7 @@ void ov_musl_clock_hooks(const char *when);   // sdk/ov/ov_time2.c
 static void cb_module_inits(Cpu *c) {
     if (plat_cas32(&inits_done, 0, 0)) rt_fatal("boot: module constructors requested twice");
     const RtInitCount *expected_inits = rt_version()->inits;
-    if (!expected_inits[0].name) {   // version 0, another game: every module's DT_INIT in load order, counts logged
+    if (!expected_inits[0].name) {   // no counts in the row: every module's DT_INIT in load order, counts logged
         for (int k = 0; k < ldr_count(); k++) {
             const RtLoaded *m = ldr_module(k);
             uint64_t entries = m->init_array_size / 8;
@@ -137,7 +131,7 @@ void rt_boot_event(const char *what, Cpu *c, const char *detail) {
     }
     if (!strcmp(what, "nvn")) {
         uint64_t nvn_ret = rt_version()->nvn_ret;
-        if (!nvn_ret) {   // version 0, another game: where its first NVN call comes from, and the run goes on
+        if (!nvn_ret) {   // not in the row: where the first NVN call comes from, and the run goes on
             rt_logf("boot: first NVN call nvnBootstrapLoader(\"%s\") from %s\n", detail, at);
             stats_line();
             return;
@@ -160,7 +154,7 @@ void rt_boot_event(const char *what, Cpu *c, const char *detail) {
 
 // ---- --seconds S
 // A PNG with stored (uncompressed) deflate blocks: no compression library, and the shot is only read by tools.
-// rt_write_png (declared in vk.h) is shared with the MKW_DUMP frame dump (vk_dump.c).
+// rt_write_png (declared in vk.h) is shared with the ORBITALS_DUMP frame dump (vk_dump.c).
 static uint32_t crc32_update(uint32_t crc, const uint8_t *p, size_t n) {
     static uint32_t table[256];
     if (!table[1])
@@ -268,9 +262,9 @@ static void save_shot(const tex_t *t, const char *path) {
     rt_logf("boot: shot %s (%ux%u)\n", path, w, h);
 }
 
-// MKW_SHOTS=lo-hi:step [MKW_SHOTS_DIR=dir]: every step-th present in [lo, hi] saved as <dir>/f<n>.png (n the
-// present), box-filtered to 480x270; MKW_SHOTS=w<lo>-<hi>:<step> takes them by world-clock seconds instead, the first
-// present at or after each step (full size with MKW_SHOTS_FULL=1), for finding short glitches. Pipeline builds stay asynchronous, so the
+// ORBITALS_SHOTS=lo-hi:step [ORBITALS_SHOTS_DIR=dir]: every step-th present in [lo, hi] saved as <dir>/f<n>.png (n the
+// present), box-filtered to 480x270; ORBITALS_SHOTS=w<lo>-<hi>:<step> takes them by world-clock seconds instead, the first
+// present at or after each step (full size with ORBITALS_SHOTS_FULL=1), for finding short glitches. Pipeline builds stay asynchronous, so the
 // pictures show what a player sees.
 static void series_shot(const tex_t *t, uint64_t n) {
     static int parsed;
@@ -278,14 +272,14 @@ static void series_shot(const tex_t *t, uint64_t n) {
     static const char *dir;
     static int full, world;
     if (!parsed) {
-        full = cfg_get("MKW_SHOTS_FULL") != NULL;
-        const char *e = cfg_get("MKW_SHOTS");
+        full = cfg_get("ORBITALS_SHOTS_FULL") != NULL;
+        const char *e = cfg_get("ORBITALS_SHOTS");
         double wl, wh, ws;
         if (e && e[0] == 'w' && sscanf(e + 1, "%lf-%lf:%lf", &wl, &wh, &ws) == 3 && ws > 0)   // world-clock seconds
             world = 1, lo = (unsigned long long)(wl * 1e6), hi = (unsigned long long)(wh * 1e6),
             step = (unsigned long long)(ws * 1e6), next = lo;
         else if (!e || sscanf(e, "%llu-%llu:%llu", &lo, &hi, &step) != 3 || !step) hi = 0;
-        dir = cfg_get("MKW_SHOTS_DIR") ? cfg_get("MKW_SHOTS_DIR") : ".";
+        dir = cfg_get("ORBITALS_SHOTS_DIR") ? cfg_get("ORBITALS_SHOTS_DIR") : ".";
         if (hi) plat_file_mkdir_p(dir);
         parsed = 1;
     }
@@ -301,7 +295,7 @@ static void series_shot(const tex_t *t, uint64_t n) {
     if (!bgra && fmt != NVN_FORMAT_RGBA8 && fmt != NVN_FORMAT_RGBA8_SRGB) return;
     uint32_t w = t->d.width, h = t->d.height, ow = full ? w : 480, oh = full ? h : 270;
     uint8_t *px = malloc(4ull * w * h), *out = malloc(4ull * ow * oh);
-    if (!px || !out) rt_fatal("boot: out of memory for a MKW_SHOTS frame");
+    if (!px || !out) rt_fatal("boot: out of memory for a ORBITALS_SHOTS frame");
     view_t view;
     memset(&view, 0, sizeof view);
     NVNcopyRegion r = {.width = (int)w, .height = (int)h, .depth = 1};
@@ -327,7 +321,7 @@ static void series_shot(const tex_t *t, uint64_t n) {
     free(px);
 }
 
-// MKW_CTL "shot PATH" (ctl.c): the next presented frame, full size.
+// ORBITALS_CTL "shot PATH" (ctl.c): the next presented frame, full size.
 static char *shot_req;
 
 void rt_shot_request(const char *path) {
@@ -388,7 +382,7 @@ static void lock_profile(void) {
     char p[4200];
     snprintf(p, sizeof p, "%s/instance.lock", rt_config()->profile_base);
     if (plat_file_lock(p)) return;   // -1 (cannot open it): played as before, without the guard
-    const char *msg = "Mario Kart World is already running from this folder. Close it before starting it again.";
+    const char *msg = "Orbitals is already running from this folder. Close it before starting it again.";
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "orbitals-recomp", msg, NULL);
     rt_fatal("boot: %s (%s is held)", msg, p);
 }
@@ -401,7 +395,6 @@ void rt_boot(void) {
     PlatThread *warm = plat_thread_new(prewarm_main, NULL, "prewarm");
     ldr_load(rt_config()->exefs);
     rt_patches_init();
-    seqwatch_init();
     impcensus_init();
     cb_addr[0] = hostfn_register("<rtld loader_ready>", cb_loader_ready);
     cb_addr[1] = hostfn_register("<rtld module_inits>", cb_module_inits);

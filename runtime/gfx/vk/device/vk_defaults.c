@@ -3,7 +3,7 @@
 // (#31).
 #include "vk_defaults.h"
 
-// Tile slots of the sparse textures (vk_sparse.c). Integrated: 768, the 660M's (1024 hung it with MKW_ASTC_BC1,
+// Tile slots of the sparse textures (vk_sparse.c). Integrated: 768, the 660M's (1024 hung it with ORBITALS_ASTC_BC1,
 // run-race41). Discrete: a quarter of the VRAM in 256 MiB steps, 768 to 3072; the title binds 1 472 MiB uncapped
 // (run-sp3), so 8 GB and up hold all of it and a 4 GB card keeps the 660M's figure. Below 3 GB the 768 floor took most
 // of the budget (a 2 GB GTX 750 Ti, budget 1399 MiB: 9961 slots live when a block of 16 MiB failed and the device was
@@ -24,7 +24,7 @@ uint64_t vk_default_mem_limit_mib(uint64_t ram_mib, uint64_t carveout_mib) {
     return (mib > 4096 ? mib : 4096) + carveout_mib;
 }
 
-// Texture pool blocks made at start (vk_tex_image.c, MKW_VK_TEX_POOL_MIN). Discrete only. Half the VRAM, in 256 MiB
+// Texture pool blocks made at start (vk_tex_image.c, ORBITALS_VK_TEX_POOL_MIN). Discrete only. Half the VRAM, in 256 MiB
 // blocks, up to 8 (2 GiB): 8 blocks took the two long frames after «VALE» on the GTX 1050 Ti from 2 642 + 2 471 to
 // 1 661 + 1 476 ms (wtp8 / wtp0), and the pool grows past them on demand, so the cap costs only the reserve. Half a
 // 16 GB card (31 blocks, 7 750 MiB) was 92% of the runtime's own budget there (8 386 MiB, "heap 1 limited" in a

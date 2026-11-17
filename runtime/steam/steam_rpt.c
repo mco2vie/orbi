@@ -1,4 +1,4 @@
-// Steam Remote Play Together (steam_rpt.h). With MKW_STEAM_APPID set (a number, or auto: the game Steam started), the game process starts Steam's API as that App
+// Steam Remote Play Together (steam_rpt.h). With ORBITALS_STEAM_APPID set (a number, or auto: the game Steam started), the game process starts Steam's API as that App
 // ID before the game boots; Steam then streams the window and the sound to the guests itself, and this file turns the
 // guests into players:
 //   - a guest's controller is a Steam virtual gamepad on the host, which input.c gives to the next free player once SDL
@@ -61,7 +61,7 @@ static int is_app_id(const char *s);
 
 // steam_appid = auto: the App ID Steam put in the environment when it started mkw from a game's launch options
 // (%command%), so the overlay and the guests' controllers are that game's. Read once, before steam_rpt_start sets it.
-// Each one Steam passes is kept in cache/steam-appid next to orbital.ini, and a start from mkw's own folder (no SteamAppId)
+// Each one Steam passes is kept in cache/steam-appid next to orbitals.ini, and a start from mkw's own folder (no SteamAppId)
 // uses the last one, so Automatic works there as a fixed number does (auto_saved).
 static char auto_id[16];
 static int auto_saved;
@@ -95,7 +95,7 @@ static void auto_store(const char *id) {
 }
 
 const char *steam_rpt_app_id(void) {
-    const char *v = cfg_get("MKW_STEAM_APPID");
+    const char *v = cfg_get("ORBITALS_STEAM_APPID");
     if (!v) return "";
     if (strcmp(v, "auto")) return v;
     static int resolved;
@@ -182,7 +182,7 @@ static void choice_done(int choice, void *ctx) {
 
 int steam_rpt_multiplayer(int need, int have) {
     if (need < 2 || steam_rpt_state() != STEAM_RPT_READY) return 0;
-    const char *mode = cfg_get("MKW_STEAM_INVITE");
+    const char *mode = cfg_get("ORBITALS_STEAM_INVITE");
     if (mode && !strcmp(mode, "off")) return 0;
     int missing = have < need;
     // ask (default): with too few controllers the player chooses how the others join, local controllers or Steam's
@@ -347,7 +347,7 @@ static void read_keys(void) {
 static void requests(void) {
     if (plat_xchg32(&req_invite, 0) && !api.show_ui(rp)) {
         plat_xchg32(&invite_failed, 1);
-        rt_log("steam: the overlay did not open (Steam overlay off, or mkw not started from Steam); the guest link works "
+        rt_log("steam: the overlay did not open (Steam overlay off, or orbitals-recomp not started from Steam); the guest link works "
                "without it");
         menu_notice(menu_text(UI_NOTICE_RPT_NO_OVERLAY), 10);
     }
@@ -419,22 +419,22 @@ void steam_rpt_start(void) {
     const char *app = steam_rpt_app_id();
     if (!*app) { plat_xchg32(&g_state, STEAM_RPT_OFF); return; }
     if (!strcmp(app, "auto")) {
-        fail("steam_appid = %s, but Steam passed no App ID and none is remembered: start mkw once from a Steam game's "
+        fail("steam_appid = %s, but Steam passed no App ID and none is remembered: start orbitals-recomp once from a Steam game's "
              "launch options (%%command%%)", app);
         return;
     }
     if (!is_app_id(app)) { fail("steam_appid = %s is not a Steam App ID (a number)", app); return; }
     if (auto_saved)
         rt_log("steam: steam_appid = auto, started without Steam: App ID %s, the one Steam passed last time "
-               "(guests' controllers need mkw started from that game in Steam, docs/remote-play.md)", app);
+               "(guests' controllers need orbitals-recomp started from that game in Steam, docs/remote-play.md)", app);
     char started[32];   // a number set while Steam started mkw as another game: the overlay is that game's
     if (plat_getenv("SteamAppId", started, sizeof started) && is_app_id(started) && strcmp(started, app))
-        rt_log("steam: Steam started mkw as App ID %s, but steam_appid = %s: set steam_appid = auto to follow the game",
+        rt_log("steam: Steam started orbitals-recomp as App ID %s, but steam_appid = %s: set steam_appid = auto to follow the game",
                started, app);
 
     char tried[PLAT_PATH_MAX];
     void *lib = open_library(tried, sizeof tried);
-    if (!lib) { fail("Steam's library is missing: put " STEAM_LIBRARY " next to mkw (looked for %s)", tried); return; }
+    if (!lib) { fail("Steam's library is missing: put " STEAM_LIBRARY " next to orbitals-recomp (looked for %s)", tried); return; }
     const char *missing = NULL;
 #define BIND(field, name) \
     if (!(*(void **)&api.field = plat_lib_sym(lib, name)) && !missing) missing = name;

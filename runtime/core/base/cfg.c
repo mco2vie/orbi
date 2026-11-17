@@ -1,6 +1,6 @@
-// orbital.ini: file-backed defaults for the MKW_* environment variables (docs/controls.md, orbital.ini.example).
+// orbitals.ini: file-backed defaults for the ORBITALS_* environment variables (docs/controls.md, orbitals.ini.example).
 // Format: "key = value" lines, '#' or ';' at the start of a line begins a comment, [sections] only group. A key is a
-// variable name without "MKW_" (an optional MKW_ prefix is accepted), case-insensitive. A value is the rest of the
+// variable name without "ORBITALS_" (an optional ORBITALS_ prefix is accepted), case-insensitive. A value is the rest of the
 // line, trimmed, optionally in double quotes; an empty value counts as unset. The environment wins over the file.
 //
 // Live settings: cfg_set changes a value in memory (readers see the new pointer; the old string is kept, so a pointer
@@ -18,7 +18,7 @@
 #include "utf16.h"
 #endif
 
-#define PREFIX "MKW_"
+#define PREFIX "ORBITALS_"
 #define PREFIX_LEN (sizeof PREFIX - 1)
 #define CFG_MAX_KEYS 512
 
@@ -33,36 +33,36 @@ static int save_ok = 1;                         // the last cfg_save_to wrote (o
 // Every name the runtime reads (and the patch sets in generated/), without the prefix. A file key outside this list is
 // logged as unknown. A new variable goes here too, or its ini key logs a harmless "unknown key" line.
 static const char *const known[] = {
-    "AB", "ANISO", "APP_POOL", "ASPECT", "ASSUME_FOCUS", "ASTC", "ASTC_TIME", "ASYNC_PREEMPT", "AUDIO", "AUDIO_CHANNELS", "AUDIO_OFF", "AUDIO_PREFILL_MS",
+    "AB", "ANISO", "APP_POOL", "ASSUME_FOCUS", "ASTC", "ASTC_TIME", "ASYNC_PREEMPT", "AUDIO", "AUDIO_CHANNELS", "AUDIO_OFF", "AUDIO_PREFILL_MS",
     "BACKGROUND_MUTE", "BACKGROUND_WINDOW", "BIND_A", "BIND_B", "BIND_DOWN", "BIND_L", "BIND_LCLICK", "BIND_LEFT", "BIND_LSTICK_DOWN", "BIND_LSTICK_LEFT",
     "BIND_LSTICK_RIGHT", "BIND_LSTICK_UP", "BIND_MINUS",
     "BIND_PLUS", "BIND_R", "BIND_RCLICK", "BIND_RIGHT", "BIND_RSTICK_DOWN", "BIND_RSTICK_LEFT", "BIND_RSTICK_RIGHT", "BIND_RSTICK_UP",
     "BIND_SKIP", "BIND_STATS", "BIND_UP", "BIND_X", "BIND_Y",
-    "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DETAIL_DISTANCE", "DEVICE_PROFILE", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DUMP_LOG",
+    "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DEVICE_PROFILE", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DUMP_LOG",
     "EXEFS", "FEEDBACK", "FG_BIAS", "FG_DUMP", "FG_DUMP_DIR", "FG_LAMBDA", "FG_PROBE", "FIX_C0", "FIX_ZERO", "FLIGHT", "FLIGHT_AT", "FLIGHT_DIR", "FLIGHT_FRAMES", "FLIGHT_SPIKE_MS",
-    "FLIGHT_THUMBS", "FPS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GAME_DIR", "GPL", "GPL_DRAW_BUILD", "GPU",
+    "FLIGHT_THUMBS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GAME_DIR", "GPL", "GPL_DRAW_BUILD", "GPU",
     "GPU_CRUMBS", "GPU_CRUMBS_DRAW", "HDR", "HDR_FAKE", "GPU_INDEX", "GPU_MEM_LIMIT", "GPU_NAME", "INPUT", "INPUT_RECORD", "INPUT_SCRIPT", "LAN", "LAN_IP", "LANG",
     "LOCALE", "MEMORY", "MESH_COMPUTE", "MENU_LANG", "MENU_TEST",
     "MENU_TEST_DIR", "MENU_TEST_SET", "MINIMAL_LAYOUT", "MIRROR_GAP", "MODS", "MODS_ACK", "MODS_PLAYED", "MOTION",
     "MOUSE_SENS", "PLAYER",   // PLAYER: the launcher's choice (core/base/players.h), no row: Reset all leaves it
     "ONE_PER_CORE", "OPERATION_MODE", "PAD_LAYOUT", "PERF_OVERLAY", "PERF_SLOW_MS", "PICTURE_FIT", "PIPELINE_CACHE", "PIPE_MEMO", "PIPE_PREBUILD", "PIPE_SKIP", "PIPE_STALL", "PIPE_SYNC", "PIPE_TRACE", "PIPE_WAIT", "PIPE_WORKERS",
-    "PROBE", "PROFILE", "PROFILE_CHAINS", "PROFILE_DIR", "PROFILE_FRAMES",
+    "PROFILE", "PROFILE_CHAINS", "PROFILE_DIR", "PROFILE_FRAMES",
     "PROFILE_MAIN", "PROFILE_RENDER", "PUSH_SKIP", "PUSH_STAGE", "RDOC", "RDOC_DIR", "RDOC_DLL", "REEXEC",
     "BIND_XF", "REG_LATE", "REG_QUEUED", "REPLAY_ASYNC", "USNAP_CMP",
-    "REPLAY_CHECK", "RESOLUTION", "RESOLVE_CHECK", "ROMFS", "RTSTATS", "ROMFS_MODS", "ROMFS_PATCHES",
+    "REPLAY_CHECK", "RESOLVE_CHECK", "ROMFS", "RTSTATS", "ROMFS_MODS", "ROMFS_PATCHES",
     "RUMBLE", "RUMBLE_CURVE", "RUMBLE_STRENGTH", "RUMBLE_TRIGGERS",
-    "SHADER_MEMO", "SHADOW_SIZE", "SHARED_FONTS", "SHARPNESS", "SHOTS", "SHOTS_DIR", "SHOTS_FULL", "SPARSE_IMAGES", "SPARSE_MIB", "SPARSE_NO_BUFFER", "SPIN", "SPIN_HANDOFF_US", "SPLIT_DRAWS", "SPLIT_US", "STEAM_APPID", "STEAM_APPIDS", "STEAM_INVITE", "STICK_DEADZONE", "SWITCH2", "SWKBD_ANSWER",
-    "SKIP_PROGRAMS", "SWKBD_TEST", "TEX_ALIAS", "TEX_MEMO", "TEX_QUALITY", "TEX_RELEASED_MIB", "TIMER_1MS", "TRACE", "TURBO", "TURBO_SPEED", "SKIP_MOVIES", "SEED", "UNLOCK_ALL", "QUICK_RACE", "FREEZE_KEYS", "QUALITY", "TRACE_UBO", "TRACE_UBO_OUT", "UBO_SNAPSHOT", "UPSCALER", "VK_DYN_VERTEX", "VK_NO_FLOAT64",
+    "SHADER_MEMO", "SHARED_FONTS", "SHARPNESS", "SHOTS", "SHOTS_DIR", "SHOTS_FULL", "SPARSE_IMAGES", "SPARSE_MIB", "SPARSE_NO_BUFFER", "SPIN", "SPIN_HANDOFF_US", "SPLIT_DRAWS", "SPLIT_US", "STEAM_APPID", "STEAM_APPIDS", "STEAM_INVITE", "STICK_DEADZONE", "SWITCH2", "SWKBD_ANSWER",
+    "SKIP_PROGRAMS", "SWKBD_TEST", "TEX_ALIAS", "TEX_MEMO", "TEX_QUALITY", "TEX_RELEASED_MIB", "TIMER_1MS", "TRACE", "TURBO", "TURBO_SPEED", "SEED", "FREEZE_KEYS", "QUALITY", "TRACE_UBO", "TRACE_UBO_OUT", "UBO_SNAPSHOT", "UPSCALER", "VK_DYN_VERTEX", "VK_NO_FLOAT64",
     "VK_PRESENT", "VK_RECORDER", "VK_SSBO_ALIGN", "VK_SUBGROUP", "VK_SUBGROUP_PIN", "VK_TEX_POOL_MIN", "VK_VALIDATION", "VOLUME", "VRAM_HEADROOM", "VRAM_LOG", "VRAM_MARGIN", "VS_OUTS",
-    "UPDATE_AS", "UPDATE_CHECK", "UPDATE_REPO", "WINDOW_SIZE", "ZSTD_CHECK", "ZSTD_NATIVE",
+    "UPDATE_AS", "UPDATE_CHECK", "UPDATE_REPO", "WINDOW_SIZE",
 };
 
-// The orbital.ini section a key cfg_set may write goes to when the file lacks it (orbital.ini.example's sections).
+// The orbitals.ini section a key cfg_set may write goes to when the file lacks it (orbitals.ini.example's sections).
 static const struct { const char *key, *section; } sections[] = {
     {"FULLSCREEN", "display"}, {"WINDOW_SIZE", "display"}, {"PERF_OVERLAY", "display"}, {"VK_PRESENT", "display"},
     {"GPU_INDEX", "display"}, {"UPSCALER", "display"}, {"HDR", "display"}, {"SHARPNESS", "display"}, {"PICTURE_FIT", "display"},
-    {"DEVICE_PROFILE", "display"}, {"RESOLUTION", "display"}, {"ASPECT", "display"}, {"FPS", "display"}, {"FRAMEGEN", "display"},
-    {"QUALITY", "graphics"}, {"ANISO", "graphics"}, {"TEX_QUALITY", "graphics"}, {"DETAIL_DISTANCE", "graphics"}, {"SHADOW_SIZE", "graphics"},
+    {"DEVICE_PROFILE", "display"}, {"FRAMEGEN", "display"},
+    {"QUALITY", "graphics"}, {"ANISO", "graphics"}, {"TEX_QUALITY", "graphics"},
     {"MENU_LANG", "language"}, {"LANG", "language"}, {"OPERATION_MODE", "language"}, {"LAN", "language"},
     {"VOLUME", "audio"}, {"AUDIO_CHANNELS", "audio"}, {"BACKGROUND_MUTE", "audio"},
     {"MOTION", "input"}, {"RUMBLE_STRENGTH", "input"}, {"RUMBLE_CURVE", "input"}, {"RUMBLE_TRIGGERS", "input"},
@@ -81,8 +81,8 @@ static const struct { const char *key, *section; } sections[] = {
     {"PUSH_SKIP", "performance"}, {"SPLIT_DRAWS", "performance"}, {"SPLIT_US", "performance"}, {"VK_VALIDATION", "performance"},
     {"VK_DYN_VERTEX", "performance"}, {"VK_SUBGROUP_PIN", "performance"},
     {"TRACE", "diagnostics"}, {"FLIGHT", "diagnostics"}, {"FLIGHT_SPIKE_MS", "diagnostics"},
-    {"TURBO", "hacks"}, {"TURBO_SPEED", "hacks"}, {"SKIP_MOVIES", "hacks"}, {"SEED", "hacks"}, {"UNLOCK_ALL", "hacks"}, {"FREEZE_KEYS", "hacks"},
-    {"QUICK_RACE", "hacks"}, {"MODS", "launcher"}, {"MODS_ACK", "launcher"}, {"MODS_PLAYED", "launcher"},
+    {"TURBO", "hacks"}, {"TURBO_SPEED", "hacks"}, {"SEED", "hacks"}, {"FREEZE_KEYS", "hacks"},
+    {"MODS", "launcher"}, {"MODS_ACK", "launcher"}, {"MODS_PLAYED", "launcher"},
     {"UPDATE_CHECK", "launcher"}, {"GAME_DIR", "launcher"}, {"PLAYER", "launcher"},
     {"STEAM_APPID", "steam"}, {"STEAM_APPIDS", "steam"}, {"STEAM_INVITE", "steam"},
 };
@@ -96,13 +96,11 @@ static const CfgMeta metas[] = {
     // Screen
     {"FULLSCREEN", "0", "0|1", LIVE}, {"WINDOW_SIZE", "1920x1080", NULL, LIVE},
     {"VK_PRESENT", "mailbox", "mailbox|fifo|immediate", LIVE}, {"GPU_INDEX", "", NULL, RESTART},
-    {"PERF_OVERLAY", "off", "off|fps|full", LIVE}, {"FPS", "auto", "auto|30|60", LIVE},
+    {"PERF_OVERLAY", "off", "off|fps|full", LIVE},
     {"FRAMEGEN", "off", "off|auto|2|3|4", LIVE},
     {"UPSCALER", "fsr", "fsr|bilinear", LIVE}, {"SHARPNESS", "80", "0..100", LIVE},
     {"PICTURE_FIT", "keep", "keep|stretch", LIVE}, {"HDR", "auto", "auto|off", LIVE},   // auto: HDR when the display is (hdr6c, 12/11/2026)
     {"DEVICE_PROFILE", "auto", "auto|desktop|deck", RESTART},
-    {"RESOLUTION", "original", "original|540|720|900|1080|1440|2160", RESTART},
-    {"ASPECT", "16:9", "16:9|window|21:9|32:9|48:9", RESTART},
     // Game
     {"LANG", "", "ja|en-US|fr|de|it|es|zh-CN|ko|nl|pt|ru|zh-TW|en-GB|fr-CA|es-419|zh-Hans|zh-Hant|pt-BR|pl|th|ca|gl|eu", RESTART},
     {"OPERATION_MODE", "docked", "docked|handheld", RESTART},
@@ -113,7 +111,6 @@ static const CfgMeta metas[] = {
     // Graphics: the console's look by default
     {"QUALITY", "console", "low|medium|console|high|ultra|custom", RESTART},   // the menu's presets; nothing reads it
     {"ANISO", "game", "game|2|4|8|16", RESTART}, {"TEX_QUALITY", "full", "full|half|quarter", RESTART},
-    {"DETAIL_DISTANCE", "2", "1|1.5|2|3|4", RESTART}, {"SHADOW_SIZE", "console", "console|1024|2048|3072|4096", RESTART},
     // Sound, Controls, Menu
     {"VOLUME", "100", "0..100", LIVE}, {"AUDIO_CHANNELS", "auto", "auto|2|6", RESTART}, {"BACKGROUND_MUTE", "0", "0|1", LIVE},
     {"MOTION", "1", "0|1", LIVE}, {"RUMBLE_STRENGTH", "130", "0..300", LIVE}, {"RUMBLE_CURVE", "0.6", "0.2..1.5", LIVE},
@@ -133,7 +130,7 @@ static const CfgMeta metas[] = {
     {"PIPE_PREBUILD", "1", "0|1", RESTART}, {"GPL", "1", "0|1", RESTART},
     // textures and memory
     {"ASTC", "auto", "auto|gpu|native|cpu", RESTART}, {"MEMORY", "auto", "auto|import|mirror|verify", RESTART},
-    {"TEX_ALIAS", "1", "0|1", RESTART}, {"ZSTD_NATIVE", "1", "0|1", RESTART}, {"ZSTD_CHECK", "0", "0|1", RESTART},
+    {"TEX_ALIAS", "1", "0|1", RESTART},
     // render fixes
     {"FIX_C0", "1", "0|1", RESTART}, {"FIX_ZERO", "1", "0|1", RESTART},
     {"BIND_SKIP", "1", "0|1", RESTART}, {"SHADER_MEMO", "1", "0|1", RESTART}, {"PIPE_MEMO", "1", "0|1", RESTART}, {"TEX_MEMO", "1", "0|1", RESTART},
@@ -147,9 +144,9 @@ static const CfgMeta metas[] = {
     {"TRACE", "", NULL, RESTART}, {"FLIGHT", "0", "0|1", RESTART}, {"FLIGHT_SPIKE_MS", "100", "0..60000", RESTART},
     {"INPUT_RECORD", "", NULL, RESTART},
     // Hacks: none of them on the console, all off by default
-    {"TURBO", "off", "off|hold|toggle|on|until", LIVE}, {"TURBO_SPEED", "4", "2..8", LIVE},
-    {"SKIP_MOVIES", "0", "0|1", LIVE}, {"SEED", "", NULL, RESTART},
-    {"UNLOCK_ALL", "0", "0|1", RESTART}, {"FREEZE_KEYS", "0", "0|1", LIVE}, {"QUICK_RACE", "off", "off|tt|free", RESTART},
+    {"TURBO", "off", "off|hold|toggle|on", LIVE}, {"TURBO_SPEED", "4", "2..8", LIVE},
+    {"SEED", "", NULL, RESTART},
+    {"FREEZE_KEYS", "0", "0|1", LIVE},
 };
 
 static int is_known(const char *key) {
@@ -181,7 +178,7 @@ static void add(char *key, char *value, int line) {
     size_t vl = strlen(value);
     if (vl >= 2 && value[0] == '"' && value[vl - 1] == '"') value[vl - 1] = 0, value++;
     if (!*key) return;
-    if (!is_known(key)) rt_log("cfg: orbital.ini line %d: unknown key '%s'", line, key);
+    if (!is_known(key)) rt_log("cfg: orbitals.ini line %d: unknown key '%s'", line, key);
     if (!*value) return;   // "key =" leaves the setting at its default
     for (int i = 0; i < n_entries; i++)
         if (!strcmp(entries[i].key, key)) {   // a repeated key: the later line wins
@@ -206,7 +203,7 @@ int cfg_load(const char *path) {
         char *s = trim(p);
         char *eq = strchr(s, '=');
         if (*s && *s != '#' && *s != ';' && *s != '[') {
-            if (!eq) rt_log("cfg: orbital.ini line %d: no '=' in '%s'", line, s);
+            if (!eq) rt_log("cfg: orbitals.ini line %d: no '=' in '%s'", line, s);
             else {
                 *eq = 0;
                 add(trim(s), trim(eq + 1), line);
@@ -219,19 +216,16 @@ int cfg_load(const char *path) {
     return 1;
 }
 
-// ---- device profiles: defaults for a known machine, below the environment and orbital.ini and above the table, so any
-// key the player sets wins and resetting a key in the menu returns to the profile's value. MKW_DEVICE_PROFILE = auto
+// ---- device profiles: defaults for a known machine, below the environment and orbitals.ini and above the table, so any
+// key the player sets wins and resetting a key in the menu returns to the profile's value. ORBITALS_DEVICE_PROFILE = auto
 // (default: the Steam Deck when the firmware says so), desktop (none) or deck.
 //
 // The Steam Deck (LCD Jupiter, OLED Galileo; 1280x800, 16:10, 4 Zen 2 cores, RDNA 2 with 8 CUs sharing 16 GB): a
 // window at the screen's 1280x800, fullscreen and vsync, as gamescope composes Game Mode.
-// RESOLUTION 720: with "original" the output already shrinks to the 720 lines a 16:9 picture gets on the 800-line
-// screen (patches.c output_size), but the 3D scene still renders at the console's docked 2560x1440 (romfs_res.c),
-// passes of that size taking 16 of the GPU's 42 ms a frame (MKW_PASS_TIMING with MKW_VK_RECORDER=0). With 720 they
-// go: race median 36.3 -> 23.4 ms (time trial, low quality preset, UMA 1 GB, 13/11/2026), 35.7 -> 24.6 ms without the
-// timing; a docked Deck on a large screen can pick a higher one in the menu.
+// TODO: a lower render resolution for the Deck, through Orbitals' own engine settings (the former 720-line setting
+// wrote the first game's RomFS parameters; docs/romfs-res-audit.md).
 static const struct { const char *key, *value; } DECK[] = {
-    {"FULLSCREEN", "1"}, {"WINDOW_SIZE", "1280x800"}, {"VK_PRESENT", "fifo"}, {"RESOLUTION", "720"},
+    {"FULLSCREEN", "1"}, {"WINDOW_SIZE", "1280x800"}, {"VK_PRESENT", "fifo"},
 };
 static int profile = -1;   // 0 none, 1 Steam Deck
 
@@ -460,7 +454,7 @@ static void put(Out *o, const char *s, size_t n) {
     if (o->n + n + 1 > o->cap) {
         o->cap = (o->n + n + 1) * 2;
         o->buf = realloc(o->buf, o->cap);
-        if (!o->buf) rt_fatal("cfg: out of memory writing orbital.ini");
+        if (!o->buf) rt_fatal("cfg: out of memory writing orbitals.ini");
     }
     memcpy(o->buf + o->n, s, n);
     o->n += n;
@@ -517,7 +511,7 @@ int cfg_save_to(const char *path) {
     // after[i]: entries to write after line i (-1 = none); replace[i]: the entry whose value line i now carries
     int *replace = malloc(sizeof(int) * ((size_t)nl + 1)), *after_key = malloc(sizeof(int) * (size_t)(n + 1));
     char *drop = calloc((size_t)nl + 1, 1);   // lines of a reset key
-    if (!lines || !replace || !after_key || !drop) rt_fatal("cfg: out of memory writing orbital.ini");
+    if (!lines || !replace || !after_key || !drop) rt_fatal("cfg: out of memory writing orbitals.ini");
     for (int i = 0, at = 0; i < nl; i++) {
         size_t start = (size_t)at;
         while ((uint64_t)at < size && text[at] != '\n') at++;
@@ -643,17 +637,6 @@ static int resolve_game_dir(const char *path, char *out, size_t cap) {
     return 1;
 }
 
-// An installation from before the rename keeps its settings: its mkw.ini becomes orbital.ini when orbital.ini is missing.
-static void migrate_ini(const char *path) {
-    size_t n = strlen(path);
-    if (n < sizeof "orbital.ini" - 1 || plat_file_exists(path)) return;
-    char old[PLAT_PATH_MAX * 3];
-    if (n - (sizeof "orbital.ini" - 1) + sizeof "mkw.ini" > sizeof old) return;
-    memcpy(old, path, n - (sizeof "orbital.ini" - 1));
-    strcpy(old + n - (sizeof "orbital.ini" - 1), "mkw.ini");
-    if (plat_file_exists(old) && plat_file_replace(old, path)) rt_log("cfg: %s renamed to orbital.ini", old);
-}
-
 static int find_ini(void) {
     if (ini_path[0]) return 1;
     char path[PLAT_PATH_MAX * 2];
@@ -661,8 +644,7 @@ static int find_ini(void) {
     char *cut = plat_last_sep(path);
     if (!cut) cut = strrchr(path, '/');
     if (!cut || cut + 14 >= path + sizeof path) return 0;
-    strcpy(cut + 1, "orbital.ini");
-    migrate_ini(path);
+    strcpy(cut + 1, "orbitals.ini");
     snprintf(ini_path, sizeof ini_path, "%s", path);
     snprintf(launcher_ini, sizeof launcher_ini, "%s", path);
     *cut = 0;
@@ -688,7 +670,7 @@ int cfg_game_dir_invalid(void) { return game_dir_invalid; }
 // caller restarts it after success so no DLL, shader cache or settings from the old installation survive the switch.
 int cfg_select_game_dir(const char *path) {
     cfg_game_dir();
-    if (cfg_from_env("MKW_GAME_DIR")) return 0;
+    if (cfg_from_env("ORBITALS_GAME_DIR")) return 0;
     char resolved[CFG_GAME_DIR_MAX + 1];
     game_dir_invalid = !resolve_game_dir(path, resolved, sizeof resolved);
     if (game_dir_invalid) {
@@ -703,7 +685,7 @@ int cfg_select_game_dir(const char *path) {
     int i = 0, old_n = n_entries;
     while (i < n_entries && strcmp(entries[i].key, "GAME_DIR")) i++;
     CfgEntry old = i < n_entries ? entries[i] : (CfgEntry){0};
-    cfg_set("MKW_GAME_DIR", resolved);
+    cfg_set("ORBITALS_GAME_DIR", resolved);
     if (cfg_save_to(launcher_ini)) return 1;
     // A failed selector write must not leak into the current installation on the next settings save.
     if (i < old_n) entries[i] = old;
@@ -721,7 +703,7 @@ static void load_ini(void) {
     for (int i = 0; i < n_entries; i++) {
         char var[128];
         snprintf(var, sizeof var, PREFIX "%s", entries[i].key);
-        if (getenv(var)) rt_log("cfg: %s is set in the environment and overrides orbital.ini", var);
+        if (getenv(var)) rt_log("cfg: %s is set in the environment and overrides orbitals.ini", var);
     }
 }
 
@@ -730,7 +712,7 @@ void cfg_init(void) {
     if (initialized) return;
     initialized = 1;
     load_ini();
-    const char *selected = cfg_get("MKW_GAME_DIR");
+    const char *selected = cfg_get("ORBITALS_GAME_DIR");
     if (selected && *selected) {
         char dir[CFG_GAME_DIR_MAX + 1];
         game_dir_invalid = !resolve_game_dir(selected, dir, sizeof dir);
@@ -744,8 +726,7 @@ void cfg_init(void) {
 #endif
         } else if (strcmp(game_dir, dir)) {
             snprintf(game_dir, sizeof game_dir, "%s", dir);
-            snprintf(ini_path, sizeof ini_path, "%s/orbital.ini", game_dir);
-            migrate_ini(ini_path);
+            snprintf(ini_path, sizeof ini_path, "%s/orbitals.ini", game_dir);
             // Each installation keeps its own RomFS path and settings. The launcher ini holds the selection only.
             cfg_load(ini_path);
             char key[] = "GAME_DIR", value[sizeof game_dir];
@@ -755,6 +736,6 @@ void cfg_init(void) {
         }
     }
     if (profile_of())
-        rt_log("cfg: device profile Steam Deck: defaults for the keys orbital.ini does not set (MKW_DEVICE_PROFILE=desktop "
+        rt_log("cfg: device profile Steam Deck: defaults for the keys orbitals.ini does not set (ORBITALS_DEVICE_PROFILE=desktop "
                "turns it off)");
 }

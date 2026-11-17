@@ -3,7 +3,7 @@
 // linker tables, the registry behind them, and the calls between host and guest (rt_call, rt_original).
 //
 // Every registered function dispatches through hostfn_entry, which counts the call, traces the first one
-// (MKW_TRACE=host) and tail-calls the real function. The registry is fixed by hostfn_seal, which builds the dispatch
+// (ORBITALS_TRACE=host) and tail-calls the real function. The registry is fixed by hostfn_seal, which builds the dispatch
 // table; guest threads start after that, so lookups need no lock.
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,15 +28,15 @@ __attribute__((section(".fns$z"), used)) static const RtHostEntry fns_stop[1];
 #else
 // ELF: the linker defines __start_<section> and __stop_<section> around a section named like a C identifier. Weak: a
 // build without observers has no such section, and both bounds are then NULL.
-extern const RtHostEntry __start_mkw_ovr[] __attribute__((weak)), __stop_mkw_ovr[] __attribute__((weak));
-extern const RtHostEntry __start_mkw_obs[] __attribute__((weak)), __stop_mkw_obs[] __attribute__((weak));
-extern const RtHostEntry __start_mkw_fns[] __attribute__((weak)), __stop_mkw_fns[] __attribute__((weak));
-#define ovr_start __start_mkw_ovr
-#define ovr_stop __stop_mkw_ovr
-#define obs_start __start_mkw_obs
-#define obs_stop __stop_mkw_obs
-#define fns_start __start_mkw_fns
-#define fns_stop __stop_mkw_fns
+extern const RtHostEntry __start_orbitals_ovr[] __attribute__((weak)), __stop_orbitals_ovr[] __attribute__((weak));
+extern const RtHostEntry __start_orbitals_obs[] __attribute__((weak)), __stop_orbitals_obs[] __attribute__((weak));
+extern const RtHostEntry __start_orbitals_fns[] __attribute__((weak)), __stop_orbitals_fns[] __attribute__((weak));
+#define ovr_start __start_orbitals_ovr
+#define ovr_stop __stop_orbitals_ovr
+#define obs_start __start_orbitals_obs
+#define obs_stop __stop_orbitals_obs
+#define fns_start __start_orbitals_fns
+#define fns_stop __stop_orbitals_fns
 #endif
 
 typedef struct {
@@ -45,7 +45,7 @@ typedef struct {
     uint64_t original;   // observers: the guest definition rt_original calls
     uint64_t calls;
     int blocking;        // runs with the virtual core given up (hostfn_blocking)
-    uint64_t ns_render, ns_other, n_render;   // MKW_HOST_TIME: time inside, on the presenting thread and elsewhere
+    uint64_t ns_render, ns_other, n_render;   // ORBITALS_HOST_TIME: time inside, on the presenting thread and elsewhere
 } Slot;
 static Slot slots[MAX_HOSTFN];
 static int nslots;
@@ -144,7 +144,7 @@ __attribute__((noinline)) static void hostfn_tracked(Cpu *c, GuestFn fn) {
 }
 
 // nn::fs: the call waits for the disk and the OS, and on the Switch it is an IPC request that blocks its thread, so
-// the thread gives its virtual core up for it. MKW_CORE_DIAG found the game's loader threads (priority 58) holding
+// the thread gives its virtual core up for it. ORBITALS_CORE_DIAG found the game's loader threads (priority 58) holding
 // a core through CloseFile and CreateCacheStorage while job workers and better threads waited 2-6 ms for it.
 __attribute__((noinline)) static void hostfn_blocking(Cpu *c, GuestFn fn) {
     int away = kern_core_away();
@@ -153,7 +153,7 @@ __attribute__((noinline)) static void hostfn_blocking(Cpu *c, GuestFn fn) {
     kern_core_back(&away);
 }
 
-// MKW_HOST_TIME=1: time every host function call takes on the guest thread that made it, the work done in series with
+// ORBITALS_HOST_TIME=1: time every host function call takes on the guest thread that made it, the work done in series with
 // the game (01/11/2026: nothing serial that can run elsewhere). Inclusive: a host function that calls guest code
 // that calls another counts both. hostfn_time_report lists the costliest every 600 presents.
 static int host_time = -1;
@@ -211,7 +211,7 @@ static void hostfn_entry(Cpu *c) {
     Slot *s = &slots[i];
     if (__builtin_expect(host_time, 0)) {
         if (host_time < 0) {
-            const char *e = cfg_get("MKW_HOST_TIME");
+            const char *e = cfg_get("ORBITALS_HOST_TIME");
             host_time = e && *e && *e != '0';
         }
         if (host_time) {

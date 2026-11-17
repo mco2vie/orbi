@@ -8,7 +8,7 @@
 #include "host.h"
 #include "nvn_obj.h"
 
-// NVN_API(nvnX) { body }: the strong nvnp_nvnX(Cpu *c); counts the call in gfx_counters, MKW_TRACE=gfx logs the first.
+// NVN_API(nvnX) { body }: the strong nvnp_nvnX(Cpu *c); counts the call in gfx_counters, ORBITALS_TRACE=gfx logs the first.
 #define NVN_API(n)                                                                                                   \
     static void nvn_impl_##n(Cpu *c);                                                                                \
     void nvnp_##n(Cpu *c) {                                                                                          \
@@ -18,7 +18,7 @@
     }                                                                                                                \
     static void nvn_impl_##n(Cpu *c)
 void nvn_called(uint8_t *seen, const char *name);          // the counting prologue of NVN_API
-#define NVN_LOG(...) do { if (rt_trace & RT_TRACE_GFX) rt_log("nvn: " __VA_ARGS__); } while (0)   // MKW_TRACE=gfx
+#define NVN_LOG(...) do { if (rt_trace & RT_TRACE_GFX) rt_log("nvn: " __VA_ARGS__); } while (0)   // ORBITALS_TRACE=gfx
 // A wait for the GPU, the display or another thread gives the virtual core up until the end of the enclosing scope.
 #define NVN_BLOCKING() __attribute__((cleanup(kern_core_back))) int nvn_away_ = kern_core_away()
 static inline int nvn_arg_bool(const Cpu *c, int i) { return (int)(arg_x(c, i) & 0xff); }   // NVNboolean: low 8 bits only
@@ -49,7 +49,7 @@ void nvn_sync_wait_window(void);                           // a present: the wai
 int nvn_depth_minus_w(void);                               // 1 after DeviceSetDepthMode(NEAR_IS_MINUS_W), else 0
 void nvn_depth_minus_w_set(int on);                        // the mode of a capture being replayed (runtime/gfx/cap)
 void nvn_guest_written(uint64_t addr, uint64_t size);      // the host or the game wrote pool storage: back end re-reads
-// MKW_TRACE=perf: MemoryPoolFlushMappedRange [0] and BufferFlushMappedRange [1] calls [0] and bytes [1] by the pool's
+// ORBITALS_TRACE=perf: MemoryPoolFlushMappedRange [0] and BufferFlushMappedRange [1] calls [0] and bytes [1] by the pool's
 // CPU class (0 CPU_CACHED, 1 CPU_UNCACHED, 2 other) since the previous call.
 void nvn_flush_stats(uint64_t out[2][3][2]);
 void nvn_submit_prepare(const uint64_t *handles, int n);   // weak no-op; the command-buffer slice reads deferred binds
@@ -117,7 +117,7 @@ int nvn_handle_live(uint64_t handle);                      // 1 while the handle
 uint64_t nvn_handle_bytes(uint64_t handle);                // bytes of the copy, OP_BEGIN to OP_END; 0 if not live
 extern uint32_t nvn_sub_sp_reports, nvn_sub_reports, nvn_sub_events, nvn_sub_waits;
 #define NVN_EARLY_MAX 4096
-typedef struct { uint64_t addr, size; int kind; } NvnEarlyDst;   // MKW_EARLY_READ: a submit's GPU write destinations
+typedef struct { uint64_t addr, size; int kind; } NvnEarlyDst;   // ORBITALS_EARLY_READ: a submit's GPU write destinations
 extern NvnEarlyDst nvn_sub_dst[NVN_EARLY_MAX];
 extern int nvn_sub_ndst;
 extern volatile uint32_t *nvn_sub_event_val[64];
@@ -125,7 +125,7 @@ extern volatile uint32_t *nvn_sub_event_val[64];
 // them to its fence, as nvnQueueFenceSync does to the newest)
 extern sync_t *nvn_sub_sync[64];
 extern uint32_t nvn_sub_syncs;
-int nvn_report_at_submit(void);   // MKW_REPORT_AT_SUBMIT (nvn_api_cmd.c)   // the submission being prepared (nvn_api_cmd.c)
+int nvn_report_at_submit(void);   // ORBITALS_REPORT_AT_SUBMIT (nvn_api_cmd.c)   // the submission being prepared (nvn_api_cmd.c)
 uint64_t nvn_submit_count(void);                           // QueueSubmitCommands calls so far
 const char *nvn_op_name(uint32_t op);                      // "DRAW_IDX", ...; "?" past OP_COUNT_
 // MemoryPoolInvalidateMappedRange: the CPU is about to read pool storage the GPU wrote. Weak no-op in nvn_ext.c; a back
@@ -137,9 +137,9 @@ void nvn_pool_flushed(const pool_t *p, uint64_t off, uint64_t size);
 
 // NVN2 (nvn2.c)
 int nvn_prog_set_shaders(prog_t *o, int n, const NVNshaderData *sd);   // nvnProgramSetShaders' body (nvn_api_obj.c)
-void nvn2_note_generated(const Cpu *c, int n, const NVNshaderData *sd);   // MKW_SPIRV_DUMP: stack of generated programs
-void nvn2_write_watch_arm(void);   // MKW_WRITE_WATCH: re-arms the watched pages (every present)
-void nvn2_note_label(const prog_t *o, const char *label);                 // MKW_SPIRV_DUMP: and their debug label
+void nvn2_note_generated(const Cpu *c, int n, const NVNshaderData *sd);   // ORBITALS_SPIRV_DUMP: stack of generated programs
+void nvn2_write_watch_arm(void);   // ORBITALS_WRITE_WATCH: re-arms the watched pages (every present)
+void nvn2_note_label(const prog_t *o, const char *label);                 // ORBITALS_SPIRV_DUMP: and their debug label
 uint64_t nvn2_sdk_proc(const char *name);    // the driver's own function for an NVN2 proc, or 0
 int nvn2_use_sdk_proc(const char *name);     // 1 when that function is a pure accessor the game may call directly
 int nvn2_program_stage(const uint8_t *control, const uint8_t *code);     // NVNshaderStage at control+0x56 (6 task, 7 mesh)

@@ -1,7 +1,7 @@
-// ASTC textures on the GPU: the MKW_ASTC knob, a compute decoder that turns raw blocks into the RGBA8 image the CPU
+// ASTC textures on the GPU: the ORBITALS_ASTC knob, a compute decoder that turns raw blocks into the RGBA8 image the CPU
 // decoder (tex_astc.c) would have written, and the native ASTC formats where the device samples them itself.
 //
-// MKW_ASTC = auto (default): native when the device reports textureCompressionASTC_LDR and the format's features,
+// ORBITALS_ASTC = auto (default): native when the device reports textureCompressionASTC_LDR and the format's features,
 // else gpu. gpu: compute decode into RGBA8 (runtime/shaders/astc_decode.comp). native: like auto, but logs when the
 // device cannot. cpu: astc_decode_ldr_mt on the uploading thread, as before. check: gpu, and every upload is also
 // decoded on the CPU and compared (waits for the GPU; for testing only).
@@ -111,7 +111,7 @@ static struct {
 } G = {.mode = -1, .bc7 = -1};
 static uint64_t n_dispatch, n_texels;
 
-// MKW_ASTC_TIME=1 (or vk_astc_time_enable): timestamps around the dispatches of each scratch chunk (the decode
+// ORBITALS_ASTC_TIME=1 (or vk_astc_time_enable): timestamps around the dispatches of each scratch chunk (the decode
 // alone) and around a whole vk_astc_record call (one texture upload or WriteTexels: copies and barriers included),
 // read back by later calls. Per footprint: texels and dispatch time; a new largest call is logged with both times.
 // Needs hostQueryReset (a slot is reset on the host after its read).
@@ -135,7 +135,7 @@ static uint8_t t_max_fp;
 
 static void time_init(VkCtx *c) {   // t_lock held
     if (t_on < 0) {
-        const char *e = cfg_get("MKW_ASTC_TIME");
+        const char *e = cfg_get("ORBITALS_ASTC_TIME");
         t_on = e && *e && *e != '0';
     }
     if (t_on <= 0 || (t_pool && t_dev == c->device)) return;
@@ -153,7 +153,7 @@ static void time_init(VkCtx *c) {   // t_lock held
     VkQueryPoolCreateInfo qi = {.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, .queryType = VK_QUERY_TYPE_TIMESTAMP,
                                 .queryCount = 2 * TQ};
     if (!f12.hostQueryReset || !bits || vkCreateQueryPool(c->device, &qi, NULL, &t_pool) != VK_SUCCESS) {
-        rt_log("vk: MKW_ASTC_TIME: no hostQueryReset or no timestamps on the queue; ASTC decodes not timed");
+        rt_log("vk: ORBITALS_ASTC_TIME: no hostQueryReset or no timestamps on the queue; ASTC decodes not timed");
         t_pool = VK_NULL_HANDLE;
         t_on = 0;
         return;
@@ -308,7 +308,7 @@ static int create_pipeline(VkCtx *c) {
     return 1;
 }
 
-// MKW_ASTC_BC7 (default 1; 0 off): ASTC images of 256x256 or more become BC7 images, filled by the decoder and then bc7_encode.comp. The RGBA8
+// ORBITALS_ASTC_BC7 (default 1; 0 off): ASTC images of 256x256 or more become BC7 images, filled by the decoder and then bc7_encode.comp. The RGBA8
 // copies of the textures took 2.3 GB of a 3.4 GB heap on a course (run113) and pushed render targets out of memory.
 int vk_astc_bc7(void) {
     VkCtx *c = vk_ctx();
@@ -317,7 +317,7 @@ int vk_astc_bc7(void) {
     int v = G.dev == c->device ? G.bc7 : -1;
     plat_mutex_unlock_shared(&g_lock);
     if (v >= 0) return v;
-    const char *e = cfg_get("MKW_ASTC_BC7");
+    const char *e = cfg_get("ORBITALS_ASTC_BC7");
     VkFormatProperties p;
     vkGetPhysicalDeviceFormatProperties(c->phys, VK_FORMAT_BC7_SRGB_BLOCK, &p);
     VkFormatFeatureFlags need = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
@@ -345,13 +345,13 @@ int vk_astc_mode(void) {
     plat_mutex_lock(&g_lock);
     reset_for(c);
     if (G.mode < 0) {
-        const char *e = cfg_value("MKW_ASTC");
+        const char *e = cfg_value("ORBITALS_ASTC");
         int want = !strcmp(e, "auto") ? -1 : !strcmp(e, "cpu") ? VK_ASTC_CPU : !strcmp(e, "gpu") ? VK_ASTC_GPU
                  : !strcmp(e, "native") ? VK_ASTC_NATIVE : !strcmp(e, "check") ? VK_ASTC_CHECK : -2;
-        if (want == -2) rt_log("vk: MKW_ASTC=%s is not cpu, gpu, native, check or auto: auto", e), want = -1;
+        if (want == -2) rt_log("vk: ORBITALS_ASTC=%s is not cpu, gpu, native, check or auto: auto", e), want = -1;
         if ((want == -1 || want == VK_ASTC_NATIVE) && native_device(c)) m = VK_ASTC_NATIVE;
         else {
-            if (want == VK_ASTC_NATIVE) rt_log("vk: MKW_ASTC=native: the device lacks textureCompressionASTC_LDR; gpu");
+            if (want == VK_ASTC_NATIVE) rt_log("vk: ORBITALS_ASTC=native: the device lacks textureCompressionASTC_LDR; gpu");
             m = want == VK_ASTC_CPU ? VK_ASTC_CPU : want == VK_ASTC_CHECK ? VK_ASTC_CHECK : VK_ASTC_GPU;
         }
         if ((m == VK_ASTC_GPU || m == VK_ASTC_CHECK || m == VK_ASTC_NATIVE) && !G.pipe && !G.failed &&
@@ -396,7 +396,7 @@ static void mem_barrier(VkCommandBuffer cb, VkPipelineStageFlags2 src, VkAccessF
     vkCmdPipelineBarrier2(cb, &di);
 }
 
-// Scratch buffers come from an allocator of their own, without MKW_GPU_MEM_LIMIT's heap limits: a course fills the
+// Scratch buffers come from an allocator of their own, without ORBITALS_GPU_MEM_LIMIT's heap limits: a course fills the
 // limited heaps, and a scratch that did not fit left its texture undecoded, showing whatever the memory held (the noise
 // over the world map menu, run-bc7-0 to run-bc7-3: at least 16 textures each). Each is one chunk (CHUNK_OUT) and is
 // freed with its upload batch.
@@ -421,7 +421,7 @@ static VmaAllocator svma(void) {
 // Radeon 660M (vale1, 06/11/2026: 351 allocations), and a buffer per upload batch was worse (wastc4: still new memory,
 // held until the batch ends). Every caller records into the upload batch under its lock (vk_upload_begin) and the
 // batches run in order on the graphics queue, so a barrier at the start of each use is enough, as between the chunks
-// of one call. A region over a chunk is cut to fit (split_regions); a call with a readback (MKW_ASTC=check) keeps its
+// of one call. A region over a chunk is cut to fit (split_regions); a call with a readback (ORBITALS_ASTC=check) keeps its
 // own buffer, freed with the batch.
 #define FIXED_SCRATCH (64ull << 20)
 static VkBuffer fx_buf;
@@ -500,7 +500,7 @@ static int astc_record(VkCommandBuffer cb, VkBuffer src, const VkAstcRegion *rg,
     VkPipeline pipe = G.dev == c->device ? G.pipe : VK_NULL_HANDLE;
     plat_mutex_unlock_shared(&g_lock);
     if (!pipe) return 0;
-    // bc7: 1 the image is BC7, 2 BC1 (TexVkFormat.astc_bc7). MKW_ASTC=check reads back the RGBA8 the decoder wrote,
+    // bc7: 1 the image is BC7, 2 BC1 (TexVkFormat.astc_bc7). ORBITALS_ASTC=check reads back the RGBA8 the decoder wrote,
     // before the re-encoding: turning that off for it put RGBA8 rows into BC7 images (the menus scrambled, vis22).
     if (!vk_astc_bc7()) bc7 = 0;
     VkPipeline enc = bc7 == 2 ? G.enc1 : bc7 ? G.enc : VK_NULL_HANDLE;

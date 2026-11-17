@@ -1,11 +1,11 @@
 # Guide for coding agents
 
-Read this before changing mkw-recomp with an AI agent. The rules are those of [CONTRIBUTING.md](CONTRIBUTING.md);
+Read this before changing orbitals-recomp with an AI agent. The rules are those of [CONTRIBUTING.md](CONTRIBUTING.md);
 this file says how to work by them without wasting runs.
 
 ## What this is
 
-A static recompilation of Mario Kart World 1.0.0 and 1.8.0 (Switch 2) to x86-64: the game's AArch64 code becomes C
+A static recompilation of Orbitals (Switch 2) to x86-64, `orbitals-recomp`: the game's AArch64 code becomes C
 ([recomp/](recomp/README.md)), the runtime ([runtime/](runtime/README.md)) replaces the console (kernel, SDK by
 function name, NVN2 over Vulkan), and the game's SM86 shaders become SPIR-V offline ([sm86/](sm86/README.md)). Every
 folder has a README that names each file: read it before opening the code. The open work is in
@@ -23,7 +23,7 @@ folder has a README that names each file: read it before opening the code. The o
 - **Console defaults.** Settings for weaker hardware are options; the default is what the console does.
 - **Fix, don't disable.** A feature that causes a bug is fixed where it breaks, not switched off.
 - **Nothing serial that can run elsewhere.** Do not add work to the game thread, or to the replay thread that records
-  the frame, when another thread can do it: both are on the race frame's critical path (see the roadmap).
+  the frame, when another thread can do it: both are on the frame's critical path (see the roadmap).
 
 ## Before you guess, look
 
@@ -32,25 +32,25 @@ folder has a README that names each file: read it before opening the code. The o
   strings, vtables). Disassemble a single function only when that is not enough (`tools/analisis/disasm.py`).
 - Check how other projects solved the same thing before inventing: the sources table in
   [docs/research.md](docs/research.md#sources) says what each one is good for.
-- `uv run tools/run/envs.py [REGEX]` lists every `MKW_*` switch the runtime reads, with its comment.
+- `uv run tools/run/envs.py [REGEX]` lists every `ORBITALS_*` switch the runtime reads, with its comment.
 
 ## Test without the game first
 
 A game run takes minutes; most changes can be checked in seconds:
 
-- **Back end** (replay, textures, memory, translator output): record a capture once with `MKW_CAPTURE=1`, then
+- **Back end** (replay, textures, memory, translator output): record a capture once with `ORBITALS_CAPTURE=1`, then
   `tools/test/replay.sh build/cap/<name>` replays it and compares each frame with the game's own image.
 - **Shader translator**: `uv run tools/shaders/translate.py` retranslates only what changed; a change to control flow
   (`sm86/translate/flow.py`, loops, branches) must pass `uv run tools/shaders/flow_check.py` before any GPU run, since a
   broken loop can hang the GPU of the whole desktop. `tools/shaders/glsl_hash.py` proves a refactor changes no output.
-- **Runtime pieces**: `build/mkw --selftest` and the `--probe-*` options ([runtime/probes](runtime/probes/README.md)).
+- **Runtime pieces**: `build/orbitals-recomp --selftest` and the `--probe-*` options ([runtime/probes](runtime/probes/README.md)).
 - **CPU lifter**: `uv run --with unicorn tools/cpu/lift_diff.py` compares translated instructions with Unicorn.
 - **Comments and docs only**: no rebuild needed; a comment in `runtime/cpu` rebuilds the whole game.
 
 ## When you do run the game
 
 - Write down first what you expect to see and what each outcome would mean; one run per hypothesis is too many.
-- Performance: an A/B inside one run (`MKW_AB=<seconds>` with the switch set to `ab`, then
+- Performance: an A/B inside one run (`ORBITALS_AB=<seconds>` with the switch set to `ab`, then
   `uv run tools/run/ab.py build/run/NAME.log`). Two separate runs of the same build differ by up to 12 ms per frame.
 - Rendering: compare the final screen image with the console's (`tools/imagen/vsref.py`), not an intermediate pass.
 - Read a log with `uv run tools/run/summary.py build/run/NAME.log` before grepping it.

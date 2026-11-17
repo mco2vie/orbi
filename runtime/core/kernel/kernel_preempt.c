@@ -1,5 +1,5 @@
 // Part of the kernel (kernel.c; split from it 06/11/2026, same sources and licences as its header).
-// Asynchronous preemption of virtual cores (MKW_ASYNC_PREEMPT), priority inheritance and preemption disable.
+// Asynchronous preemption of virtual cores (ORBITALS_ASYNC_PREEMPT), priority inheritance and preemption disable.
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,11 +9,11 @@
 #include "kernel_int.h"
 #include "platform/platform.h"
 
-// ---- asynchronous preemption (MKW_ASYNC_PREEMPT, on unless 0)
+// ---- asynchronous preemption (ORBITALS_ASYNC_PREEMPT, on unless 0)
 // Adapted from MacNativeGames games/totk/runtime/threads.c @ 33e8fa8 (8bf0893, PR #488; MIT, Copyright (c) 2026
 // MacNativeGames contributors): Horizon gives a core to a strictly better thread the moment that thread is ready.
 // Here a better waiter only marks the owner, which gives the core up at its next SVC or indirect call; an owner in a
-// stretch of game code with neither keeps it (MKW_CORE_DIAG: 0.5-1.1 ms of thread-time per frame, waits to 16 ms and
+// stretch of game code with neither keeps it (ORBITALS_CORE_DIAG: 0.5-1.1 ms of thread-time per frame, waits to 16 ms and
 // more). With it on, three parts, all of which MacNativeGames found necessary:
 // - The waiter interrupts the owner (plat_intr_stop) when it has waited AP_FIRST_NS, then every
 //   millisecond: if the owner's host rip is in the lifted modules' code (g_gen_lo..g_gen_hi) and its host depth is 0
@@ -28,10 +28,10 @@
 //   (interrupt_flag) is set. Such an owner is not preempted, at a checkpoint either: interrupt_flag is set and the
 //   switch happens at that SVC. Preempting it anyway hung MacNativeGames' game at "Continue" (the lock holder lost its
 //   core to a thread that then spun on that lock).
-// MKW_ASYNC_PREEMPT=0 keeps the old scheduling exactly: raw priorities, no interruption, no disable_count; =2 keeps
+// ORBITALS_ASYNC_PREEMPT=0 keeps the old scheduling exactly: raw priorities, no interruption, no disable_count; =2 keeps
 // inheritance and the preemption disable without interrupting owners.
 #define AP_GAP_NS 1000000ull    // and interrupts the same owner at most this often
-int g_ap = -1, g_ap_int;   // g_ap_int: interrupt owners (MKW_ASYNC_PREEMPT=2: inheritance and disable only)
+int g_ap = -1, g_ap_int;   // g_ap_int: interrupt owners (ORBITALS_ASYNC_PREEMPT=2: inheritance and disable only)
 static int g_ap_log;              // redirects logged so far (AP_LOG_N)
 #define AP_LOG_N 40
 static uintptr_t g_gen_lo, g_gen_hi;   // host code of the lifted modules: first and last function start
@@ -40,7 +40,7 @@ void kern_ap_stub(void);
 
 void ap_init(void) {
     if (g_ap >= 0) return;
-    const char *e = cfg_value("MKW_ASYNC_PREEMPT");
+    const char *e = cfg_value("ORBITALS_ASYNC_PREEMPT");
     g_ap = strcmp(e, "0") != 0;
     g_ap_int = g_ap && strcmp(e, "2") != 0;
     if (g_ap) {
@@ -68,7 +68,7 @@ void ap_init(void) {
         }
     }
     rt_log("kernel: asynchronous preemption of virtual cores %s, priority inheritance and preemption disable %s; lifted "
-           "code exe+%#llx-exe+%#llx", g_ap_int ? "on" : "off", g_ap ? "on (MKW_ASYNC_PREEMPT=0 turns all off)" : "off",
+           "code exe+%#llx-exe+%#llx", g_ap_int ? "on" : "off", g_ap ? "on (ORBITALS_ASYNC_PREEMPT=0 turns all off)" : "off",
            (unsigned long long)(g_gen_lo ? g_gen_lo - plat_exe_base() : 0),
            (unsigned long long)(g_gen_hi ? g_gen_hi - plat_exe_base() : 0));
 }
@@ -84,7 +84,7 @@ static int eff_prio(const RtThread *o) {
     return p;
 }
 
-// The priority the virtual cores go by: raw with MKW_ASYNC_PREEMPT=0, as before.
+// The priority the virtual cores go by: raw with ORBITALS_ASYNC_PREEMPT=0, as before.
 int prio_of(const RtThread *t) { return g_ap > 0 ? eff_prio(t) : t->prio; }
 
 // TLR+0x100 disable_count, +0x102 interrupt_flag (any thread may read them; the flag is set from outside as the

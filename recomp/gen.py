@@ -47,7 +47,7 @@ from lifter import hx  # noqa: E402
 from module import Module  # noqa: E402
 
 # Written into every generated file: a commit check can refuse anything carrying it (game-derived code).
-GENERATED_MARKER = 'MKW_RECOMP_' + 'GENERATED_FROM_GAME_CODE'
+GENERATED_MARKER = 'ORBITALS_RECOMP_' + 'GENERATED_FROM_GAME_CODE'
 
 TERMINATORS = ('b', 'br', 'ret', 'trap')
 MUSTTAIL = '__attribute__((musttail)) return'
@@ -559,7 +559,7 @@ class Emitter:
                     self.stats['spin_gates'] += 1
                 elif entry <= ins.target <= a and calls[i] == calls[(ins.target - entry) // 4]:
                     # A loop without calls: guest loads are plain C loads, so clang may hoist one another thread
-                    # changes out of the loop and leave a jmp to itself (MKW main+0x27ebb20). The barrier makes
+                    # changes out of the loop and leave a jmp to itself (the first game's main+0x27ebb20). The barrier makes
                     # every pass reload memory, as the guest does.
                     j = f'__asm__ volatile("" ::: "memory"); {j}'
                     self.stats['loop_barriers'] += 1

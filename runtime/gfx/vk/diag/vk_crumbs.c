@@ -8,7 +8,7 @@
 // Why: issues #4 and #5 (AMD discrete GPUs, v0.1.2) logged only "upload submit failed (-4)": the queue the loss was
 // noticed on, not the work that hung. VK_EXT_device_fault (vk_exec_dstat.c) names an address only for a page fault;
 // these marks also cover a timeout. Cost: two small writes per pass or dispatch, none per draw; a barrier already
-// precedes each pass and dispatch, so the end-of-pipe write adds no wait. MKW_GPU_CRUMBS=0 turns them off.
+// precedes each pass and dispatch, so the end-of-pipe write adds no wait. ORBITALS_GPU_CRUMBS=0 turns them off.
 // Where the driver has no buffer marker but VK_NV_device_diagnostic_checkpoints (older NVIDIA drivers; current ones
 // have both), the same marks are checkpoints, read from the queue after the loss.
 // The design follows totk-pc-recomp's vk_crumbs.c (MIT, 710b7f5) and Savage Wind Recomp's GPU checkpoints; the code
@@ -40,9 +40,9 @@ static VkBuffer buf;
 static VmaAllocation alloc;
 static volatile uint32_t *words;
 static Mark ring[RING];
-static uint32_t seq;   // marks made; several replay threads (MKW_REPLAY_PAR) take ids at once
+static uint32_t seq;   // marks made; several replay threads (ORBITALS_REPLAY_PAR) take ids at once
 static int mode;       // rt_knob: 1 on, 2 "ab" (on in the B blocks, for its A/B)
-static int draws;      // MKW_GPU_CRUMBS_DRAW
+static int draws;      // ORBITALS_GPU_CRUMBS_DRAW
 
 void vk_crumbs_init(void) {
     VkCtx *c = vk_ctx();
@@ -53,8 +53,8 @@ void vk_crumbs_init(void) {
         set_checkpoint = (PFN_vkCmdSetCheckpointNV)vkGetDeviceProcAddr(c->device, "vkCmdSetCheckpointNV");
         active = set_checkpoint != NULL;
         rt_log("vk: GPU breadcrumbs %s%s: upload batches, render passes and dispatches as NVIDIA checkpoints "
-               "(MKW_GPU_CRUMBS=0 turns them off)", active ? "on" : "unavailable",
-               active && mode == 2 ? " in the B blocks (MKW_AB)" : "");
+               "(ORBITALS_GPU_CRUMBS=0 turns them off)", active ? "on" : "unavailable",
+               active && mode == 2 ? " in the B blocks (ORBITALS_AB)" : "");
         return;
     }
     if (!c->has_buffer_marker) {
@@ -76,8 +76,8 @@ void vk_crumbs_init(void) {
     words = info.pMappedData;
     words[0] = words[1] = words[2] = words[3] = 0;
     active = 1;
-    rt_log("vk: GPU breadcrumbs on%s: upload batches, render passes, dispatches%s (MKW_GPU_CRUMBS=0 turns them off)",
-           mode == 2 ? " in the B blocks (MKW_AB)" : "", draws ? " and draws (MKW_GPU_CRUMBS_DRAW)" : "");
+    rt_log("vk: GPU breadcrumbs on%s: upload batches, render passes, dispatches%s (ORBITALS_GPU_CRUMBS=0 turns them off)",
+           mode == 2 ? " in the B blocks (ORBITALS_AB)" : "", draws ? " and draws (ORBITALS_GPU_CRUMBS_DRAW)" : "");
 }
 
 void vk_crumbs_release(void) {

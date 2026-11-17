@@ -1,8 +1,8 @@
-// MKW_DUMP=<frame>: a frame dump for the Vulkan back end, which RenderDoc cannot capture (it hides
+// ORBITALS_DUMP=<frame>: a frame dump for the Vulkan back end, which RenderDoc cannot capture (it hides
 // VK_EXT_external_memory_host). Between presents frame-1 and frame, the replay's command buffers also copy, after each
 // render pass, its colour and depth targets and, after each dispatch, the storage images it writes into host buffers;
 // the completion thread turns them into 8-bit PNGs once the submission is done. 3D textures (LUTs, volumes) sampled or
-// written in the frame are copied once each, slices side by side. Files in MKW_DUMP_DIR (default "dump"):
+// written in the frame are copied once each, slices side by side. Files in ORBITALS_DUMP_DIR (default "dump"):
 //   pass_<seq>_t<i>_<w>x<h>_<vkformat>_<name>.png   colour target i (td: depth; img<slot>: storage image; lut<id>: 3D;
 //                                                    a BC target drawn through a block view: its blocks as that view)
 //   ..._tm.png                                       float formats: x/(1+x) of the same image (the plain one clamps)
@@ -12,22 +12,22 @@
 //   stats.txt    per render pass: pipeline statistics (input primitives, VS invocations, clipping in/out, FS invocations)
 // Sampled 8-bit 2D textures up to TEX2D_CAP texels are copied once each as pass_<seq>_tex<id>_... at the end of the pass
 // that samples them; texture lines carry the storage address, mirror state, upload count and the image's and slot's
-// swizzle. Copies and texture clears are logged as "copy/clear after pass N". MKW_DUMP_LOG=<from> also logs the
-// frames from..frame-1 to passes.txt, with PNGs only of targets up to 64K texels. MKW_DUMP_BUF=<addr>:<size>[:...]
+// swizzle. Copies and texture clears are logged as "copy/clear after pass N". ORBITALS_DUMP_LOG=<from> also logs the
+// frames from..frame-1 to passes.txt, with PNGs only of targets up to 64K texels. ORBITALS_DUMP_BUF=<addr>:<size>[:...]
 // snapshots one GPU buffer range after every logged pass (buf_<pass>.bin and bufs.txt, see buf_snap).
 // PNGs are opaque (alpha dropped). Integer formats are scaled by the image maximum, depth by its min..max range, SNORM
 // as x/2+1/2, UNORM and sRGB bytes written as stored. Caps: MAX_PASSES passes copied, PNG_CAP bytes of PNGs.
-// MKW_DUMP_TEX=<id>|<w>x<h>[,...]: those texture slots, or 2D textures of that size, are copied where first sampled,
+// ORBITALS_DUMP_TEX=<id>|<w>x<h>[,...]: those texture slots, or 2D textures of that size, are copied where first sampled,
 // whatever their format.
-// MKW_DUMP_UBO=1: each listed pipeline also prints the first 32 vec4 (MKW_DUMP_UBO_ROWS=from-to adds those rows, and
+// ORBITALS_DUMP_UBO=1: each listed pipeline also prints the first 32 vec4 (ORBITALS_DUMP_UBO_ROWS=from-to adds those rows, and
 // rows holding a NaN or an infinity are listed) of its user uniform blocks (c3 and up), read from
 // guest memory when the entry is listed. A block the submission rewrites with UpdateUniformBuffer shows its value from
 // before the submission (vk_draw_internal.h upd_note).
-// MKW_DUMP_SKIP_RUNS=1: a render pass with the same targets as the render pass before it is logged but not copied
+// ORBITALS_DUMP_SKIP_RUNS=1: a render pass with the same targets as the render pass before it is logged but not copied
 // (the terrain decals draw one pass each into the G-buffer and would use up both caps).
-// MKW_DUMP_DRAWS: a copy of the first colour target after each draw of a run of passes (vk_dump_draws.c).
-// The parts: vk_dump_img.c (formats, image copies and PNGs), vk_dump_buf.c (MKW_DUMP_BUF) and vk_dump_draws.c
-// (MKW_DUMP_DRAWS), sharing vk_dump_internal.h.
+// ORBITALS_DUMP_DRAWS: a copy of the first colour target after each draw of a run of passes (vk_dump_draws.c).
+// The parts: vk_dump_img.c (formats, image copies and PNGs), vk_dump_buf.c (ORBITALS_DUMP_BUF) and vk_dump_draws.c
+// (ORBITALS_DUMP_DRAWS), sharing vk_dump_internal.h.
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -43,7 +43,7 @@
 #include "vk_dump_internal.h"
 
 
-// The host buffers come from an allocator of their own: the runtime's has MKW_GPU_MEM_LIMIT's heap limits, which a
+// The host buffers come from an allocator of their own: the runtime's has ORBITALS_GPU_MEM_LIMIT's heap limits, which a
 // course already fills (run101-run102: every large target "host buffer allocation failed"), and a run without the
 // limit took the GPU's memory from the desktop too (run103: kwin's submissions failed). INFLIGHT_CAP bounds this one.
 static VmaAllocator dvma_;
@@ -67,14 +67,14 @@ VmaAllocator dvma(void) {
 
 int vk_dump_armed;
 uint64_t dump_frame;
-static uint64_t log_from;   // MKW_DUMP_LOG: first frame logged to passes.txt without images
+static uint64_t log_from;   // ORBITALS_DUMP_LOG: first frame logged to passes.txt without images
 char dump_dir[400];
 FILE *images_f;
 FILE *passes_f;
 static int seq, finished, copied;      // copied: passes and dispatches of the dump frame whose images were copied
-static int skip_runs, dump_ubo;        // MKW_DUMP_SKIP_RUNS, MKW_DUMP_UBO
-static int luts_only;                  // MKW_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
-static uint32_t want_tex[16][2];       // MKW_DUMP_TEX: slot id and 0, or width and height
+static int skip_runs, dump_ubo;        // ORBITALS_DUMP_SKIP_RUNS, ORBITALS_DUMP_UBO
+static int luts_only;                  // ORBITALS_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
+static uint32_t want_tex[16][2];       // ORBITALS_DUMP_TEX: slot id and 0, or width and height
 static int nwant_tex;
 static uint64_t last_targets;          // targets_sig of the last render pass; 0 after a dispatch
 static const char *pass_skip;          // why the current pass copies nothing, or NULL
@@ -108,7 +108,7 @@ __attribute__((format(printf, 2, 3))) static void sp(Str *b, const char *fmt, ..
 }
 
 // SPIR-V hash of a shader. The file is written the first time a logged pass names the shader, not on a hash looked up
-// only to decide whether the pass is the one MKW_DUMP_DRAWS asked for.
+// only to decide whether the pass is the one ORBITALS_DUMP_DRAWS asked for.
 uint64_t shader_hash(const GfxShader *s) {
     static struct { const GfxShader *s; uint64_t h; int wrote; } tab[1024];
     static int n;
@@ -156,7 +156,7 @@ static int nluts;
 static VkImage luts_done[MAX_LUTS];
 static int nluts_done;
 
-// wanted: MKW_DUMP_TEX asked for it. The small sampled textures filled the MAX_LUTS slots before the HUD's glyph
+// wanted: ORBITALS_DUMP_TEX asked for it. The small sampled textures filled the MAX_LUTS slots before the HUD's glyph
 // cache came up in its last passes (vis13, 01/11/2026): the last 16 slots are kept for wanted textures.
 static void queue_lut(const VkTexImage *t, int id, int wanted) {
     if (frame_now() != dump_frame) return;
@@ -244,7 +244,7 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
                 for (uint64_t k = 0; k < 32 && (k + 1) * 16 <= n; k++)
                     sp(b, "%s[%llu] %g %g %g %g", k % 4 ? " " : "\n      ", (unsigned long long)k, f[4 * k], f[4 * k + 1],
                        f[4 * k + 2], f[4 * k + 3]);
-                const char *rows = cfg_get("MKW_DUMP_UBO_ROWS");   // "from-to": those rows too
+                const char *rows = cfg_get("ORBITALS_DUMP_UBO_ROWS");   // "from-to": those rows too
                 unsigned r0 = 0, r1 = 0;
                 if (rows && sscanf(rows, "%u-%u", &r0, &r1) == 2)
                     for (uint64_t k = r0; k <= r1 && (k + 1) * 16 <= n; k++)
@@ -344,8 +344,8 @@ static uint64_t bindings_hash(const VkExec *ex, const VkPipeInfo *info) {
     return h;
 }
 
-// MKW_TRACE_UBO=<fs hash>[:<rows>] (diagnosis): every draw with that fragment shader appends its user uniform blocks
-// (c3 and up, the first <rows> vec4, 32 by default), read at record time, to MKW_TRACE_UBO_OUT (ubo_trace.txt) as
+// ORBITALS_TRACE_UBO=<fs hash>[:<rows>] (diagnosis): every draw with that fragment shader appends its user uniform blocks
+// (c3 and up, the first <rows> vec4, 32 by default), read at record time, to ORBITALS_TRACE_UBO_OUT (ubo_trace.txt) as
 // "pass <frame>-<n>:" blocks in passes.txt's format, so tools/shaders/glsl_cpu.py runs the shader on them. Catches a
 // pass whose frame changes from run to run (the colour-grading LUT's last write fell anywhere in frames 230-252).
 static uint64_t tu_fs;
@@ -556,13 +556,13 @@ out:
     plat_mutex_unlock(&rec_lock);
 }
 
-// MKW_TRACE_3D=1 (diagnosis): the first dispatch that writes each 3D storage image is logged with its frame, size,
+// ORBITALS_TRACE_3D=1 (diagnosis): the first dispatch that writes each 3D storage image is logged with its frame, size,
 // shader and caller (the race's colour-grading LUT is written in some earlier frame, not in the one dumped).
 void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, const p_dispatch *d) {
     static int on = -1;
     static VkImage seen[256];
     static int nseen;
-    if (on < 0) on = cfg_get("MKW_TRACE_3D") && atoi(cfg_get("MKW_TRACE_3D"));
+    if (on < 0) on = cfg_get("ORBITALS_TRACE_3D") && atoi(cfg_get("ORBITALS_TRACE_3D"));
     if (!on) return;
     for (uint32_t i = 0; i < info->n_bindings; i++) {
         const VkPipeBinding *bd = &info->bindings[i];
@@ -698,7 +698,7 @@ static void open_dir(const char *d) {
     if (!passes_f || !images_f) rt_fatal("vk_dump: cannot write to %s", dump_dir);
 }
 
-// MKW_CTL (ctl.c): dumps the next frame into d (ubo: MKW_DUMP_UBO; luts: only the sampled 3D volumes and small
+// ORBITALS_CTL (ctl.c): dumps the next frame into d (ubo: ORBITALS_DUMP_UBO; luts: only the sampled 3D volumes and small
 // textures, a few MB instead of hundreds). 0 while an earlier dump is not written yet.
 int vk_dump_rearm(const char *d, int ubo, int luts, int log_n) {
     plat_mutex_lock(&rec_lock);
@@ -719,32 +719,32 @@ int vk_dump_rearm(const char *d, int ubo, int luts, int log_n) {
 }
 
 void vk_dump_init(void) {
-    const char *tu = cfg_get("MKW_TRACE_UBO");
+    const char *tu = cfg_get("ORBITALS_TRACE_UBO");
     if (tu && sscanf(tu, "%llx:%u", (unsigned long long *)&tu_fs, &tu_rows) >= 1) {
-        const char *o = cfg_get("MKW_TRACE_UBO_OUT");
+        const char *o = cfg_get("ORBITALS_TRACE_UBO_OUT");
         if (!(tu_f = fopen(o && *o ? o : "ubo_trace.txt", "w"))) rt_fatal("ubo trace: cannot write %s", o && *o ? o : "ubo_trace.txt");
         vk_dump_armed = 1;
         rt_log("ubo trace: fs %016llx, %u rows of each block, to %s", (unsigned long long)tu_fs, tu_rows, o && *o ? o : "ubo_trace.txt");
     }
-    const char *wt = cfg_get("MKW_DUMP_TEX");   // read without MKW_DUMP too: MKW_CTL dumps use it
+    const char *wt = cfg_get("ORBITALS_DUMP_TEX");   // read without ORBITALS_DUMP too: ORBITALS_CTL dumps use it
     for (char *q = (char *)wt; q && *q && nwant_tex < 16; q += *q == ',') {
         uint32_t *w = want_tex[nwant_tex++];
         w[0] = (uint32_t)strtoul(q, &q, 10);
         w[1] = *q == 'x' ? (uint32_t)strtoul(q + 1, &q, 10) : 0;
     }
     draws_init();
-    const char *e = cfg_get("MKW_DUMP");
+    const char *e = cfg_get("ORBITALS_DUMP");
     if (!e || !*e || !(dump_frame = strtoull(e, NULL, 10))) return;
-    const char *lf = cfg_get("MKW_DUMP_LOG");
+    const char *lf = cfg_get("ORBITALS_DUMP_LOG");
     if (lf && *lf) log_from = strtoull(lf, NULL, 10);
-    const char *sr = cfg_get("MKW_DUMP_SKIP_RUNS");
+    const char *sr = cfg_get("ORBITALS_DUMP_SKIP_RUNS");
     skip_runs = sr && *sr && *sr != '0';
-    const char *du = cfg_get("MKW_DUMP_UBO");
+    const char *du = cfg_get("ORBITALS_DUMP_UBO");
     dump_ubo = du && *du && *du != '0';
-    const char *d = cfg_get("MKW_DUMP_DIR");
+    const char *d = cfg_get("ORBITALS_DUMP_DIR");
     open_dir(d && *d ? d : "dump");
     char path[600];
-    const char *bf = cfg_get("MKW_DUMP_BUF");
+    const char *bf = cfg_get("ORBITALS_DUMP_BUF");
     if (bf && *bf) {
         char *q;
         bd_addr = strtoull(bf, &q, 0);

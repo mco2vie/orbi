@@ -1,4 +1,4 @@
-// What memory.c shares with memory_early.c (MKW_EARLY_READ): the trap map and its lock. Not for other files.
+// What memory.c shares with memory_early.c (ORBITALS_EARLY_READ): the trap map and its lock. Not for other files.
 #ifndef MEMORY_INT_H
 #define MEMORY_INT_H
 #include <stdint.h>
@@ -19,7 +19,7 @@ void mem_early_filled_locked(uint64_t a, int access);   // a trapped page was fi
 extern uint64_t *mem_lastf, *mem_prevf;                         // per page: the newest submit listed writing it, the one before
 extern uint64_t (*mem_fence_done)(void), (*mem_fence_queued)(void);
 extern uint64_t mem_early_frame;                                // the frame mem_early_log saw last
-void mem_early_ev_note(int kind, uint64_t addr, uint64_t w, uint64_t done, uint64_t pc);   // MKW_EARLY_READ_DRY
+void mem_early_ev_note(int kind, uint64_t addr, uint64_t w, uint64_t done, uint64_t pc);   // ORBITALS_EARLY_READ_DRY
 void mem_early_ev_log(void);                                    // every frame
 int mem_early_ev_counts(char *b, int n);                        // the 600-frame line's counts, then reset
 void mem_early_wait(uint64_t fence);   // frz_lock held: a's page gets its protection back; access:

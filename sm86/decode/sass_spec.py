@@ -34,7 +34,7 @@ class Slot:
             mask |= 1 << p
         self.mask = mask
         # (word bit, run mask, field bit) per run of consecutive positions: extract() reads a run in one shift instead
-        # of a bit at a time, the decoder's hottest loop (mkw-recomp, 11/11/2026)
+        # of a bit at a time, the decoder's hottest loop (11/11/2026)
         self.runs = []
         for i, p in enumerate(positions):
             if self.runs and p == self.runs[-1][0] + self.runs[-1][1].bit_length():

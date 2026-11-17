@@ -64,7 +64,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mkw-recomp"
+name = "orbitals-recomp"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [

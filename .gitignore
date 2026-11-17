@@ -19,3 +19,7 @@ __pycache__/
 
 # Local agent tooling settings (private, never published)
 .agents-*
+
+# Icon: the source picture and the .ico made from it (tools/build/make_ico.py, docs/branding.md); fetched by the CI
+/assets/icon/orbitals_logo.png
+/assets/icon/orbitals.ico

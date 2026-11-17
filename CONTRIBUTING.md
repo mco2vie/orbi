@@ -20,18 +20,18 @@
 
 ## Measuring and testing
 
-- **Performance** changes are measured before and after with an A/B inside the same run: a switch `MKW_<X>=ab` acts
-  only in the B blocks of `MKW_AB=<seconds>`, and [tools/run/ab.py](tools/run/ab.py) compares them. Two runs of the
+- **Performance** changes are measured before and after with an A/B inside the same run: a switch `ORBITALS_<X>=ab` acts
+  only in the B blocks of `ORBITALS_AB=<seconds>`, and [tools/run/ab.py](tools/run/ab.py) compares them. Two runs of the
   same build differ by up to 12 ms per frame, so two separate runs prove nothing. Diagnostics that add work to the
   measured path have their own switch.
 - **Back end** changes (replay, translator, textures, memory) are checked in seconds on frame captures:
-  `MKW_CAPTURE` records a few frames once, and [tools/test/replay.sh](tools/test/replay.sh) replays them against the
+  `ORBITALS_CAPTURE` records a few frames once, and [tools/test/replay.sh](tools/test/replay.sh) replays them against the
   game's own image. A game run is for what never reaches the back end (CPU, loading).
 - **Rendering** fixes are judged on the final screen image against the console's (`tools/imagen/vsref.py`), never on
   an intermediate pass.
 - **Shader translator** changes that touch control flow are checked off the GPU first (`tools/shaders/flow_check.py`
   on every program); a broken structured loop can hang the GPU of the whole desktop.
-- **Self-tests**: `build/mkw --selftest` and the `--probe-*` options of [runtime/probes](runtime/probes/README.md).
+- **Self-tests**: `build/orbitals-recomp --selftest` and the `--probe-*` options of [runtime/probes](runtime/probes/README.md).
 
 ## Code
 

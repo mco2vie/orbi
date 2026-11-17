@@ -1,5 +1,5 @@
 // --probe-texpre: quality of the two BC7 encoders of ASTC textures on real game textures. For each "<romfs path>\t<index>"
-// line of the file MKW_TEXPRE_PROBE_LIST, level 0 of that BNTX texture is decoded on the CPU (astc_decode_ldr, the
+// line of the file ORBITALS_TEXPRE_PROBE_LIST, level 0 of that BNTX texture is decoded on the CPU (astc_decode_ldr, the
 // reference), encoded as BC7 by the GPU encoder (vk_astc_record, mode 6) and by bc7enc.cpp (vk_texpre.c's offline
 // encoder), both decoded by the GPU (a blit to RGBA8), and each gets its RGBA PSNR against the reference. Decides
 // whether vk_texpre.c (slower than the GPU path) is worth keeping.
@@ -152,9 +152,9 @@ static int one(VkCtx *c, const char *rel, int idx, double *pg, double *pc) {
 static int cmp(const void *a, const void *b) { double x = *(const double *)a, y = *(const double *)b; return (x > y) - (x < y); }
 
 int probe_texpre(void) {
-    const char *list = cfg_get("MKW_TEXPRE_PROBE_LIST");
+    const char *list = cfg_get("ORBITALS_TEXPRE_PROBE_LIST");
     FILE *f = list ? fopen(list, "r") : NULL;
-    if (!f) { printf("probe-texpre: FAIL set MKW_TEXPRE_PROBE_LIST to a file of \"<romfs path>\\t<index>\" lines\n"); return 1; }
+    if (!f) { printf("probe-texpre: FAIL set ORBITALS_TEXPRE_PROBE_LIST to a file of \"<romfs path>\\t<index>\" lines\n"); return 1; }
     if (!vk_init() || !vk_astc_gpu()) { printf("probe-texpre: FAIL vk_init or no GPU ASTC encoder\n"); fclose(f); return 1; }
     bc7enc_c_init();
     VkCtx *c = vk_ctx();

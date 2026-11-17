@@ -69,10 +69,10 @@ extern _Thread_local DrawB *dtl_b DRAW_SHARED;   // vk_exec_draw.c
 extern _Thread_local uint32_t c0_dim[3] DRAW_SHARED, c0_binst DRAW_SHARED;
 extern _Thread_local const GfxShader *c0_cs DRAW_SHARED;
 extern _Thread_local uint64_t bind_gen DRAW_SHARED;
-extern _Thread_local int pd_on DRAW_SHARED;            // MKW_TRACE=draw timing (prepare_draw_ex sets it per draw)
+extern _Thread_local int pd_on DRAW_SHARED;            // ORBITALS_TRACE=draw timing (prepare_draw_ex sets it per draw)
 
-// MKW_BIND_STATS counters (vk_exec_bind.c bind_stats).
-// MKW_BIND_STATS counters (bind_stats).
+// ORBITALS_BIND_STATS counters (vk_exec_bind.c bind_stats).
+// ORBITALS_BIND_STATS counters (bind_stats).
 typedef struct {
     int on;
     uint64_t draws, bind[2], desc[2], push, push_skip, set_new, set_reuse, same_prog, same_all, bind_skip, ubo_skip;
@@ -82,17 +82,17 @@ extern _Thread_local DrawBS BS DRAW_SHARED;
 
 static inline int bind_stats_on(void) {
     if (BS.on < 0) {
-        const char *e = cfg_get("MKW_BIND_STATS");
+        const char *e = cfg_get("ORBITALS_BIND_STATS");
         BS.on = e && *e && strcmp(e, "0");
     }
     return BS.on;
 }
 
-// MKW_TRACE=draw: prepare_draw_ex (PD) and bind_resources (BR) by stage, TSC ticks; vk_exec_dstat.c reports them.
+// ORBITALS_TRACE=draw: prepare_draw_ex (PD) and bind_resources (BR) by stage, TSC ticks; vk_exec_dstat.c reports them.
 enum { PD_HEAD, PD_SHADER, PD_FEEDBACK, PD_PIPE, PD_STATE, PD_RES, PD_VB, PD_N };
 enum { BR_SIG, BR_C0, BR_UBO, BR_SSBO, BR_TEX, BR_CHECK, BR_SETS, BR_N };   // BR_C0: c0, compiler constants, support
 extern _Thread_local uint64_t pd_tsc[PD_N] DRAW_SHARED, pd_n DRAW_SHARED, br_tsc[BR_N] DRAW_SHARED;
-extern _Thread_local uint64_t td_stat[7] DRAW_SHARED;   // MKW_TRACE=perf: memo hits, of them first in the submission, misses, not memoised; miss TSC, hit TSC, texture lock TSC
+extern _Thread_local uint64_t td_stat[7] DRAW_SHARED;   // ORBITALS_TRACE=perf: memo hits, of them first in the submission, misses, not memoised; miss TSC, hit TSC, texture lock TSC
 
 // The inline uniform updates of the submission being replayed, newest last (a ring of UPD_N). op_update_ub writes them
 // into the buffer's GPU copy; guest memory gets them only from the write-back when the submission ends. The terrain
@@ -145,11 +145,11 @@ static inline int in_fbl(const VkExec *ex, VkImage img) {
     return 0;
 }
 
-// MKW_TEX_MEMO (tex_info, feedback_scan): 0 off, 1 on, 2 (=check) computes every hit again and stops on a difference.
+// ORBITALS_TEX_MEMO (tex_info, feedback_scan): 0 off, 1 on, 2 (=check) computes every hit again and stops on a difference.
 static inline int td_mode(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_value("MKW_TEX_MEMO");
+        const char *e = cfg_value("ORBITALS_TEX_MEMO");
         on = !strcmp(e, "check") ? 2 : strcmp(e, "0") != 0;
     }
     return on;
@@ -217,7 +217,7 @@ void spec_census(VkExec *ex, const GfxShader *s, int st);
 int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh);
 // vk_exec_ubuf.c
 uint64_t ubo_ptr(const VkExec *ex, int st, const GfxShaderRes *r);
-// MKW_BIND_XF (vk_exec_xbind.c, a measurement): descriptors kept across frames by the draw's inputs
+// ORBITALS_BIND_XF (vk_exec_xbind.c, a measurement): descriptors kept across frames by the draw's inputs
 int xb_mode(void);
 const VkDescSlot *xb_get(uint64_t key, const VkPipeInfo *info, uint32_t nd);
 void xb_put(uint64_t key, const VkPipeInfo *info, const VkDescSlot *d, uint32_t nd, const uint8_t *keep,

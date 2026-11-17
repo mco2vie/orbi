@@ -33,7 +33,7 @@ from pathlib import Path
 
 import internetarchive as ia
 
-REPO = os.environ.get("GITHUB_REPOSITORY", "adriadam10/mkw-recomp")
+REPO = os.environ.get("GITHUB_REPOSITORY", "sinedgiveaways/pmocer-latibro")
 SLUG = REPO.replace("/", "-")
 URL = f"https://github.com/{REPO}"
 # The Wayback Machine takes about six captures a minute from one account (SPN2); one every 12 s stays under it
@@ -107,7 +107,7 @@ def metadata(title: str, description: str) -> dict:
         "title": title,
         "description": description,
         "source": URL,
-        "subject": ["github", "recompilation", "mkw-recomp"],
+        "subject": ["github", "recompilation", "orbitals-recomp"],
     }
 
 

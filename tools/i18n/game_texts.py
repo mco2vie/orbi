@@ -16,9 +16,9 @@ hex: a translation keeps them as the dump with --tags gives them. \\n is a line 
 Usage:
   uv run tools/i18n/game_texts.py dump EUde [JPja ...] [-o DIR] [--tags]   every text of those folders
   uv run tools/i18n/game_texts.py todo ca            the base language's lines (with tags) ca.tsv still lacks
-  uv run tools/i18n/game_texts.py build ca [-o DIR]  the overlay (default build/lang/ca): MKW_ROMFS_MODS=DIR
+  uv run tools/i18n/game_texts.py build ca [-o DIR]  the overlay (default build/lang/ca): ORBITALS_ROMFS_MODS=DIR
   uv run tools/i18n/game_texts.py list               the folders the game has
-The game copy is game/ in the repository (a link to your copy) or MKW_GAME.
+The game copy is game/ in the repository (a link to your copy) or ORBITALS_GAME.
 """
 
 import argparse
@@ -37,7 +37,7 @@ TAG = re.compile(r"\{(0[EF](?: [0-9A-F]{4})*)\}")
 
 
 def game_dir() -> Path:
-    return Path(os.environ.get("MKW_GAME", ROOT / "game"))
+    return Path(os.environ.get("ORBITALS_GAME", ROOT / "game"))
 
 
 # ---- SARC
@@ -212,6 +212,8 @@ def read_translation(lang: str, version: int = 0) -> dict[str, str]:
     sys.path.insert(0, str(ROOT / "recomp"))
     from versions import VERSIONS
 
+    if not TRANSLATIONS.is_dir():
+        raise SystemExit("no game translations: i18n/game was removed from the repository")
     numbers = {v.name: v.number for v in VERSIONS}
     out = read_tsv(TRANSLATIONS / f"{lang}.tsv")
     for sub in sorted((d for d in TRANSLATIONS.iterdir() if d.name in numbers), key=lambda d: numbers[d.name]):
@@ -284,6 +286,8 @@ def build(lang: str, out: Path, romfs: Path | None = None, strict: bool = True, 
 
 def build_all(game: Path, romfs: Path) -> None:
     """Every translation into game/lang/<lang>/ (the setup's last step, tools/prepare/prepare.py)."""
+    if not TRANSLATIONS.is_dir():   # i18n/game holds no translation at present: nothing to build
+        return
     version = game_version(game / "exefs")
     for path in sorted(TRANSLATIONS.glob("*.tsv")):
         build(path.stem, game / "lang" / path.stem, romfs, strict=False, version=version)

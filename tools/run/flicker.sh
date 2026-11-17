@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Counts the frames whose lower half is black in a flight dump taken from a live run (tools/run/live.sh): the title's
+# Counts the frames whose lower half is black in a flight dump taken from a run with ORBITALS_FLIGHT: the title's
 # 3D scene flickering to black with the logo kept (31/10/2026, about 1 frame in 10). A dump covers the 600 frames up to
 # the request. Usage: tools/run/flicker.sh NAME [AT_FRAME] (default 900: the title, before any press)
 set -euo pipefail

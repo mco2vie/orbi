@@ -1,4 +1,4 @@
-// The Mods page: scan, import, enable, delete. Enabling only writes config (orbital.ini's MODS order and the mod's
+// The Mods page: scan, import, enable, delete. Enabling only writes config (orbitals.ini's MODS order and the mod's
 // switches); the game reads both at the next start, so nothing here touches the running game. The import runs
 // tools/mod/import.py in a child process on a thread, like launcher_setup.cpp runs prepare.py.
 #include <SDL3/SDL.h>
@@ -68,11 +68,11 @@ int mods_risk_draw(void) {
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetFontSize() * 30);
     ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", menu_text(UI_MOD_RISK));
     ImGui::PopTextWrapPos();
-    const char *ack = cfg_get("MKW_MODS_ACK");
+    const char *ack = cfg_get("ORBITALS_MODS_ACK");
     if (ack && !strcmp(ack, "1")) return 1;
     bool tick = false;
     if (ImGui::Checkbox(menu_text(UI_MOD_RISK_ACK), &tick) && tick) {
-        cfg_set("MKW_MODS_ACK", "1");
+        cfg_set("ORBITALS_MODS_ACK", "1");
         cfg_save();
     }
     return tick;
@@ -119,7 +119,7 @@ static int oldest_cb(const char *name, int kind, uint64_t, void *) {
 }
 
 void mods_before_play(const char *player_dir) {
-    const char *on = cfg_get("MKW_MODS"), *played = cfg_get("MKW_MODS_PLAYED");
+    const char *on = cfg_get("ORBITALS_MODS"), *played = cfg_get("ORBITALS_MODS_PLAYED");
     if (!strcmp(on ? on : "", played ? played : "")) return;
     if (on && *on) {
         CopyCtx c = {};
@@ -145,7 +145,7 @@ void mods_before_play(const char *player_dir) {
             }
         }
     }
-    cfg_set("MKW_MODS_PLAYED", on ? on : "");
+    cfg_set("ORBITALS_MODS_PLAYED", on ? on : "");
     cfg_save();
 }
 
@@ -206,7 +206,7 @@ static int json_value(const char *json, const char *key, char *out, size_t cap) 
     return 1;
 }
 
-// mod.json's "switches": {"MKW_A": "1", ...} into the mod (our own files: flat, MKW_ keys, short values).
+// mod.json's "switches": {"ORBITALS_A": "1", ...} into the mod (our own files: flat, ORBITALS_ keys, short values).
 static void json_switches(const char *json, Mod *m) {
     const char *p = strstr(json, "\"switches\"");
     if (!p || !(p = strchr(p, '{'))) return;
@@ -282,7 +282,7 @@ static void conflicts_load(void);   // .merged/conflicts.json, defined below
 static void rewrite_choices(const char *archive, const char *inner, const char *winner, const char *drop_mod);
 void mods_merge_start(const char *exe_dir);        // merge worker, defined below (public: mods.h)
 static int mod_enabled(const char *name) {
-    const char *mods = cfg_get("MKW_MODS");
+    const char *mods = cfg_get("ORBITALS_MODS");
     if (!mods || !*mods) return 0;
     char copy[4096];
     snprintf(copy, sizeof copy, "%s", mods);
@@ -322,7 +322,7 @@ void mods_apply(void) {
         if (!G.mods[i].enabled) continue;
         for (int s = 0; s < G.mods[i].nswitches; s++) {
             char var[96];
-            snprintf(var, sizeof var, "MKW_%s", G.mods[i].switches[s].name);
+            snprintf(var, sizeof var, "ORBITALS_%s", G.mods[i].switches[s].name);
             cfg_set(var, G.mods[i].switches[s].value);
         }
     }
@@ -336,7 +336,7 @@ static void remove_tree(const char *path);
 static void set_enabled(const char *name, int on) {
     char keep[MODS_MAX][MOD_NAME_MAX], cur[4096];
     int nk = 0;
-    const char *mods = cfg_get("MKW_MODS");
+    const char *mods = cfg_get("ORBITALS_MODS");
     snprintf(cur, sizeof cur, "%s", mods ? mods : "");
     for (char *t = strtok(cur, ","); t && nk < MODS_MAX; t = strtok(NULL, ",")) {
         while (*t == ' ') t++;
@@ -351,7 +351,7 @@ static void set_enabled(const char *name, int on) {
     }
     if (!on) rewrite_choices(nullptr, nullptr, nullptr, name);   // a disabled mod's picks go with it
     mark_rebuild(name);
-    cfg_set("MKW_MODS", out);
+    cfg_set("ORBITALS_MODS", out);
     mods_refresh(G.exe_dir);
     mods_apply();   // saves too
     mods_merge_start(G.exe_dir);   // re-merges the enabled mods' shared archives
@@ -376,7 +376,7 @@ static void exefs_root(char *out, size_t cap) {
         snprintf(out, cap, "%s", g_exefs_override);
         return;
     }
-    const char *e = cfg_get("MKW_EXEFS");
+    const char *e = cfg_get("ORBITALS_EXEFS");
     if (e && *e)
         snprintf(out, cap, "%s", e);
     else
@@ -388,7 +388,7 @@ static void romfs_root(char *out, size_t cap) {
         snprintf(out, cap, "%s", g_romfs_override);
         return;
     }
-    const char *linked = cfg_get("MKW_ROMFS");
+    const char *linked = cfg_get("ORBITALS_ROMFS");
     if (linked && *linked)
         snprintf(out, cap, "%s", linked);
     else
@@ -741,7 +741,7 @@ void mods_merge_start(const char *exe_dir) {
     }
     char romfs[PLAT_PATH_MAX * 2], mods[4096], choices[PLAT_PATH_MAX * 2];
     romfs_root(romfs, sizeof romfs);
-    const char *list = cfg_get("MKW_MODS");
+    const char *list = cfg_get("ORBITALS_MODS");
     snprintf(mods, sizeof mods, "%s", list ? list : "");
     snprintf(choices, sizeof choices, "%s/mods/choices.json", cfg_game_dir());
     const char *args[] = {python, "-I", script, "--game", cfg_game_dir(), "--romfs", romfs,
@@ -923,7 +923,7 @@ void mods_merge_sync(const char *exe_dir) {
     }
     char romfs[PLAT_PATH_MAX * 2], mods[4096], choices[PLAT_PATH_MAX * 2];
     romfs_root(romfs, sizeof romfs);
-    const char *list = cfg_get("MKW_MODS");
+    const char *list = cfg_get("ORBITALS_MODS");
     snprintf(mods, sizeof mods, "%s", list ? list : "");
     snprintf(choices, sizeof choices, "%s/mods/choices.json", cfg_game_dir());
     const char *args[] = {python, "-I", script, "--game", cfg_game_dir(), "--romfs", romfs,

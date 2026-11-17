@@ -37,7 +37,7 @@ from nso import R_AARCH64_ABS64, R_AARCH64_GLOB_DAT, R_AARCH64_JUMP_SLOT, R_AARC
 from nvn2_procs import procs
 from versions import modules as exefs_modules
 
-DEFAULT_EXEFS = Path(os.environ.get("MKW_GAME", "game")) / "exefs"
+DEFAULT_EXEFS = Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs"
 LOOKAHEAD = 4  # instructions after an ADRP searched for the ADD/LDR that completes the address
 STRING = re.compile(rb"[\x20-\x7e\t\n]{4,}\x00")
 

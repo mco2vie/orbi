@@ -127,10 +127,10 @@ typedef struct { void *p; } PlatCond;
 #define PLAT_COND_INIT {0}
 void plat_mutex_init(PlatMutex *m);
 void plat_mutex_lock(PlatMutex *m);
-void plat_mutex_lock_from(PlatMutex *m, uintptr_t ra);   // ra: the caller MKW_LOCK_PROF names (plat_rmutex_lock's)
+void plat_mutex_lock_from(PlatMutex *m, uintptr_t ra);   // ra: the caller ORBITALS_LOCK_PROF names (plat_rmutex_lock's)
 int plat_mutex_trylock(PlatMutex *m);     // 1 when acquired
 void plat_mutex_unlock(PlatMutex *m);
-int plat_lock_report(int holds, char *buf, int size);   // MKW_LOCK_PROF=1: the locks waited on (holds, Linux only: kept
+int plat_lock_report(int holds, char *buf, int size);   // ORBITALS_LOCK_PROF=1: the locks waited on (holds, Linux only: kept
                                                        // while a thread slept on them) longest since the last call
 void plat_mutex_lock_shared(PlatMutex *m);
 int plat_mutex_trylock_shared(PlatMutex *m);   // 1 when acquired
@@ -213,7 +213,7 @@ int plat_mem_poke(uint64_t addr, const void *src, size_t n);
 int plat_mem_peek(void *dst, uint64_t addr, size_t n);      // reads through the protection (Linux; Windows: memcpy)
 int64_t plat_threads_cpu_ns_named(const char *name);   // CPU time of this process's threads so named; -1 unknown
 // A write-fault hook that runs before the others and also gets the faulting host instruction (diagnostic write
-// watches, nvn2.c MKW_GEN_WATCH); 1: handled, the write retries.
+// watches, nvn2.c ORBITALS_GEN_WATCH); 1: handled, the write retries.
 void plat_mem_watch_hook(int (*fn)(uint64_t addr, uint64_t rip));
 // The page at addr: PLAT_PROT_* when committed, else PLAT_MEM_RESERVED or PLAT_MEM_FREE (not reserved by us). *end
 // gets the end of the run of pages in the same state, at most limit.
@@ -233,7 +233,7 @@ void plat_mem_fault_hook(int (*fn)(uint64_t addr));
 // memory.c lazy_fault): 1 when fn committed it and the access should run again. Not called on Linux, which commits on
 // touch by itself.
 void plat_mem_lazy_hook(int (*fn)(uint64_t addr));
-// The fault the hook is called for, on its thread (Linux; MKW_EARLY_READ tells reads from writes and names the code):
+// The fault the hook is called for, on its thread (Linux; ORBITALS_EARLY_READ tells reads from writes and names the code):
 // a write, and the faulting instruction's address.
 extern _Thread_local int plat_fault_write;
 extern _Thread_local uint64_t plat_fault_pc;
@@ -251,7 +251,7 @@ typedef struct {
     uintptr_t rip, offset;     // the faulting instruction, and its offset in its module
     int access;                // the data access that faulted: 0 read, 1 write, 8 execute; -1 when not an access
     uint64_t addr;             // its address when access >= 0
-    const char *module;        // where rip is: "mkw", "orbitalgame" or "no module" (offset is then rip); NULL: mkw
+    const char *module;        // where rip is: "orbitals-recomp", "orbitalgame" or "no module" (offset is then rip); NULL: the exe
     uintptr_t ret;             // rip in no module: the word at rsp, the caller's return address after a wild call
 } PlatCrash;
 void plat_crash_hook(void (*fn)(const PlatCrash *c));
@@ -406,9 +406,6 @@ int plat_open_folder(const char *path);                   // shows the folder in
 // trusted so KDE and GNOME start it without asking, with a copy in ~/.local/share/applications for the menu. Writes the
 // shortcut's path to out. 1 on success.
 int plat_desktop_shortcut(const char *name, const char *exe, const char *dir, char *out, size_t cap);
-// Makes exe the user's handler of scheme: URLs (GameBanana's 1-Click), run as `exe arg URL`; only rewritten when it
-// differs. 1 when registered.
-int plat_url_scheme(const char *scheme, const char *label, const char *exe, const char *arg);
 
 // ---- dynamic libraries: a library some machines lack (a GPU vendor's), loaded at run time. A bare name is searched
 // in the system directories only. NULL when missing.

@@ -1,22 +1,22 @@
-// Sampling profiler (MKW_PROFILE=<path>) and per-frame timing (MKW_TRACE=perf). tools/prof_report.py reads the profile.
+// Sampling profiler (ORBITALS_PROFILE=<path>) and per-frame timing (ORBITALS_TRACE=perf). tools/prof_report.py reads the profile.
 // A host thread wakes every 1 ms and, for every other thread, suspends it, reads Rip and resumes it. The sampler never
 // allocates or takes a lock between SuspendThread and ResumeThread and never runs guest code. The profile is text:
-//   mkw-prof 1 / base <hex> / period_us / samples N / thread <tid> <samples> <in-exe samples> / module <base> <size> <path> /
-//   rip <hex> <count> <role> (the top PROF_TOP Rips per thread role: 1 main, 2 render, 3 replay, 0 any other) / stack <count> <rip> <caller> ... (MKW_PROFILE_RENDER or
-//   MKW_PROFILE_CHAINS only, the top PROF_STACKS call chains)
-// With MKW_PROFILE_RENDER (the render thread) or MKW_PROFILE_CHAINS=1 (every thread, chains of all threads summed: for
+//   orbitals-prof 1 / base <hex> / period_us / samples N / thread <tid> <samples> <in-exe samples> / module <base> <size> <path> /
+//   rip <hex> <count> <role> (the top PROF_TOP Rips per thread role: 1 main, 2 render, 3 replay, 0 any other) / stack <count> <rip> <caller> ... (ORBITALS_PROFILE_RENDER or
+//   ORBITALS_PROFILE_CHAINS only, the top PROF_STACKS call chains)
+// With ORBITALS_PROFILE_RENDER (the render thread) or ORBITALS_PROFILE_CHAINS=1 (every thread, chains of all threads summed: for
 // short frame ranges, as each sample copies a stack) the sampler also copies up to STK_COPY bytes of the suspended
 // thread's stack and, after
 // ResumeThread, unwinds the copy with the .pdata tables (RtlVirtualUnwind), so it takes no lock while the thread is
 // suspended. The unwind stops at the first frame outside the copy; deeper callers are cut.
-// MKW_PROFILE_AT=<frame> writes the profile at that present and stops sampling, for a run that does not end by
+// ORBITALS_PROFILE_AT=<frame> writes the profile at that present and stops sampling, for a run that does not end by
 // itself (--seconds counts the world clock, which stands still at the title).
-// MKW_PROFILE_SLOW=<ms> keeps every thread's chains of the last half second in a ring (a thread outside the exe, mostly
+// ORBITALS_PROFILE_SLOW=<ms> keeps every thread's chains of the last half second in a ring (a thread outside the exe, mostly
 // waiting, copies 8 KiB of stack, one in it STK_COPY; a thread that ran no cycle since its previous sample is not
 // suspended and repeats its previous chain; a sample that took over 2 ms to stop its thread, which happens while the
 // thread is in a long kernel call, is written as `tstall <tid> <ms into the window> <ms stopping> <rip>...` with the
 // chain where the thread stopped) and, after a present at least <ms> after the previous one, writes
-// that interval's samples (plus the 20 ms before) to <MKW_PROFILE>.f<frame>: the profile format, one `stack 1` line per
+// that interval's samples (plus the 20 ms before) to <ORBITALS_PROFILE>.f<frame>: the profile format, one `stack 1` line per
 // sample, and `tstack <tid> <ms into the window> <rip>...` lines that keep the thread and the time. At most 64 dumps.
 #include <windows.h>
 #include <psapi.h>
@@ -46,7 +46,7 @@
 
 typedef struct { uint64_t rip, n; } RipCount;
 #define PROF_DEPTH 24             // frames kept per call chain, the sampled Rip first
-// cycles, depth, last: MKW_PROFILE_SLOW only, the thread's cycle count and chain at its previous sample
+// cycles, depth, last: ORBITALS_PROFILE_SLOW only, the thread's cycle count and chain at its previous sample
 typedef struct { DWORD tid; HANDLE h; uint64_t n, in_exe, cycles; uint32_t depth; uint64_t last[PROF_DEPTH]; } ThreadSlot;
 
 static RipCount table[PROF_SLOTS];
@@ -61,17 +61,17 @@ static const char *out_path;
 static HANDLE sampler;
 static volatile LONG stop, written;
 static uintptr_t exe_lo, exe_hi;
-static int only_render;             // MKW_PROFILE_RENDER=1: sample the render thread only
-static int only_main;               // MKW_PROFILE_MAIN=1: sample the guest main thread only
-static int only_replay;             // MKW_PROFILE_REPLAY=1: sample the replay thread only (MKW_REPLAY_ASYNC)
-static int only_roles;              // MKW_PROFILE_ROLES=1: main, render and replay only. With MKW_PROFILE_SLOW the ring then
+static int only_render;             // ORBITALS_PROFILE_RENDER=1: sample the render thread only
+static int only_main;               // ORBITALS_PROFILE_MAIN=1: sample the guest main thread only
+static int only_replay;             // ORBITALS_PROFILE_REPLAY=1: sample the replay thread only (ORBITALS_REPLAY_ASYNC)
+static int only_roles;              // ORBITALS_PROFILE_ROLES=1: main, render and replay only. With ORBITALS_PROFILE_SLOW the ring then
                                     // holds ~11 s of those three instead of ~0.2 s of ~140 threads (wslow1, 06/11/2026)
-static int chains;                  // call chains are kept: MKW_PROFILE_RENDER or MKW_PROFILE_CHAINS
+static int chains;                  // call chains are kept: ORBITALS_PROFILE_RENDER or ORBITALS_PROFILE_CHAINS
 static volatile uint64_t cur_frame; // last presented frame
-static uint64_t frame_lo, frame_hi; // MKW_PROFILE_FRAMES=<lo>-<hi>: sample only while presents lo..hi-1 are pending
-static int64_t world_lo, world_hi;  // MKW_PROFILE_FRAMES=w<lo>-<hi>: only while the world clock is in [lo, hi) s (us)
+static uint64_t frame_lo, frame_hi; // ORBITALS_PROFILE_FRAMES=<lo>-<hi>: sample only while presents lo..hi-1 are pending
+static int64_t world_lo, world_hi;  // ORBITALS_PROFILE_FRAMES=w<lo>-<hi>: only while the world clock is in [lo, hi) s (us)
 
-#define SLOW_RING (1u << 15)        // MKW_PROFILE_SLOW: about 0.5 s of samples of every thread
+#define SLOW_RING (1u << 15)        // ORBITALS_PROFILE_SLOW: about 0.5 s of samples of every thread
 #define SLOW_DUMPS 64
 typedef struct { uint64_t t; DWORD tid; uint32_t depth; uint64_t rip[PROF_DEPTH]; } Sample;
 static Sample ring[SLOW_RING];
@@ -79,8 +79,8 @@ static uint64_t ring_n;
 #define STALL_RING 1024
 static Sample stalls[STALL_RING];   // t: when the stop began; rip[PROF_DEPTH - 1] holds the stop's ns
 static uint64_t stall_n;
-static uint64_t slow_ns;            // MKW_PROFILE_SLOW in ns, 0 off
-static uint64_t write_at;           // MKW_PROFILE_AT, 0 off
+static uint64_t slow_ns;            // ORBITALS_PROFILE_SLOW in ns, 0 off
+static uint64_t write_at;           // ORBITALS_PROFILE_AT, 0 off
 static volatile LONG64 dump_lo, dump_hi, dump_frame;   // the render thread asks for a window, the sampler writes it
 
 static void count_rip(uint64_t rip) {
@@ -126,7 +126,7 @@ static uint32_t unwind_copy(CONTEXT *c, uintptr_t lo, size_t n, uint64_t *rip) {
     while (d < PROF_DEPTH && c->Rip && c->Rsp >= buf && c->Rsp + 8 <= end) {
         // Saved registers popped from the copy still hold addresses of the real stack: move them into the copy, so a
         // frame-pointer function unwinds inside it. A frame register left outside the copy ends the chain: unwinding
-        // through it read whatever it pointed at (an access violation in ntdll, 06/11/2026, MKW_PROFILE_SLOW).
+        // through it read whatever it pointed at (an access violation in ntdll, 06/11/2026, ORBITALS_PROFILE_SLOW).
         for (unsigned i = 0; i < sizeof regs / sizeof *regs; i++)
             if (*regs[i] >= lo && *regs[i] < lo + n) *regs[i] = *regs[i] - lo + buf;
         rip[d++] = c->Rip;
@@ -195,7 +195,7 @@ static void slow_dump(void) {
     FILE *f = dumps < SLOW_DUMPS ? fopen(path, "w") : NULL;
     if (f) {
         dumps++;
-        fprintf(f, "mkw-prof 1\nbase %llx\nperiod_us 1000\nframe %llu interval_ms %.1f\nmain %u render %u replay %u\n",
+        fprintf(f, "orbitals-prof 1\nbase %llx\nperiod_us 1000\nframe %llu interval_ms %.1f\nmain %u render %u replay %u\n",
                 (unsigned long long)(uintptr_t)GetModuleHandleW(NULL), (unsigned long long)frame, (hi - lo) / 1e6 - 20,
                 main_tid, render_tid, replay_tid);
         write_modules(f);
@@ -321,7 +321,7 @@ void prof_sampler_write(void) {
         rt_log("prof: cannot write %s", out_path);
         return;
     }
-    fprintf(f, "mkw-prof 1\nbase %llx\nperiod_us 1000\nsamples %llu\ndropped %llu\n", (unsigned long long)(uintptr_t)GetModuleHandleW(NULL),
+    fprintf(f, "orbitals-prof 1\nbase %llx\nperiod_us 1000\nsamples %llu\ndropped %llu\n", (unsigned long long)(uintptr_t)GetModuleHandleW(NULL),
             (unsigned long long)total, (unsigned long long)dropped);
     for (int i = 0; i < n_threads; i++)
         fprintf(f, "thread %lu %llu %llu\n", threads[i].tid, (unsigned long long)threads[i].n, (unsigned long long)threads[i].in_exe);
@@ -347,22 +347,22 @@ void prof_sampler_write(void) {
 }
 
 int prof_sampler_start(void) {
-    out_path = cfg_get("MKW_PROFILE");
+    out_path = cfg_get("ORBITALS_PROFILE");
     if (!out_path || !*out_path) {
         out_path = NULL;
         return 0;
     }
-    only_render = cfg_get("MKW_PROFILE_RENDER") != NULL;
-    only_main = !only_render && cfg_get("MKW_PROFILE_MAIN") != NULL;
-    only_replay = !only_render && !only_main && cfg_get("MKW_PROFILE_REPLAY") != NULL;
-    only_roles = cfg_get("MKW_PROFILE_ROLES") != NULL;
-    const char *ch = cfg_get("MKW_PROFILE_CHAINS");
-    const char *sl = cfg_get("MKW_PROFILE_SLOW");
+    only_render = cfg_get("ORBITALS_PROFILE_RENDER") != NULL;
+    only_main = !only_render && cfg_get("ORBITALS_PROFILE_MAIN") != NULL;
+    only_replay = !only_render && !only_main && cfg_get("ORBITALS_PROFILE_REPLAY") != NULL;
+    only_roles = cfg_get("ORBITALS_PROFILE_ROLES") != NULL;
+    const char *ch = cfg_get("ORBITALS_PROFILE_CHAINS");
+    const char *sl = cfg_get("ORBITALS_PROFILE_SLOW");
     slow_ns = sl && atoi(sl) > 0 ? (uint64_t)atoi(sl) * 1000000ull : 0;
     chains = only_render || only_main || only_replay || slow_ns || (ch && *ch && strcmp(ch, "0"));
-    const char *at = cfg_get("MKW_PROFILE_AT");
+    const char *at = cfg_get("ORBITALS_PROFILE_AT");
     write_at = at ? strtoull(at, NULL, 10) : 0;
-    const char *fr = cfg_get("MKW_PROFILE_FRAMES");
+    const char *fr = cfg_get("ORBITALS_PROFILE_FRAMES");
     double wl, wh;
     if (fr && fr[0] == 'w' && sscanf(fr + 1, "%lf-%lf", &wl, &wh) == 2 && wl >= 0 && wl < wh)
         world_lo = (int64_t)(wl * 1e6), world_hi = (int64_t)(wh * 1e6);
@@ -381,7 +381,7 @@ int prof_sampler_start(void) {
     return 1;
 }
 
-// perf_present, every present: the frame the sampler's MKW_PROFILE_FRAMES window counts, and a MKW_PROFILE_SLOW
+// perf_present, every present: the frame the sampler's ORBITALS_PROFILE_FRAMES window counts, and a ORBITALS_PROFILE_SLOW
 // dump of a present at least slow_ns after the previous one (d 0 on the first present).
 void prof_sampler_frame(uint64_t frame, uint64_t now, uint64_t d) {
     cur_frame = frame;

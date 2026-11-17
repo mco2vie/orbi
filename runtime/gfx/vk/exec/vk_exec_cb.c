@@ -116,7 +116,7 @@ uint8_t *scratch(VkExec *ex, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
                                       .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
         VmaAllocationInfo info;
         VkResult res = vmaCreateBuffer(vk_ctx()->vma, &bi, &ai, &c->buf, &c->alloc, &info);
-        if (res != VK_SUCCESS) {   // new.log, 09/11/2026: a 4 MiB chunk ended a capture replay at MKW_GPU_MEM_LIMIT=2048
+        if (res != VK_SUCCESS) {   // new.log, 09/11/2026: a 4 MiB chunk ended a capture replay at ORBITALS_GPU_MEM_LIMIT=2048
             vk_mem_relieve(2 * n + (8ull << 20), "a transient buffer");
             res = vmaCreateBuffer(vk_ctx()->vma, &bi, &ai, &c->buf, &c->alloc, &info);
         }
@@ -143,7 +143,7 @@ static void wslot_put(CbRes *r, int i) {
     r->wslot[k] = i;
 }
 
-// MKW_TRACE_WPAGE=<hex> (diagnosis): each GPU write (a written storage buffer's binding, a copy, a clear, a counter)
+// ORBITALS_TRACE_WPAGE=<hex> (diagnosis): each GPU write (a written storage buffer's binding, a copy, a clear, a counter)
 // covering that guest page, with the program and the submission, the first 64: which shader writes what the game
 // reads early (ht2: page 0x2a9bdc000, read by main+0x56b520 every ~68 frames, a 6-13 ms wait each). An address off
 // the page start: only the writes covering that byte (the page's every-frame writers would use the 64 up).
@@ -151,7 +151,7 @@ void wpage_note(const VkExec *ex, uint64_t addr, uint64_t size, const char *what
     static uint64_t page = 1, at;
     static int n;
     if (page == 1) {
-        const char *e = cfg_get("MKW_TRACE_WPAGE");
+        const char *e = cfg_get("ORBITALS_TRACE_WPAGE");
         at = e ? strtoull(e, NULL, 16) : 0;
         page = at & ~0xfffull;
     }
@@ -274,7 +274,7 @@ uint32_t vk_exec_streams(const VkExec *ex, const VkPipeInfo *info) {
 }
 
 // streams: the ones the draw's attributes read (vk_exec_streams). The others get the zero buffer: they hold whatever an
-// earlier draw bound, which made two recordings of the same draw differ (MKW_REUSE check, ru15).
+// earlier draw bound, which made two recordings of the same draw differ (ORBITALS_REUSE check, ru15).
 void bind_vertex_buffers(VkExec *ex, uint32_t streams) {
     VkBuffer vb[17];
     VkDeviceSize vo[17], vsz[17], vstr[17];

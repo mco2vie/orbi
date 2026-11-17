@@ -1,22 +1,21 @@
-// MKW_CTL=<fifo>: commands to a running game, one per line, so a screen is inspected where it is instead of a new run
+// ORBITALS_CTL=<fifo>: commands to a running game, one per line, so a screen is inspected where it is instead of a new run
 // replaying the boot and the menus to reach its frame again (60-90 s each). The FIFO is made if missing; answers are
 // "ctl:" lines in the log. tools/run/ctl.sh writes a command and waits for its answer.
 //   shot PATH            the next presented frame, full size, as PNG (save_shot)
 //   screen PATH          the next swapchain image as PNG: what the player sees, with the menu, notices and overlays
 //                        (sRGB at paper white on an HDR display; gfx_present.c save_capture)
-//   dump DIR [ubo|lut|log N]   the next frame as MKW_DUMP writes it (vk_dump_rearm; ubo: MKW_DUMP_UBO; lut: only 3D
-//                        volumes; log N: the N frames before it logged to passes.txt too, as MKW_DUMP_LOG)
-//   flight               a flight dump around now (MKW_FLIGHT=1), as F8
+//   dump DIR [ubo|lut|log N]   the next frame as ORBITALS_DUMP writes it (vk_dump_rearm; ubo: ORBITALS_DUMP_UBO; lut: only 3D
+//                        volumes; log N: the N frames before it logged to passes.txt too, as ORBITALS_DUMP_LOG)
+//   flight               a flight dump around now (ORBITALS_FLIGHT=1), as F8
 //   press <ticks> <button> [hold]  /  press <ticks> LSTICK|RSTICK x y [hold]   input, <ticks> 60 Hz ticks from now
 //   tex ADDR             textures whose storage or pool-bound Vulkan image covers ADDR (0: every image larger than its storage)
 //   mem ADDR SIZE PATH   SIZE bytes of guest memory at ADDR to PATH (what a CPU-written texture holds)
 //   frame                the present count
 //   trim [MiB]           frees that much (1024) as an allocation failure would: released textures, idle mirrored ones
 //                        (vk_mem_relieve), with the vram line before and after
-//   vram                 the "mem: vram" line now: what holds device-local memory (vk_mem_log.c, MKW_VRAM_LOG)
+//   vram                 the "mem: vram" line now: what holds device-local memory (vk_mem_log.c, ORBITALS_VRAM_LOG)
 //   focus 0|1            the window lost (0) or took (1) the focus, as the window system reports it
-//   seq                  the game's active sequence nodes (MKW_SEQ_WATCH, seqwatch.c)
-//   capture DIR [N]      the next N presented frames (2) as a capture for mkw --replay (runtime/gfx/cap; MKW_CAPTURE=1)
+//   capture DIR [N]      the next N presented frames (2) as a capture for mkw --replay (runtime/gfx/cap; ORBITALS_CAPTURE=1)
 //   pause | step [N] | resume   the game stops on its next frame, goes N frames on (1) and stops, runs again (freeze.c)
 #include <errno.h>
 #include <stdio.h>
@@ -57,7 +56,7 @@ void ctl_run(char *line) {
         rt_log(vk_dump_rearm(d, ubo, luts, logn) ? "ctl: dump %s queued at frame %llu" : "ctl: dump %s refused: one is pending (frame %llu)",
                d, (unsigned long long)frame);
     } else if (!strcmp(cmd, "flight")) {
-        if (!flight_on) rt_log("ctl: flight refused: MKW_FLIGHT is off");
+        if (!flight_on) rt_log("ctl: flight refused: ORBITALS_FLIGHT is off");
         else flight_request(), rt_log("ctl: flight queued at frame %llu", (unsigned long long)frame);
     } else if (!strcmp(cmd, "press")) {
         rt_log(input_script_inject(arg) ? "ctl: press %s queued at frame %llu" : "ctl: press %s: bad line (frame %llu)", arg,
@@ -80,16 +79,14 @@ void ctl_run(char *line) {
         char dir[400];
         int frames = 2;
         if (sscanf(arg, "%399s %d", dir, &frames) < 1) frames = 2;
-        if (!cap_request(dir, frames)) rt_log("ctl: capture refused: the run needs MKW_CAPTURE=1");
+        if (!cap_request(dir, frames)) rt_log("ctl: capture refused: the run needs ORBITALS_CAPTURE=1");
         else rt_log("ctl: capture %s (%d frames) queued at frame %llu", dir, frames, (unsigned long long)frame);
-    } else if (!strcmp(cmd, "seq")) {
-        seqwatch_log_active();
     } else if (!strcmp(cmd, "pause") || !strcmp(cmd, "resume")) {
         freeze_set(cmd[0] == 'p', 0);
     } else if (!strcmp(cmd, "step")) {
         freeze_set(1, *arg ? atoll(arg) : 1);
     } else if (!strcmp(cmd, "vram")) {
-        vram_log_now();   // vk_mem_log.c: what holds device-local memory, as MKW_VRAM_LOG's periodic line
+        vram_log_now();   // vk_mem_log.c: what holds device-local memory, as ORBITALS_VRAM_LOG's periodic line
         rt_log("ctl: vram at frame %llu", (unsigned long long)frame);
     } else if (!strcmp(cmd, "trim")) {
         // vk_mem_relieve, as when an allocation fails: released textures, then idle mirrored ones, then the GPU waited
@@ -123,7 +120,7 @@ static void ctl_main(void *arg) {
 }
 
 void ctl_init(void) {
-    const char *path = cfg_get("MKW_CTL");
+    const char *path = cfg_get("ORBITALS_CTL");
     if (!path || !*path) return;
     struct stat st;
     if (stat(path, &st) ? mkfifo(path, 0600) != 0 : !S_ISFIFO(st.st_mode)) {
@@ -162,7 +159,7 @@ static void ctl_main(void *arg) {
 }
 
 void ctl_init(void) {
-    const char *v = cfg_get("MKW_CTL");
+    const char *v = cfg_get("ORBITALS_CTL");
     if (!v || !*v) return;
     static char path[300];
     const char *b = strrchr(v, '\\'), *b2 = strrchr(v, '/');

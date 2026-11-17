@@ -1,6 +1,5 @@
-# The Windows package of this port branch (the start screen, mkw.exe, and the setup tools that build a game from the
-# player's own dump), as MKW's release workflow built it (removed on this branch), for trying another game: a tag
-# port-* builds it and puts the zip in a pre-release of that tag. Nothing of any game goes in.
+# The Windows package (the start screen, orbitals-recomp.exe, and the setup tools that build the game from the player's
+# own dump): a tag port-* builds it and puts the zip in a pre-release of that tag. Nothing of any game goes in.
 name: Port Windows package
 
 on:
@@ -45,10 +44,12 @@ jobs:
           key: dist-dl-windows-${{ hashFiles('tools/build/dist.py') }}
       - name: llvm-mingw and the Windows libraries
         run: uv run tools/build/windeps.py
-      - name: mkw.exe
+      - name: orbitals-recomp.exe
         run: uv run tools/build/build.py --target windows --dist --runtime-only
       - name: Setup tools
         run: uv run tools/build/dist.py --target windows
+      - name: Steam's steam_api64.dll for Remote Play Together (pinned sha256, docs/remote-play.md)
+        run: uv run tools/build/steamlib.py --target windows
       - name: Zip
         run: uv run tools/build/release.py --target windows --version "${GITHUB_REF_NAME#port-}"
       - uses: actions/upload-artifact@v4
@@ -63,5 +64,5 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --prerelease --title "$GITHUB_REF_NAME" \
-              --notes "The start screen and setup of the orbitals-port branch, for Windows. Unzip, run orbitals-recomp.exe, Game files > choose your .nup > Set up, then Play, and send logs/setup.log and logs/orbital.log."
+              --notes "The start screen and setup of the orbitals-port branch, for Windows. Unzip, run orbitals-recomp.exe, Game files > choose your .nup > Set up, then Play, and send logs/setup.log and logs/orbitals.log."
           gh release upload "$GITHUB_REF_NAME" build/release/*.zip --repo "$GITHUB_REPOSITORY" --clobber

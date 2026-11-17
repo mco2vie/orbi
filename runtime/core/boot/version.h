@@ -1,7 +1,7 @@
-// The fixed addresses of each game version the port knows: one row per executable, chosen by RtGame.version (the
-// number recomp/versions.py gives the dump the game code was generated from). Every guest address the runtime reads
-// or calls by number lives here, so a new version is one more row and the code that uses them stays the same.
-// A field at 0 is not known for that version: the feature that needs it is off, with a log line, never a guess.
+// The fixed values of each game build the port knows: one row per executable, chosen by RtGame.version (the number
+// recomp/versions.py gives the dump the game code was generated from). Every guest address the runtime reads or calls
+// by number lives here, so a new build is one more row and the code that uses them stays the same.
+// A field at 0 is not known for that build: the feature that needs it is off, with a log line, never a guess.
 #pragma once
 #include <stdint.h>
 
@@ -10,29 +10,19 @@
 typedef struct { const char *name; uint64_t entries; } RtInitCount;
 
 typedef struct {
-    int number;                // RtGame.version: 100, 180
-    const char *display;       // as the game shows it (nn::oe::GetDisplayVersion): "1.0.0"
+    int number;                // RtGame.version: 1 Orbitals; 0 a build not listed
+    const char *display;       // as the game shows it (nn::oe::GetDisplayVersion)
     // main offsets
     uint64_t nvn_ret;          // return address of the first nvnBootstrapLoader call (boot.c checkpoint)
-    uint64_t frame_update;     // the frame object's per-frame virtual (game.c, MKW_FPS)
-    uint64_t frame_slot;       // its vtable slot (main's data segment, writable)
-    uint64_t game_clock;       // u32, += the present interval every frame
-    uint64_t zstd_multiframe;  // ZSTD_decompressMultiFrame (ov_zstd.c, patch set zstd)
-    uint64_t zstd_stream;      // the loads' stream function (stream, src, size, ddict)
-    uint64_t rb_create;        // gsys RenderBuffer creation (patches.c, set shadow)
-    uint64_t rb_alloc_init;    // render-buffer allocator setup
-    uint64_t rb_pool_new;      // operator new(size, heap, alignment), as the allocator calls it
-    uint64_t rb_pool_init;     // one pool of that allocator
-    uint64_t expheap_create;   // pead::ExpHeap::create(void *start, size_t size, const char **name, int lock, 0)
-    uint64_t random_ctor_lr;   // sead::Random::Random, after its GetSystemTick call (set seed)
-    uint64_t random_ctor2_lr;  // another Random constructor, the same
-    uint64_t ui_text_lr;       // return address of the 2D text setup's projection getter call (set aspect)
-    uint64_t ui_focus_fn;      // a menu button taking the cursor (seqwatch.c, MKW_UI_FOCUS)
-    uint64_t camera_service;   // the global holding the camera service object (patches.c, set camera; 1.8.0)
-    // sdk offsets: the NVN2 driver's proc table (tools/gpu/nvn2_procs.py TABLES, the same rows)
+    // sdk offsets: the NVN2 driver's proc table (tools/gpu/nvn2_procs.py TABLES, the same rows); 0: RtGame.port's,
+    // found in the dump at setup
     uint64_t sdk_name_pool, sdk_name_offsets, sdk_pointers;
     int sdk_last_index;
-    // DT_INIT_ARRAYSZ / 8 of each module, in load order (boot.c): a different count is a different build
+    // the NVN2 device values nvnDeviceGetInteger answers (nvn_api_core.c): 16 for API 231.16's table, 39 for 231.39's;
+    // 0 is 231.16
+    int nvn_api_minor;
+    // DT_INIT_ARRAYSZ / 8 of each module, in load order (boot.c): a different count is a different build; none: each
+    // module's DT_INIT runs and its count is logged
     RtInitCount inits[RT_MAX_MODULES];
 } RtVersion;
 

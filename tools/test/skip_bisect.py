@@ -3,7 +3,7 @@
 # dependencies = ["pillow==11.3.0"]
 # ///
 """Finds the draw program behind a coloured artifact by replaying one frame capture with half of the candidate
-programs skipped each time (MKW_SKIP_PROGRAMS takes key prefixes), until one key prefix is left.
+programs skipped each time (ORBITALS_SKIP_PROGRAMS takes key prefixes), until one key prefix is left.
 
 Why: artifacts that only show on GPUs we do not have (#174, Intel ANV: red halos and a red tint on the 3D scene) cannot
 be narrowed here, and a game run per guess costs the reporter minutes. A capture replays in seconds on their machine,
@@ -17,9 +17,9 @@ too: the final program is checked alone and printed with what it removed. If nei
 does not come from one draw program (a compute pass, or several programs): the script says so and stops.
 
 Capture first, on the GPU that shows the artifact (Linux), with the scene on screen at the given present:
-    MKW_CAPTURE=1 MKW_CAPTURE_AT=2000 MKW_CAPTURE_DIR=~/mkw-cap ./mkw
-Usage: uv run tools/test/skip_bisect.py CAPTURE_DIR [--mkw PATH] [--color red] [--drop 0.6] [--out DIR]
-       (--mkw: build/mkw from a source build; from the AppImage, ~/.local/share/mkw-recomp/mkw)
+    ORBITALS_CAPTURE=1 ORBITALS_CAPTURE_AT=2000 ORBITALS_CAPTURE_DIR=~/orbitals-cap ./orbitals-recomp
+Usage: uv run tools/test/skip_bisect.py CAPTURE_DIR [--exe PATH] [--color red] [--drop 0.6] [--out DIR]
+       (--exe: build/orbitals-recomp from a source build; from the AppImage, ~/.local/share/orbitals-recomp/orbitals-recomp)
 """
 
 import argparse
@@ -30,7 +30,7 @@ from pathlib import Path
 
 from PIL import Image
 
-HEX = "0123456789abcdef"  # 16 one-digit prefixes at most: MKW_SKIP_PROGRAMS keeps 16 entries (vk_exec_draw.c)
+HEX = "0123456789abcdef"  # 16 one-digit prefixes at most: ORBITALS_SKIP_PROGRAMS keeps 16 entries (vk_exec_draw.c)
 PREFIX_DIGITS = 5  # 20 bits: about a million prefixes for the ~23 000 programs of a version
 
 
@@ -42,8 +42,8 @@ COLORS = {"red": is_red}
 
 
 class Replayer:
-    def __init__(self, mkw: Path, capture: Path, out: Path, color: str) -> None:
-        self.mkw, self.capture, self.out, self.match = mkw, capture, out, COLORS[color]
+    def __init__(self, exe: Path, capture: Path, out: Path, color: str) -> None:
+        self.exe, self.capture, self.out, self.match = exe, capture, out, COLORS[color]
         self.n = 0
 
     def count(self, skip: list[str]) -> tuple[int, int]:
@@ -51,11 +51,11 @@ class Replayer:
         self.n += 1
         d = self.out / f"r{self.n:02d}"
         env = dict(os.environ)
-        env.pop("MKW_SKIP_PROGRAMS", None)
+        env.pop("ORBITALS_SKIP_PROGRAMS", None)
         if skip:
-            env["MKW_SKIP_PROGRAMS"] = ",".join(skip)
+            env["ORBITALS_SKIP_PROGRAMS"] = ",".join(skip)
         with open(self.out / f"r{self.n:02d}.log", "w") as log:
-            r = subprocess.run([str(self.mkw), "--replay", str(self.capture), "--out", str(d), "--tag", "f"],
+            r = subprocess.run([str(self.exe), "--replay", str(self.capture), "--out", str(d), "--tag", "f"],
                                env=env, stdout=log, stderr=subprocess.STDOUT)  # fmt: skip
         pngs = sorted(d.glob("*.png"), key=lambda p: p.stat().st_mtime)
         if r.returncode or not pngs:
@@ -99,14 +99,14 @@ def bisect(rp: Replayer, base: tuple[int, int], drop: float) -> str | None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("capture", type=Path)
-    p.add_argument("--mkw", type=Path, default=Path(__file__).resolve().parents[2] / "build/mkw")
+    p.add_argument("--exe", type=Path, default=Path(__file__).resolve().parents[2] / "build/orbitals-recomp")
     p.add_argument("--color", choices=sorted(COLORS), default="red")
     p.add_argument("--drop", type=float, default=0.6, help="share of the pixels a culprit half removes")
     p.add_argument("--out", type=Path, help="replays and logs (default CAPTURE/bisect)")
     a = p.parse_args()
     out = a.out or a.capture / "bisect"
     out.mkdir(parents=True, exist_ok=True)
-    rp = Replayer(a.mkw, a.capture, out, a.color)
+    rp = Replayer(a.exe, a.capture, out, a.color)
     base = rp.count([])
     if base[0] < 200:
         sys.exit(f"only {base[0]} {a.color} pixels in the last present: capture a frame that shows the artifact")
@@ -118,7 +118,7 @@ def main() -> None:
         f"\nprogram key prefix {prefix}: skipping it alone leaves {alone[0]} of {base[0]} {a.color} pixels and "
         f"{alone[1]} of {base[1]} others"
     )
-    print(f"the program: <folder of mkw>/spirv/{prefix}*.spv")
+    print(f"the program: <folder of orbitals-recomp>/spirv/{prefix}*.spv")
 
 
 if __name__ == "__main__":

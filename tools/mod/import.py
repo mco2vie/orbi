@@ -1,14 +1,14 @@
 """Import a Switch-style mod into <game>/mods for the start screen's Mods page.
 
 Why: mods ship in the emulators' layout (romfs/ and/or exefs/ with <build id>.ips + .pchtxt inside), as
-GameBanana has them: zip, rar or 7z, with those folders at the root, under one folder, deeper, or under
+mod sites ship them: zip, rar or 7z, with those folders at the root, under one folder, deeper, or under
 atmosphere/contents/<title id>/. The port reads a mod from <game>/mods/<name>/ with a manifest.tsv over its romfs/
 (runtime/sdk/fs/romfs.c) and a mod.json the Mods page shows. This copies the mod in as it comes, checks the exefs
 patches name this game's build id, and writes both files.
 
 Usage: import.py --game EXEDIR --romfs ROMFS [--exefs DIR] [--build-id HEX] (--zip FILE | --folder DIR)
                  [--name NAME] [--variant PATH]
-  --game: the folder of mkw / mkw.exe (mods/ is made inside it)
+  --game: the folder of orbitals-recomp / orbitals-recomp.exe (mods/ is made inside it)
   --romfs: the game's RomFS the manifest's original hashes come from: a loose folder or a .nup package
   --zip: a mod archive, .zip, .rar or .7z (rar and 7z through tar, which is bsdtar on Windows 10 and later)
   --folder: an extracted mod folder
@@ -37,7 +37,7 @@ from nup import romfs_read  # noqa: E402  (a loose RomFS or a .nup package)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ips  # noqa: E402  (a mod's .ips / .pchtxt as patches of the game's code)
 
-# An archive that unpacks to more is refused (a zip bomb, or not a mod): the largest MKW mods are a few hundred MB
+# An archive that unpacks to more is refused (a zip bomb, or not a mod): the largest mods of the first game were a few hundred MB
 MAX_BYTES, MAX_FILES = 4 << 30, 50_000
 
 BUILD_ID_OFF, BUILD_ID_LEN = 0x40, 8
@@ -155,7 +155,7 @@ def main():
     if len(game_id) != 16 or any(c not in "0123456789abcdef" for c in game_id):
         return fail("usage", "bad --build-id")
 
-    with tempfile.TemporaryDirectory(prefix="mkwmod") as tmp:
+    with tempfile.TemporaryDirectory(prefix="orbitalsmod") as tmp:
         if args.zip_path:
             try:
                 err = unpack(args.zip_path, tmp)
@@ -205,7 +205,7 @@ def main():
         usable = [p for p in shipped_patches.get("spans", []) + shipped_patches.get("sites", []) if isinstance(p, dict)]
         image = []
         if has_exefs and not usable:
-            # as GameBanana has them: the .ips applied to the code before the generator lifts it (enabling or
+            # as mod sites ship them: the .ips applied to the code before the generator lifts it (enabling or
             # removing the mod then builds the game code again: tools/prepare/prepare.py)
             files = [p for p in Path(src, "exefs").iterdir() if p.suffix.lower() in (".ips", ".pchtxt")]
             try:

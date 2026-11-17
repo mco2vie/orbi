@@ -62,8 +62,8 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
     jobs_c.sort(key=lambda j: -j[0].stat().st_size)  # the largest first: no 10 MB main_table.c alone at the end
     total, done = len(jobs_c) + 1, 0  # the link is the last unit: a progress bar full before it hid it (issue #2)
     # Windows: the import library names the program the DLL's imports come from, orbitals-recomp.exe on this branch
-    # (dist.py); a change here changes the compile step's key, so a library linked against mkw.exe is linked again
-    extra = [str(package_dir(game) / "lib/libmkw.dll.a")] if windows else ["-Wl,-z,noexecstack"]
+    # (dist.py); a change here changes the compile step's key, so a library linked against orbitals-recomp.exe is linked again
+    extra = [str(package_dir(game) / "lib/liborbitals-recomp.dll.a")] if windows else ["-Wl,-z,noexecstack"]
     base = common_key(cc, gen)
 
     def one(job: tuple[Path, Path, list[str]]) -> str:
@@ -125,7 +125,7 @@ def common_key(cc: list[str], gen: Path) -> str:
 
 def object_key(base: str, src: Path, flags: list[str], gen: Path) -> str:
     """An object is reused while this matches: kept across setups (cleanup leaves obj/), an update that changes a few
-    functions (a patch in patches-mkw.txt) compiles their chunks only, not all ~360 (8 min Linux, 12 Windows,
+    functions (a patch in the patch table) compiles their chunks only, not all ~360 (8 min Linux, 12 Windows,
     11/11/2026). Paths leave the key: the AppImage mounts the package at a new /tmp/.mount_* each run."""
     h = hashlib.sha256(base.encode())
     for f in flags:

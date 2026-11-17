@@ -97,7 +97,7 @@ typedef struct VkExec {
     void *views;                         // image views created for this command buffer (freed at its fence)
     int nviews, cap_views;
     int barrier_at;                      // recorded right after the last full barrier (-1: none yet)
-    int last_dispatch;                   // recorded right after the last dispatch (MKW_DISPATCH_NOBARRIER)
+    int last_dispatch;                   // recorded right after the last dispatch (ORBITALS_DISPATCH_NOBARRIER)
     int clear_run_at;                    // recorded right after the last image clear (vk_exec_clear.c clear_barrier)
     int nclr;                            // image clears since the last barrier, in clr
     struct { VkImage img; uint32_t level, layer0, layers; } clr[8];
@@ -124,8 +124,8 @@ void vk_exec_pass_end(VkExec *ex);
 // Full memory barrier (all commands, all memory); ends the open pass first. Copies and dispatches order themselves with
 // it. Skipped when nothing was recorded since the last one.
 void vk_exec_barrier(VkExec *ex);
-void wpage_note(const VkExec *ex, uint64_t addr, uint64_t size, const char *what);   // MKW_TRACE_WPAGE (vk_exec_cb.c)
-// vk_texture.c (MKW_TEX_ALIAS): commands that must run at the replay's current position. vk_exec_inline_begin returns
+void wpage_note(const VkExec *ex, uint64_t addr, uint64_t size, const char *what);   // ORBITALS_TRACE_WPAGE (vk_exec_cb.c)
+// vk_texture.c (ORBITALS_TEX_ALIAS): commands that must run at the replay's current position. vk_exec_inline_begin returns
 // the command buffer being recorded after a full barrier (an open pass is ended; *reopen says so), or VK_NULL_HANDLE
 // when this thread is not recording a replay. vk_exec_inline_end begins the pass again when it was open.
 // vk_exec_inline_buffer: a device buffer for transfers, destroyed when the submission completes.
@@ -147,7 +147,7 @@ int vk_exec_targets_recent(VkExec *ex, int any);
 // The current pass's targets with their formats, extents and the frames they were last rendered in (diagnostics).
 void vk_exec_targets_describe(VkExec *ex, char *buf, size_t cap);
 
-// MKW_TRACE=gfx: replay counters of the current frame, logged and reset at each present (vk_exec_frame_log).
+// ORBITALS_TRACE=gfx: replay counters of the current frame, logged and reset at each present (vk_exec_frame_log).
 typedef struct {
     uint64_t passes, draws_seen, draws, clears, copies, dispatches, submits;
     uint64_t fb_draws, fb_barriers, fb_restarts, fb_layouts;   // feedback loops: draws sampling a written target of
@@ -158,7 +158,7 @@ typedef struct {
 enum { VK_SKIP_OFF, VK_SKIP_SCISSOR, VK_SKIP_PROGRAM, VK_SKIP_NO_VS, VK_SKIP_SHADER_MISSING,
        VK_SKIP_PIPE_WAIT, VK_SKIP_PIPE_FAILED, VK_SKIP_MESH };
 extern VkExecFrame vk_exec_frame_all;
-// The counters this thread adds to: vk_exec_frame_all, or a chunk's own on MKW_REPLAY_PAR's threads (summed into it
+// The counters this thread adds to: vk_exec_frame_all, or a chunk's own on ORBITALS_REPLAY_PAR's threads (summed into it
 // when the chunks join, vk_exec_frame_add).
 extern _Thread_local VkExecFrame *vk_exec_frame_cur;
 #define vk_exec_frame (*vk_exec_frame_cur)
@@ -166,34 +166,34 @@ void vk_exec_frame_add(const VkExecFrame *f);
 void vk_exec_frame_written(const tex_t *t);                    // vk_texture_gpu_written: t rendered or copied into
 uint64_t vk_exec_recording_fence(void);                        // fence of the submission this thread records, else 0
 void vk_exec_frame_log(const tex_t *presented, uint64_t frame);
-// MKW_IND_READ (vk_ind_read.c): an indirect draw's arguments noted, copied out at its pass end and logged at the fence
+// ORBITALS_IND_READ (vk_ind_read.c): an indirect draw's arguments noted, copied out at its pass end and logged at the fence
 void vk_ind_read_note(VkBuffer buf, VkDeviceSize off, uint32_t stride, uint32_t max, VkBuffer cbuf, VkDeviceSize coff,
                       uint32_t vs, int has_count, int indexed, uint64_t guest, const VkExec *ex);   // guest: 0 when
                                                                                                     // not host-backed
 void vk_ind_read_pass_end(VkExec *ex);
-void vk_ind_note_pass(void);   // the open pass records an indirect draw (MKW_IND_BARRIER)
+void vk_ind_note_pass(void);   // the open pass records an indirect draw (ORBITALS_IND_BARRIER)
 extern uint64_t vk_exec_presented;   // the last frame vk_exec_frame_log saw (traces that name a frame)
-extern int vk_cond_trace;            // MKW_COND_TRACE lines left (vk_exec_xfer.c); -1 before the first condition
+extern int vk_cond_trace;            // ORBITALS_COND_TRACE lines left (vk_exec_xfer.c); -1 before the first condition
 
-// MKW_DUMP=<frame> (vk_dump.c): between presents frame-1 and frame, every pass's targets and every dispatch's storage
-// images are copied out and written as PNGs to MKW_DUMP_DIR (default "dump"), with passes.txt (targets, pipelines,
+// ORBITALS_DUMP=<frame> (vk_dump.c): between presents frame-1 and frame, every pass's targets and every dispatch's storage
+// images are copied out and written as PNGs to ORBITALS_DUMP_DIR (default "dump"), with passes.txt (targets, pipelines,
 // textures, samplers) and images.txt (per image value statistics). The hooks run only when vk_dump_armed is set.
 extern int vk_dump_armed;
 void vk_dump_pass_begin(VkExec *ex);   // after vkCmdBeginRendering: the pass's pipeline statistics query
 void vk_dump_pass_close(VkExec *ex);   // before vkCmdEndRendering
-int vk_dump_rearm(const char *dir, int ubo, int luts, int log_n);   // MKW_CTL: dump the frame log_n + 1 ahead into dir,
+int vk_dump_rearm(const char *dir, int ubo, int luts, int log_n);   // ORBITALS_CTL: dump the frame log_n + 1 ahead into dir,
                                                                    // logging the ones before; 0 while one is pending
 void vk_dump_init(void);                 // reads the environment; vk_exec_record's first call
 void vk_dump_pass_end(VkExec *ex);       // after vkCmdEndRendering
 void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeInfo *info);   // after a draw's binds;
-                                                                                           // marks the draws MKW_DUMP_DRAWS selects
-void vk_dump_draw_after(VkExec *ex);     // after vkCmdDraw*: MKW_DUMP_DRAWS copies after the actual draw
+                                                                                           // marks the draws ORBITALS_DUMP_DRAWS selects
+void vk_dump_draw_after(VkExec *ex);     // after vkCmdDraw*: ORBITALS_DUMP_DRAWS copies after the actual draw
 void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPipeInfo *info, const p_dispatch *d);
 void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, const p_dispatch *d);
 void vk_dump_copy(VkExec *ex, uint32_t op, const void *payload);   // before a copy or texture clear is replayed
 void vk_dump_present(uint64_t frame);    // vk_be_present: waits for the dump frame's copies and closes the logs
 
-// MKW_RTSTATS=<N> (diag/vk_rtstats.c): one frame in N, each pass's targets and each dispatch's storage images are
+// ORBITALS_RTSTATS=<N> (diag/vk_rtstats.c): one frame in N, each pass's targets and each dispatch's storage images are
 // copied out and checked on a thread of their own; a NaN, an infinity or a constant target is logged once
 // ("rtstats:"). The hooks run only when vk_rtstats_on is set.
 enum { VK_RTSTATS_NAN, VK_RTSTATS_INF, VK_RTSTATS_CONST, VK_RTSTATS_RULES };
@@ -205,7 +205,7 @@ void vk_rtstats_dispatch(VkExec *ex, const VkPipeInfo *info); // after a dispatc
 void vk_rtstats_flush(void);           // waits for every submission and for the checks of their copies
 uint64_t vk_rtstats_hits(int rule);    // targets that broke the rule so far, logged or not
 
-// c0, the NVN driver constant bank of one stage (vk_exec_ubuf.c; MKW_FIX_C0=0 binds zeros instead): bank is
+// c0, the NVN driver constant bank of one stage (vk_exec_ubuf.c; ORBITALS_FIX_C0=0 binds zeros instead): bank is
 // VK_C0_BYTES, stage an NVN stage (0 vertex, 1 fragment, 5 compute), ssbo and ubo the 16 bound slots of that stage.
 #define VK_C0_BYTES 0x800u
 // cs_table (compute, NULL for NVN1's fixed tables): the program's uniform, storage, texture and image entry counts and
@@ -214,7 +214,7 @@ void vk_c0_fill(uint8_t bank[VK_C0_BYTES], int stage, const p_bind_buf ssbo[16],
                 const uint32_t dispatch[3], uint32_t base_instance, const uint8_t *cs_table, const uint64_t *tex,
                 const uint64_t *img);
 
-// ---- MKW_REPLAY_PAR (vk_exec_par.c): one submission recorded as chunks on several threads
+// ---- ORBITALS_REPLAY_PAR (vk_exec_par.c): one submission recorded as chunks on several threads
 #define VK_EXEC_CALL_DEPTH 8   // OP_CALL nesting
 // vk_exec.c: one op that is not END, BEGIN, JUMP or CALL (1: a draw or dispatch); the fixed-function state ops' effect
 // alone (1 when op is one); a chunk's start (its state becomes this thread's, x_cur) and end (pass ended, a full barrier,
@@ -227,16 +227,16 @@ void vk_exec_op_pos_set(uint64_t pos);   // a chunk's thread: the position befor
 void vk_exec_chunk_end(VkExec *ex);
 // vk_exec_par.c: called by vk_exec_record before it walks; 1 when it recorded and submitted the submission's ops as
 // chunks (ex then holds the state after the last op and a new command buffer for the rest); 0: walk as usual. diag: a
-// diagnosis that times ops or passes is on (chunks stay off). vk_exec_par_log: the perf line (MKW_TRACE=perf).
+// diagnosis that times ops or passes is on (chunks stay off). vk_exec_par_log: the perf line (ORBITALS_TRACE=perf).
 int vk_exec_par(VkExec *ex, const uint64_t *handles, int n, int diag);
 void vk_exec_par_log(void);
-void vk_exec_draw_probe_log(void);   // MKW_DRAW_CACHE_PROBE (vk_exec_dcache.c)
-void vk_exec_draw_cache_log(void);   // MKW_DRAW_CACHE (vk_exec_dcache.c)
+void vk_exec_draw_probe_log(void);   // ORBITALS_DRAW_CACHE_PROBE (vk_exec_dcache.c)
+void vk_exec_draw_cache_log(void);   // ORBITALS_DRAW_CACHE (vk_exec_dcache.c)
 uint64_t vk_dcache_epoch(void);      // moves when the draw cache empties: the sets it gave before may be destroyed
-void vk_exec_op_timing_log(void);    // MKW_TRACE=draw: the replay's time per op since the last call
+void vk_exec_op_timing_log(void);    // ORBITALS_TRACE=draw: the replay's time per op since the last call
 VkDescriptorSet vk_dcache_get(VkDescriptorSetLayout sl, const VkDescSlot *d, uint32_t n, uint64_t fence,
                               void (*write)(void *ctx, VkDescriptorSet set), void *ctx);   // vk_exec_dcache.c
-void vk_dcache_probe(const VkPipeInfo *info, const VkDescSlot *d, uint32_t nd);           // MKW_DRAW_CACHE_PROBE
+void vk_dcache_probe(const VkPipeInfo *info, const VkDescSlot *d, uint32_t nd);           // ORBITALS_DRAW_CACHE_PROBE
 // vk_exec_ubuf.c: a chunk's thread sees the submission's inline uniform updates before the chunk (upd[0..n)).
 void vk_exec_draw_upd_seed(const VkExec *ex, const void *const *upd, int n);
 // vk_exec_xfer.c: conditional rendering decided by the light walk. vk_exec_cond_plan follows a report or a condition
@@ -250,8 +250,8 @@ void vk_exec_cond_use(const VkCondPlanned *d, int n);
 void vk_exec_xfer_again(int on);   // vk_exec_xfer.c: this thread records a chunk again (no events, no reports)
 // vk_exec_xfer.c: samples-passed counting is on (its queries must stay in replay order: no chunks).
 int vk_exec_oq_busy(void);
-int vk_exec_oq_state(void);   // occlusion counting (bit 0) and a query open (bit 1): whether a draw begins one (MKW_REUSE)
-// vk_usnap.c: uniform snapshot copies this thread dropped so far (MKW_REPLAY_PAR's order check).
+int vk_exec_oq_state(void);   // occlusion counting (bit 0) and a query open (bit 1): whether a draw begins one (ORBITALS_REUSE)
+// vk_usnap.c: uniform snapshot copies this thread dropped so far (ORBITALS_REPLAY_PAR's order check).
 uint64_t vk_usnap_thread_drops(void);
 
 // Handler hooks. vk_exec.c defines both WEAK: they stop with rt_fatal naming the op.
@@ -259,14 +259,14 @@ uint64_t vk_usnap_thread_drops(void);
 // samp, img), OP_UPDATE_UB, OP_DRAW_IDX_IND, OP_DISPATCH_IND. payload: nvn_op_payload of the record.
 void vk_exec_op_draw(VkExec *ex, uint32_t op, const void *payload);
 // The replay-state effect alone of a bind op (vk_exec_ops.c) or a render-enable op (vk_exec_xfer.c), for the light
-// walk (MKW_REPLAY_WALK): 1 when op is one of theirs.
+// walk (ORBITALS_REPLAY_WALK): 1 when op is one of theirs.
 int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload);
 int vk_exec_xfer_state(VkExec *ex, uint32_t op, const void *payload);
-void vk_exec_dc_read(VkImage img);           // a sampling of img (MKW_DEPTH_CLEAR_ALL's read count)
+void vk_exec_dc_read(VkImage img);           // a sampling of img (ORBITALS_DEPTH_CLEAR_ALL's read count)
 // since the last call; by_layer: clears a chunk made layer by layer since an earlier chunk bound the image
 void vk_exec_dc_stats(uint64_t *reads, uint64_t *skipped, uint64_t *ahead, uint64_t *by_layer);
-void vk_exec_present_note(uint64_t frame);   // MKW_TRACE=perf: a present (the per-frame submission census)
-int vk_exec_draw_timing(char *buf, int size, double us_per_tick);   // MKW_TRACE=perf: prepare_draw by stage, then reset
+void vk_exec_present_note(uint64_t frame);   // ORBITALS_TRACE=perf: a present (the per-frame submission census)
+int vk_exec_draw_timing(char *buf, int size, double us_per_tick);   // ORBITALS_TRACE=perf: prepare_draw by stage, then reset
 // The aspect a sampled view of img reads (vk_exec_view.c get_view): stencil for a view in STENCIL depth-stencil mode.
 VkImageAspectFlags vk_exec_view_aspect(const VkTexImage *img, const view_t *v, int hv);
 VkImageView vk_exec_target_view(const VkTexImage *img, VkFormat format, VkImageViewType type, uint32_t aspect,

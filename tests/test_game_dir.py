@@ -31,7 +31,7 @@ def game_dir_probe(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 def probe(exe: Path, *args: str, **overrides: str) -> dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("MKW_", "TEST_LOG_", "TEST_STDERR_"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("ORBITALS_", "TEST_LOG_", "TEST_STDERR_"))}
     env.update(overrides)
     p = subprocess.run([str(exe), *args], env=env, check=True, capture_output=True, text=True)
     return dict(line.split("=", 1) for line in p.stdout.splitlines())
@@ -41,12 +41,12 @@ def probe(exe: Path, *args: str, **overrides: str) -> dict[str, str]:
 def launcher(game_dir_probe: Path, tmp_path: Path) -> Path:
     folder = tmp_path / "Launcher ñ with spaces"
     folder.mkdir()
-    return Path(shutil.copy2(game_dir_probe, folder / "mkw"))
+    return Path(shutil.copy2(game_dir_probe, folder / "orbitals-recomp"))
 
 
 def installation(folder: Path, volume: int = 80) -> Path:
     folder.mkdir()
-    (folder / "orbital.ini").write_text(f"romfs = /dump ñ/romfs\nvolume = {volume}\n")
+    (folder / "orbitals.ini").write_text(f"romfs = /dump ñ/romfs\nvolume = {volume}\n")
     (folder / "orbitalgame.so").touch()  # readiness checks the id without loading code, as the launcher does
     (folder / "orbitalgame.id").write_text("dev")
     return folder
@@ -57,10 +57,10 @@ def test_default_and_persisted_directory(launcher: Path, tmp_path: Path) -> None
     game = installation(tmp_path / "Games ñ with spaces")
     assert probe(launcher, "select", str(game))["selected"] == "1"
     assert probe(launcher) == {"dir": str(game), "ready": "1", "romfs": "/dump ñ/romfs", "volume": "80"}
-    selector = (launcher.parent / "orbital.ini").read_text()
+    selector = (launcher.parent / "orbitals.ini").read_text()
     probe(launcher, "save", "41")
     assert probe(launcher)["volume"] == "41"
-    assert (launcher.parent / "orbital.ini").read_text() == selector
+    assert (launcher.parent / "orbitals.ini").read_text() == selector
     assert probe(launcher, "select", str(launcher.parent))["selected"] == "1"
     assert probe(launcher)["dir"] == str(launcher.parent)
     assert probe(launcher)["volume"] == "100"
@@ -68,11 +68,11 @@ def test_default_and_persisted_directory(launcher: Path, tmp_path: Path) -> None
 
 def test_relative_directory_and_environment_override(launcher: Path, tmp_path: Path) -> None:
     game = installation(launcher.parent / "Installed game")
-    (launcher.parent / "orbital.ini").write_text("game_dir = Installed game\n")
+    (launcher.parent / "orbitals.ini").write_text("game_dir = Installed game\n")
     assert probe(launcher)["dir"] == str(game)
     other = installation(tmp_path / "Other game", 65)
-    assert probe(launcher, MKW_GAME_DIR=str(other), MKW_VOLUME="32")["volume"] == "32"
-    result = probe(launcher, "select", str(game), MKW_GAME_DIR=str(other))
+    assert probe(launcher, ORBITALS_GAME_DIR=str(other), ORBITALS_VOLUME="32")["volume"] == "32"
+    result = probe(launcher, "select", str(game), ORBITALS_GAME_DIR=str(other))
     assert result["dir"] == str(other) and result["selected"] == "0"
     assert probe(launcher)["dir"] == str(game)
 
@@ -92,7 +92,7 @@ def test_failed_selection_keeps_current_installation(launcher: Path, tmp_path: P
     assert probe(launcher, "fail", str(tmp_path / "Other"))["selected"] == "0"
     result = probe(launcher)
     assert result["dir"] == str(game) and result["volume"] == "37"
-    assert "game_dir" not in (game / "orbital.ini").read_text()
+    assert "game_dir" not in (game / "orbitals.ini").read_text()
 
 
 def nested_path(base: Path, size: int) -> Path:
@@ -111,7 +111,7 @@ def test_selection_preserves_whitespace(launcher: Path, tmp_path: Path, ending: 
         game = installation(tmp_path / (name + ending))
         result = probe(launcher, "select", str(game))
         assert result["selected"] == "1" and result["value"] == str(game)
-        assert f'game_dir = "{game}"\n' in (launcher.parent / "orbital.ini").read_text()
+        assert f'game_dir = "{game}"\n' in (launcher.parent / "orbitals.ini").read_text()
         assert probe(launcher)["dir"] == str(game)
         assert probe(launcher)["ready"] == "1"
 
@@ -120,12 +120,12 @@ def test_selection_preserves_whitespace(launcher: Path, tmp_path: Path, ending: 
 def test_rejected_directory_does_not_replace_selection(launcher: Path, tmp_path: Path, size: int) -> None:
     game = installation(tmp_path / "Current")
     probe(launcher, "select", str(game))
-    selector = (launcher.parent / "orbital.ini").read_bytes()
+    selector = (launcher.parent / "orbitals.ini").read_bytes()
     long_path = nested_path(tmp_path, size)
     long_path.mkdir(parents=True)
     result = probe(launcher, "select", str(long_path))
     assert result["selected"] == "0" and result["invalid"] == "1"
-    assert (launcher.parent / "orbital.ini").read_bytes() == selector
+    assert (launcher.parent / "orbitals.ini").read_bytes() == selector
     assert probe(launcher)["dir"] == str(game)
 
 
@@ -147,7 +147,7 @@ def test_supported_path_boundary_and_relative_resolution(launcher: Path) -> None
 
 def test_invalid_saved_directory_allows_recovery(launcher: Path, tmp_path: Path) -> None:
     invalid = nested_path(tmp_path, 2048)
-    ini = launcher.parent / "orbital.ini"
+    ini = launcher.parent / "orbitals.ini"
     ini.write_text(f'game_dir = "{invalid}"\n')
     assert probe(launcher)["dir"] == str(launcher.parent)
     game = installation(tmp_path / "Recovered")
@@ -160,7 +160,7 @@ def test_invalid_selection_does_not_create_selector(launcher: Path, path: str) -
     result = probe(launcher, "select", path)
     assert result["selected"] == "0" and result["invalid"] == "1"
     assert result["value"] == ""
-    assert not (launcher.parent / "orbital.ini").exists()
+    assert not (launcher.parent / "orbitals.ini").exists()
 
 
 def test_relative_selection_is_saved_as_supported_absolute_path(launcher: Path) -> None:

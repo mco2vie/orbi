@@ -259,7 +259,7 @@ void views_release(VkExec *ex) {
 #define RECENT_FRAMES 16
 typedef struct { VkImage image; uint32_t level, layer; uint64_t last, prev; } TargetFrames;
 static TargetFrames tfr[1024];
-static PlatMutex tfr_lock = PLAT_MUTEX_INIT;   // chunks end passes on several threads (MKW_REPLAY_PAR)
+static PlatMutex tfr_lock = PLAT_MUTEX_INIT;   // chunks end passes on several threads (ORBITALS_REPLAY_PAR)
 
 static TargetFrames *tfr_slot(const VkExecTarget *t) {
     uint64_t h = ((uint64_t)(uintptr_t)t->image ^ (uint64_t)t->level << 56 ^ (uint64_t)t->base_layer << 40) *

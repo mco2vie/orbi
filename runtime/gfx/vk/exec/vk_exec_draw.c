@@ -45,7 +45,7 @@ void warn_once(int key, const char *fmt, ...) {
 
 // ---- the recording thread's state
 // What belongs to the command buffer a thread records (bound pipeline and sets, memos of the last draw, the inline
-// updates seen) lives per thread: MKW_REPLAY_PAR records one submission's chunks on several threads (vk_exec_par.c).
+// updates seen) lives per thread: ORBITALS_REPLAY_PAR records one submission's chunks on several threads (vk_exec_par.c).
 // The large blocks are allocated on a thread's first recording (vk_exec_draw_thread), not as _Thread_local storage,
 // which every thread of the process would carry: B, DS, RS, UPD, SM, PM and BRA name this thread's, each through a
 // pointer set there.
@@ -58,7 +58,7 @@ void vk_exec_draw_new_cb(void) {
     memset(&B, 0, sizeof B);
 }
 
-// What is bound is not known any more (MKW_REUSE emitted packets of its own); the memos of this command buffer's
+// What is bound is not known any more (ORBITALS_REUSE emitted packets of its own); the memos of this command buffer's
 // transient buffers (c0, support) still hold.
 void vk_exec_draw_forget(void) {
     vk_exec_draw_thread();
@@ -127,10 +127,10 @@ int find_stage(const prog_t *p, int nvn_stage, const uint8_t **ctl, const uint8_
 // Which TEX/IMG bindings of a compute program have an integer-format view bound: the translator reads them as float
 // and takes the bits (floatBitsToUint), as SM86 does; in Vulkan a float image over an integer view is undefined
 // (format-07753): AMD and NVIDIA return the bits, Intel Arc drew the race black (issue #64). Array and buffer
-// bindings are left as they are. MKW_INT_IMAGES=0 keeps the float images (to compare). s: the program's base shader.
+// bindings are left as they are. ORBITALS_INT_IMAGES=0 keeps the float images (to compare). s: the program's base shader.
 static void cs_answers(VkExec *ex, const GfxShader *s, GfxShaderAnswers *a) {
     static int on = -1;
-    if (on < 0) on = !cfg_get("MKW_INT_IMAGES") || strcmp(cfg_get("MKW_INT_IMAGES"), "0") != 0;
+    if (on < 0) on = !cfg_get("ORBITALS_INT_IMAGES") || strcmp(cfg_get("ORBITALS_INT_IMAGES"), "0") != 0;
     if (!on) return;
     for (int img = 0; s && img < 2; img++) {
         const GfxShaderRes *res;
@@ -250,7 +250,7 @@ void spec_census(VkExec *ex, const GfxShader *s, int st) {
     vk_spec_observe(s, val, known);
 }
 
-// MKW_SPEC: s or its specialized variant (vk_spec.c).
+// ORBITALS_SPEC: s or its specialized variant (vk_spec.c).
 static const GfxShader *spec_pick(VkExec *ex, const GfxShader *s, int st) {
     if (!s || gfx_shader_mesh_kind(s) != GFX_MESH_NONE) return s;
     SpecCtx c = {ex, s, st};
@@ -366,7 +366,7 @@ static uint32_t feedback_prepare(VkExec *ex, const GfxShader *fs) {
     return mode == VK_FEEDBACK_LAYOUT ? m & ex->fbl_mask : 0;
 }
 
-// MKW_PIPE_SKIP: which draws are skipped, rather than waited for, while their shaders or pipeline build.
+// ORBITALS_PIPE_SKIP: which draws are skipped, rather than waited for, while their shaders or pipeline build.
 // strict (0): only draws whose pass targets were all rendered in the last frames (RECENT_FRAMES); a pass with a target
 //   that was not counts as one-shot and waits.
 // any (1): also draws in a pass with at least one target rendered in the last frames (a per-frame depth
@@ -379,17 +379,17 @@ static uint32_t feedback_prepare(VkExec *ex, const GfxShader *fs) {
 static int pipe_skip_mode(void) {
     static int mode = -1;
     if (mode < 0) {
-        const char *e = cfg_value("MKW_PIPE_SKIP");
+        const char *e = cfg_value("ORBITALS_PIPE_SKIP");
         mode = !strcmp(e, "strict") || !strcmp(e, "0") ? 0 : !strcmp(e, "fullscreen") || !strcmp(e, "2") ? 2 : 1;
-        static const char *const what[3] = {"only draws into per-frame passes (MKW_PIPE_SKIP=strict)",
+        static const char *const what[3] = {"only draws into per-frame passes (ORBITALS_PIPE_SKIP=strict)",
                                             "draws into passes with a target the previous frame rendered",
-                                            "those and full-screen draws (MKW_PIPE_SKIP=fullscreen)"};
+                                            "those and full-screen draws (ORBITALS_PIPE_SKIP=fullscreen)"};
         rt_log("vk_exec: draws skipped while their pipeline builds: %s", what[mode]);
     }
     return mode;
 }
 
-// MKW_SKIP_PROGRAMS=<hex>[,<hex>...] (diagnosis): draws whose vertex or fragment program key (the 64 hex digits of
+// ORBITALS_SKIP_PROGRAMS=<hex>[,<hex>...] (diagnosis): draws whose vertex or fragment program key (the 64 hex digits of
 // the breadcrumb and "last programs" lines) starts with one of these are left out, each one logged the first time.
 // Why: issue #22's NVIDIA faults ("instruction pointer invalid") were each narrowed to one program by skipping it on a
 // reporter's debug branch (c74a0d4e at Star High Sundae, 1c7a765b in the Shell Cup); in the release every reporter can.
@@ -400,7 +400,7 @@ static int hexval(char c) { return c >= '0' && c <= '9' ? c - '0' : (c | 32) >= 
 static int skip_listed(const GfxShader *vs, const GfxShader *fs) {
     if (SP.n < 0) {
         int n = 0;
-        for (const char *p = cfg_get("MKW_SKIP_PROGRAMS"); p && *p && n < SKIP_PROGS;) {
+        for (const char *p = cfg_get("ORBITALS_SKIP_PROGRAMS"); p && *p && n < SKIP_PROGS;) {
             int len = 0;
             memset(SP.key[n], 0, 32);
             for (; hexval(*p) >= 0 && len < 64; p++, len++) SP.key[n][len / 2] |= (uint8_t)(hexval(*p) << (len & 1 ? 0 : 4));
@@ -408,7 +408,7 @@ static int skip_listed(const GfxShader *vs, const GfxShader *fs) {
             while (*p && hexval(*p) < 0) p++;
         }
         __atomic_store_n(&SP.n, n, __ATOMIC_RELEASE);
-        if (n) rt_log("vk_exec: draws with %d listed programs are skipped (MKW_SKIP_PROGRAMS, a diagnosis)", n);
+        if (n) rt_log("vk_exec: draws with %d listed programs are skipped (ORBITALS_SKIP_PROGRAMS, a diagnosis)", n);
     }
     for (int i = 0; i < SP.n; i++)
         for (int s = 0; s < 2; s++) {
@@ -419,7 +419,7 @@ static int skip_listed(const GfxShader *vs, const GfxShader *fs) {
             if (ok && len & 1) ok = (k[len / 2] >> 4) == (SP.key[i][len / 2] >> 4);
             if (!ok) continue;
             if (!__atomic_exchange_n(&SP.logged[i], 1, __ATOMIC_RELAXED))
-                rt_log("vk_exec: frame %llu: first draw skipped by MKW_SKIP_PROGRAMS entry %d (%s program)",
+                rt_log("vk_exec: frame %llu: first draw skipped by ORBITALS_SKIP_PROGRAMS entry %d (%s program)",
                        (unsigned long long)__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED) + 1, i + 1,
                        s ? "fragment" : "vertex");
             return 1;
@@ -428,7 +428,7 @@ static int skip_listed(const GfxShader *vs, const GfxShader *fs) {
 }
 
 // The previous draw's shaders, kept while its program and bound pipeline state stay the same: shader_for reads nothing
-// else (the vertex attribute formats are in the state), so it would return the same shaders. MKW_SHADER_MEMO=0 turns
+// else (the vertex attribute formats are in the state), so it would return the same shaders. ORBITALS_SHADER_MEMO=0 turns
 // it off; =check looks the shaders up on every hit too and stops on a difference.
 typedef struct {
     const prog_t *prog;
@@ -450,7 +450,7 @@ static int memo_match(const VkExec *ex, const MemoKey *k) {
 
 static int shader_memo_on(void) {
     if (SM.on < 0) {
-        const char *e = cfg_value("MKW_SHADER_MEMO");
+        const char *e = cfg_value("ORBITALS_SHADER_MEMO");
         SM.on = !strcmp(e, "check") ? 2 : strcmp(e, "0") != 0;
     }
     return SM.on;
@@ -461,7 +461,7 @@ static _Thread_local DrawPM *dtl_pm;
 #define PM (*dtl_pm)
 
 static int pipe_memo_on(void) {
-    if (PM.on < 0) PM.on = cfg_bool("MKW_PIPE_MEMO");
+    if (PM.on < 0) PM.on = cfg_bool("ORBITALS_PIPE_MEMO");
     return PM.on;
 }
 
@@ -538,7 +538,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         if (!(s.vs = gfx_shader_mesh_cs_vs())) return 0;
         s.mesh = NULL;
     }
-    int spec = 0;   // s holds a specialized variant (MKW_SPEC): the generic shaders while its pipeline is built
+    int spec = 0;   // s holds a specialized variant (ORBITALS_SPEC): the generic shaders while its pipeline is built
     if (vk_spec_mode() && !msh) {
         s.vs = spec_pick(ex, vs, NVN_STAGE_VS), s.fs = spec_pick(ex, fs, NVN_STAGE_FS);
         spec = s.vs != vs || s.fs != fs;
@@ -553,7 +553,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
     int pending;
     // A draw of at most 6 vertices over half the render area or more (a full-screen triangle or quad, a tile) waits for
     // its pipeline: skipping it can leave a black tile. The waits share 50 ms per presented frame
-    // (MKW_PIPE_SKIP=fullscreen skips them instead). A one-shot draw waits without that budget. Everything else is
+    // (ORBITALS_PIPE_SKIP=fullscreen skips them instead). A one-shot draw waits without that budget. Everything else is
     // skipped while its pipeline is built.
     static _Thread_local uint64_t wait_frame;
     static _Thread_local uint64_t wait_left_ns;
@@ -567,7 +567,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         wait_ms = (uint32_t)(wait_left_ns / 1000000);
         if (wait_ms) t0 = kern_now_ns();
     }
-    // The previous draw's pipeline while its state repeats (PM, MKW_PIPE_MEMO=0 turns it off): the cache key is made
+    // The previous draw's pipeline while its state repeats (PM, ORBITALS_PIPE_MEMO=0 turns it off): the cache key is made
     // from the state alone, and a pipeline once found only changes from its fast link to its optimised build, read
     // from the info the cache entry keeps.
     VkPipeline p;

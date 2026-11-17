@@ -1,4 +1,4 @@
-// MKW_UBO_WATCH=<hex address>[,...] (diagnosis): each dispatch or draw that binds a uniform block at one of those
+// ORBITALS_UBO_WATCH=<hex address>[,...] (diagnosis): each dispatch or draw that binds a uniform block at one of those
 // addresses logs, once per frame and address, the block's first 0x80 bytes as the replay binds them (the snapshot of
 // vk_usnap.c, else guest memory) and whether guest memory already holds other bytes ("uw:" lines, the first 20 000).
 // Found for the cacti: the culling dispatch reads the camera from the block at 0x2a0729300 and,
@@ -21,7 +21,7 @@ static int naddr = -1, lines;
 void vk_ubo_watch(const VkExec *ex, int st) {
     if (naddr < 0) {
         naddr = 0;
-        for (const char *p = cfg_get("MKW_UBO_WATCH"); p && *p && naddr < 4; p = strchr(p, ',') ? strchr(p, ',') + 1 : NULL)
+        for (const char *p = cfg_get("ORBITALS_UBO_WATCH"); p && *p && naddr < 4; p = strchr(p, ',') ? strchr(p, ',') + 1 : NULL)
             addrs[naddr++] = strtoull(p, NULL, 16);
         if (naddr) vk_usnap_host_wanted = 1;
     }

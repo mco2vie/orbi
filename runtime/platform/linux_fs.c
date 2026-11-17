@@ -154,7 +154,7 @@ int plat_file_write_atomic(const char *path, const void *data, size_t n) {
     char tmp[PATH_MAX + 48];
     int len = snprintf(tmp, sizeof tmp, "%s.%u.%u.tmp", path, plat_process_id(), plat_thread_id());
     if (len < 0 || len >= (int)sizeof tmp) return 0;
-    // A read-only file stays as it is, as on Windows: rename() alone would replace it (a orbital.ini set read-only).
+    // A read-only file stays as it is, as on Windows: rename() alone would replace it (a orbitals.ini set read-only).
     if (access(path, W_OK) && errno != ENOENT) return 0;
     int fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
     if (fd < 0) return 0;

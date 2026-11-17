@@ -190,10 +190,10 @@ static int test_case(VkCtx *c, uint32_t bw, uint32_t bh, int srgb, uint32_t nx, 
     return bad;
 }
 
-// BC7 re-encoding (MKW_ASTC_BC7): constant-colour (void extent) blocks of footprint bw x bh into a BC7 image, read back
+// BC7 re-encoding (ORBITALS_ASTC_BC7): constant-colour (void extent) blocks of footprint bw x bh into a BC7 image, read back
 // through a blit to RGBA8. A constant colour fits mode 6 within 1 per channel, so a layout or bit-packing mistake shows
 // as a large error. Level 0 cropped as in test_case, level 1 half of it.
-// kind 2: BC1 instead (opaque ASTC, MKW_ASTC_BC1): RGB only, within the 5.6.5 endpoint rounding.
+// kind 2: BC1 instead (opaque ASTC, ORBITALS_ASTC_BC1): RGB only, within the 5.6.5 endpoint rounding.
 static int bc7_case(VkCtx *c, uint32_t bw, uint32_t bh, uint32_t nx, uint32_t ny, int kind) {   // nx x ny blocks at level 0
     const char *name = kind == 2 ? "BC1" : "BC7";
     uint32_t w0 = nx * bw - 1 - (bw > 5), h0 = ny * bh - 2, w1 = w0 >> 1, h1 = h0 >> 1;
@@ -266,7 +266,7 @@ static int bc7_case(VkCtx *c, uint32_t bw, uint32_t bh, uint32_t nx, uint32_t ny
 }
 
 // One 2048 x 2048 texture of valid blocks: the CPU worker-pool decode against the GPU time of the dispatches alone
-// (vk_astc.c timestamps, MKW_ASTC_TIME) and the wall time of the upload batch.
+// (vk_astc.c timestamps, ORBITALS_ASTC_TIME) and the wall time of the upload batch.
 static void timing(VkCtx *c, uint32_t bw, uint32_t bh) {
     uint32_t w = 2048, h = 2048;
     size_t n = (size_t)((w + bw - 1) / bw) * ((h + bh - 1) / bh);
@@ -300,19 +300,19 @@ int probe_astc(void) {
            vk_astc_mode());
     int bad = 0;
     if (!vk_astc_gpu()) {
-        printf("probe-astc: FAIL the compute decoder is not available (MKW_ASTC=cpu or pipeline creation failed)\n");
+        printf("probe-astc: FAIL the compute decoder is not available (ORBITALS_ASTC=cpu or pipeline creation failed)\n");
         bad = 1;
     }
     for (int i = 0; i < 14 && !bad; i++)
         for (int s = 0; s < 2 && !bad; s++) bad = test_case(c, dims[i][0], dims[i][1], s, 37, 23);
     // over vk_astc.c's 32 MiB scratch chunk at level 0 (45 MiB): cut into bands of whole rows of 12 and 20 texels
     if (!bad) bad = test_case(c, 6, 6, 0, 560, 560) || test_case(c, 10, 10, 1, 340, 340);
-    if (!bad && vk_astc_bc7()) {   // MKW_ASTC_BC7=1
+    if (!bad && vk_astc_bc7()) {   // ORBITALS_ASTC_BC7=1
         // the 4-aligned footprints; the last one is 4800x2400, over vk_astc.c's 32 MiB scratch chunk at level 0
         bad = bc7_case(c, 4, 4, 37, 23, 1) || bc7_case(c, 8, 8, 37, 23, 1) || bc7_case(c, 12, 12, 37, 23, 1) ||
               bc7_case(c, 8, 8, 600, 300, 1) || bc7_case(c, 8, 8, 37, 23, 2) || bc7_case(c, 8, 8, 600, 300, 2);
     } else if (!bad) {
-        printf("probe-astc: BC7 re-encoding off (MKW_ASTC_BC7=1 tests it)\n");
+        printf("probe-astc: BC7 re-encoding off (ORBITALS_ASTC_BC7=1 tests it)\n");
     }
     for (int b = 0; b < NB && !bad; b++)
         if (!g_bucket[b]) { printf("probe-astc: FAIL no valid %s block was generated\n", bucket_name[b]); bad = 1; }

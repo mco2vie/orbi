@@ -1,4 +1,4 @@
-// GPU time per submission part (MKW_TRACE=perf), for vk_sync.c: split out of it, which had grown past 600 lines.
+// GPU time per submission part (ORBITALS_TRACE=perf), for vk_sync.c: split out of it, which had grown past 600 lines.
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,7 +22,7 @@ static int ts_cur = -1;                    // the pair of the part being recorde
 static uint64_t ts_last_end;               // completion thread: end of the latest part read (ticks)
 static volatile int64_t ts_busy_ns, ts_parts, ts_missed;
 
-// On the first submission that wants timing (perf_gpu_timing: MKW_TRACE=perf or the full performance overlay).
+// On the first submission that wants timing (perf_gpu_timing: ORBITALS_TRACE=perf or the full performance overlay).
 static void ts_setup(VkCtx *c) {
     ts_state = -1;
     uint32_t nq = 0;

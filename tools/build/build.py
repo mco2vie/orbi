@@ -1,5 +1,5 @@
-"""Build the game: compile the generated C (build/generated, from recomp/gen.py) and the runtime, link build/mkw (or
-build/mkw.exe with --target windows).
+"""Build the game: compile the generated C (build/generated, from recomp/gen.py) and the runtime, link build/orbitals-recomp (or
+build/orbitals-recomp.exe with --target windows).
 
 Why: the generated code is ~0.9 GB of C in ~355 chunks; Ninja recompiles only what changed and runs the chunks in
 parallel. Each job can take several hundred MB, so the job count comes from a memory budget, not the core count.
@@ -10,7 +10,7 @@ code's tables (runtime/core/boot/gamelib.h: module layout, function tables, the 
 game copy, patch sets); build/obj/rt/defaults.c the default game paths; build/obj/rt/i18n/ the menu texts
 of every language, from i18n/*.po (tools/i18n/catalog.py).
 
---target windows cross-compiles build/mkw.exe from Linux with llvm-mingw and the MSYS2 UCRT64 libraries that
+--target windows cross-compiles build/orbitals-recomp.exe from Linux with llvm-mingw and the MSYS2 UCRT64 libraries that
 tools/build/windeps.py puts in build/win (totk-pc-recomp's --toolchain build: its LLVM_LINK_LIBS). Objects go to
 build/obj-win. The window, input, keyboard and menu are SDL3 on both systems; platform/win32.c replaces platform/linux.c.
 
@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -35,7 +36,8 @@ import catalog  # noqa: E402  (tools/i18n: the text catalogs from i18n/*.po)
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
-GAME = Path(os.environ.get("MKW_GAME", ROOT / "game"))
+ORBITALS_ICO = ROOT / "assets/icon/orbitals.ico"   # made by tools/build/make_ico.py
+GAME = Path(os.environ.get("ORBITALS_GAME", ROOT / "game"))
 WIN = ROOT / "build/win"  # tools/build/windeps.py
 # The CPU the game and runtime are built for. x86-64: AVX2 (x86-64-v3). AArch64: ARMv8.2 with the extensions of every
 # Cortex-A76-class core or newer (Snapdragon 8cx/8 Gen 1+, Raspberry Pi 5, Apple M): LSE atomics, FP16, RCpc, dot
@@ -50,7 +52,7 @@ GEN_FLAGS = ["-O1", "-fno-strict-aliasing", "-Wno-return-type", "-Wno-unused-lab
              *ARCH_FLAGS[ARCH], *GEN_ARCH_FLAGS[ARCH]]  # fmt: skip
 RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", *ARCH_FLAGS[ARCH]]
 sys.path.insert(0, str(ROOT / "recomp"))
-from versions import detect_any as detect_version  # noqa: E402  (the game version of a dump; 0: another game)
+from versions import detect_any as detect_version  # noqa: E402  (the game version of a dump; 0: a build not listed)
 
 
 def gen_modules(gen: Path) -> list[str]:
@@ -76,23 +78,23 @@ class Target:
     link_flags: list[str]
     link_libs: list[str]
     vma: Path  # the directory with vk_mem_alloc.h
-    windres: str = ""  # Windows: compiles runtime/platform/mkw.rc (the exe's manifest)
+    windres: str = ""  # Windows: compiles runtime/platform/orbitals-recomp.rc (the exe's manifest)
 
 
 LINUX = Target(
-    "clang", "clang++", "llvm-ar", ROOT / "build/mkw",
+    "clang", "clang++", "llvm-ar", ROOT / "build/orbitals-recomp",
     ["-D_GNU_SOURCE"],
     # -no-pie: the function tables (hundreds of thousands of pointers) need no load-time relocation.
-    ["-fuse-ld=lld", "-no-pie", "-Wl,-z,noexecstack", "-Wl,-Map=$builddir/mkw.map"],
+    ["-fuse-ld=lld", "-no-pie", "-Wl,-z,noexecstack", "-Wl,-Map=$builddir/orbitals-recomp.map"],
     ["-lvulkan", "-lSDL3", "-lopus", "-lvpx", "-lzstd", "-l:libstdc++.a", "-lm", "-lpthread", "-ldl"],
     ROOT / "scratchpad/vma",  # vk_mem_alloc.h 3.4.0 (AUR only on Arch); fetched as in tools/build/README.md
 )  # fmt: skip
 WINDOWS = Target(
     str(WIN / "llvm-mingw/bin/x86_64-w64-mingw32-clang"), str(WIN / "llvm-mingw/bin/x86_64-w64-mingw32-clang++"),
-    str(WIN / "llvm-mingw/bin/llvm-ar"), ROOT / "build/mkw.exe",
+    str(WIN / "llvm-mingw/bin/llvm-ar"), ROOT / "build/orbitals-recomp.exe",
     [f"-I{WIN / 'deps/include'}"],
-    # 16 MiB main-thread stack, as mkw; the map as on Linux.
-    [f"-L{WIN / 'deps/lib'}", "-fuse-ld=lld", "-Wl,--stack,16777216", "-Wl,--Map=$builddir/mkw.map"],
+    # 16 MiB main-thread stack, as the Linux runtime; the map as on Linux.
+    [f"-L{WIN / 'deps/lib'}", "-fuse-ld=lld", "-Wl,--stack,16777216", "-Wl,--Map=$builddir/orbitals-recomp.map"],
     ["-lpsapi", "-lbcrypt", "-ladvapi32", "-lws2_32", "-liphlpapi", "-luser32", "-lole32", "-luuid", "-lshell32", "-lgdi32", "-ldwmapi", "-lruntimeobject", "-lwinmm", "-lvulkan-1", "-lSDL3", "-lopus",
      "-l:libvpx.a", "-l:libzstd.a", "-l:libc++.a", "-l:libc++abi.a", "-l:libunwind.a", "-l:libwinpthread.a"],
     WIN / "deps/include/vma",
@@ -131,8 +133,8 @@ def game_id() -> str:
 
 
 def port_glue(exefs: Path) -> list[str]:
-    """RtGame.port for a game without a version row (gamelib.h RtPort): its program id from main.npdm's ACI0, and the
-    NVN2 driver's proc table found in its sdk (tools/gpu/nvn2_procs.py locate(); zeros, logged, when not found)."""
+    """RtGame.port (gamelib.h RtPort): its program id from main.npdm's ACI0, and the NVN2 driver's proc table found in
+    its sdk (tools/gpu/nvn2_procs.py locate(); zeros, logged, when not found)."""
     program_id, title = 0, f"build {detect_version(exefs).main_build_id}"
     npdm = (exefs / "main.npdm").read_bytes() if (exefs / "main.npdm").is_file() else b""
     if npdm[:4] == b"META":
@@ -184,24 +186,35 @@ def module_glue(gen: Path, exefs: Path, library: bool) -> str:
             "#define X(m, off, b, n) {m, off, (const uint8_t *)b, n},", "    RT_IMAGE_PATCHES(X)", "#undef X", "};",
             "#else", "#undef RT_IMAGE_PATCH_COUNT", "#define RT_IMAGE_PATCH_COUNT 0",
             "static const RtImagePatch *const image_patches = 0;", "#endif", "",
-            # RtGame.version: recomp/versions.py's number for the dump (100: 1.0.0, 180: 1.8.0)
+            # RtGame.version: recomp/versions.py's number for the dump (1: Orbitals, 0: a build not listed). RtGame.port
+            # for every build: its program id and the NVN2 proc table are read from its own exefs
             "volatile int g_fnprof;", "uint8_t rt_patch_on[RT_MAX_PATCH_SETS];", "",
-            *(port_glue(exefs) if not number else []),
+            *port_glue(exefs),
             "static const RtGame game = {RT_GAME_ABI, RT_GAME_ID, modules, sizeof modules / sizeof *modules,",
             "                            exefs_sha256, sizeof exefs_sha256 / sizeof *exefs_sha256, patch_sets,",
             f"                            RT_PATCH_COUNT, RT_PATCH_PAGE, {number}, &g_fnprof, rt_patch_on,",
-            f"                            image_patches, RT_IMAGE_PATCH_COUNT, {'0' if number else '&port'}}};", "",
+            "                            image_patches, RT_IMAGE_PATCH_COUNT, &port};", "",
             "RT_GAME_EXPORT const RtGame *orbitalgame_tables(void) { return &game; }" if library
             else "const RtGame *rt_game_builtin(void) { return &game; }", ""]  # fmt: skip
     return "\n".join(out)
 
 
 def port_version() -> str:
-    """The release tag without its v (0.1.0) or, between tags, git describe's tag-commits-hash; the commit alone in a
-    clone without tags, "dev" outside git (the source tarball of a release says nothing)."""
-    r = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--always", "--dirty"],
+    """The release tag without its v (v0.2.0: 0.2.0) or, between release tags, git describe's tag-commits-hash; with no
+    release tag yet, the newest CHANGELOG.md version and the commit (0.2.0-gabc1234), "dev" outside git (the source
+    tarball of a release says nothing). Only tags of the form v<digit>... count: the tools' own releases (port-check,
+    romfs-check) are tags too, and one of them gave "romfs-check-24-gede6850" as the program's version."""
+    r = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--match", "v[0-9]*", "--dirty"],
                        capture_output=True, text=True, check=False)  # fmt: skip
-    return r.stdout.strip().removeprefix("v") if r.returncode == 0 and r.stdout.strip() else "dev"
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip().removeprefix("v")
+    h = subprocess.run(["git", "-C", str(ROOT), "describe", "--always", "--dirty", "--abbrev=7"],
+                       capture_output=True, text=True, check=False)  # fmt: skip
+    if h.returncode != 0 or not h.stdout.strip():
+        return "dev"
+    log = ROOT / "CHANGELOG.md"
+    m = re.search(r"^## \[?(\d+\.\d+\.\d+)\]?", log.read_text(encoding="utf-8"), re.M) if log.is_file() else None
+    return f"{m[1]}-g{h.stdout.strip()}" if m else h.stdout.strip()
 
 
 def defaults_glue(exefs: Path, romfs: Path, dist: bool) -> str:
@@ -224,8 +237,8 @@ RT_EXPORTS = ("rt_dispatch", "rt_sj_owner", "rt_svc", "rt_brk", "rt_udf", "rt_ti
 def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: Path | None,
                runtime_only: bool = False, ld_extra: list[str] | None = None,
                sys_flags: list[str] | None = None) -> str:  # fmt: skip
-    """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (orbitalgame.so,
-    orbitalgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
+    """dist: the player's build into that folder, the runtime (orbitals-recomp, orbitals-recomp.exe) and the game code apart (orbitalgame.so,
+    orbitalgame.dll); else build/orbitals-recomp with the game code linked in. runtime_only (with dist): the runtime alone, what a
     release ships and the CI builds, without the game's generated C."""
     inc = " ".join(f"-I{d}" for d in sorted({RUNTIME} | {p.parent for p in RUNTIME.rglob("*.h")}))
     gid = f'-DRT_GAME_ID=\\"{game_id()}\\"'
@@ -235,13 +248,13 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         link_flags += [f"-Wl,--export-dynamic-symbol={s}" for s in RT_EXPORTS]
     elif dist:  # the exports (a .def file lld reads as an input) and the import library the game code links against
         out.mkdir(parents=True, exist_ok=True)
-        (out / "mkw.def").write_text("EXPORTS\n" + "".join(f"    {s}\n" for s in RT_EXPORTS))
+        (out / "orbitals-recomp.def").write_text("EXPORTS\n" + "".join(f"    {s}\n" for s in RT_EXPORTS))
         # GUI subsystem: started from Explorer or a shortcut, no console window opens (main() stays the entry)
-        link_flags += [str(out / "mkw.def"), f"-Wl,--out-implib,{out / 'libmkw.dll.a'}", "-Wl,--subsystem,windows"]
-    # ccache before the C compilers (MKW_CCACHE=0 leaves it out): a folder move changes every runtime command's -I list
+        link_flags += [str(out / "orbitals-recomp.def"), f"-Wl,--out-implib,{out / 'liborbitals-recomp.dll.a'}", "-Wl,--subsystem,windows"]
+    # ccache before the C compilers (ORBITALS_CCACHE=0 leaves it out): a folder move changes every runtime command's -I list
     # and a comment in runtime/cpu recompiles all the game code; ninja rebuilds both, ccache hands back the objects
     # (07/11/2026: ~12 min per step of a bisection). Not for C++: menu_look.cpp #embeds a file ccache may not track.
-    cc = f"ccache {target.cc}" if os.environ.get("MKW_CCACHE", "1") != "0" and shutil.which("ccache") else target.cc
+    cc = f"ccache {target.cc}" if os.environ.get("ORBITALS_CCACHE", "1") != "0" and shutil.which("ccache") else target.cc
     lines = [
         f"builddir = {out}",
         f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",
@@ -275,6 +288,8 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         ),
         f"rule rc\n  command = {target.windres} -O coff -I {out / 'rt/platform'} $in -o $out\n  description = rc $in",
         f"rule icon\n  command = {sys.executable} $in $out\n  description = icon $out",
+        f"rule copyico\n  command = {sys.executable} -c \"import shutil,sys;shutil.copyfile(sys.argv[1],sys.argv[2])\" $in $out"
+        "\n  description = icon $out",
     ]
     libs = []
     for mod in () if runtime_only else gen_modules(gen):
@@ -297,10 +312,13 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         rt_objs.append(str(obj))
         lines.append(f"build {obj}: {'rtcxx' if src.suffix == '.cpp' else 'rtcc'} {src}")
     if target.windres:  # windres writes no depfile: the manifest and the icon it embeds are listed by hand
-        rc = RUNTIME / "platform/mkw.rc"
-        ico = out / "rt/platform/mkw.ico"  # drawn by tools/build/icon.py, never committed
-        rt_objs.append(str(out / "rt/platform/mkw_rc.o"))
-        lines.append(f"build {ico}: icon {ROOT / 'tools/build/icon.py'}")
+        rc = RUNTIME / "platform/orbitals-recomp.rc"
+        ico = out / "rt/platform/orbitals-recomp.ico"  # the name the .rc includes; the file is never committed
+        rt_objs.append(str(out / "rt/platform/orbitals-recomp_rc.o"))
+        if ORBITALS_ICO.is_file():  # tools/build/make_ico.py's icon (docs/branding.md); else the one icon.py draws
+            lines.append(f"build {ico}: copyico {ORBITALS_ICO}")
+        else:
+            lines.append(f"build {ico}: icon {ROOT / 'tools/build/icon.py'}")
         lines.append(f"build {rt_objs[-1]}: rc {rc} | {rc.with_suffix('.manifest')} {ico}")
     if not dist:
         lines.append(f"build {target.exe}: link {' '.join(rt_objs)} {' '.join(libs)}")
@@ -308,7 +326,7 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     exe = dist / target.exe.name
     tab = out / "rt/modules.o"
     if runtime_only:
-        lines.append(f"build {exe}{f' | {out}/libmkw.dll.a' if target is WINDOWS else ''}: link {' '.join(rt_objs)}")
+        lines.append(f"build {exe}{f' | {out}/liborbitals-recomp.dll.a' if target is WINDOWS else ''}: link {' '.join(rt_objs)}")
         return "\n".join(lines) + "\n"
     lines.append(f"build {tab}: tabcc {out / 'rt/modules.c'}")
     if target is LINUX:
@@ -316,7 +334,7 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         lines.append(f"build {dist / 'orbitalgame.so'}: solink {tab} {' '.join(libs)}")
         lines.append("  solibs = -Wl,-z,noexecstack")
     else:
-        implib = out / "libmkw.dll.a"
+        implib = out / "liborbitals-recomp.dll.a"
         lines.append(f"build {exe} | {implib}: link {' '.join(rt_objs)}")
         lines.append(f"build {dist / 'orbitalgame.dll'}: solink {tab} {' '.join(libs)} | {implib}")
         lines.append(f"  solibs = {implib}")

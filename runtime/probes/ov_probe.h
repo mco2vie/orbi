@@ -1,4 +1,4 @@
-// What ov_probe.c (--probe-services) lends ov_mkw_probe.c: calls to the overrides of its table by case key, on the
+// What ov_probe.c (--probe-services) lends ov_sdk2_probe.c: calls to the overrides of its table by case key, on the
 // guest main thread, and its check counters.
 #pragma once
 #include <stdint.h>
@@ -14,4 +14,4 @@ void ovp_check(int ok, const char *fmt, ...) __attribute__((format(printf, 2, 3)
 void *ovp_alloc(uint64_t n);                         // guest-visible memory
 Cpu *ovp_cpu(void);
 
-void probe_mkw_services(void);                       // ov_mkw_probe.c
+void probe_sdk2_services(void);                       // ov_sdk2_probe.c

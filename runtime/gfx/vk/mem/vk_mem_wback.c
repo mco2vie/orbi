@@ -24,11 +24,11 @@ uint64_t s_wb_bytes;
 int32_t n_mbase;
 int n_want;
 volatile int32_t want_new;
-int merge_mode = -1;                              // MKW_SHADOW_MERGE (default 1; "ab")
-int read_traps;                                   // MKW_READ_TRAPS (default 1): GPU writes reach guest memory on access
-int wb_defer;                                     // MKW_SHADOW_WB_DEFER (default 1; "ab"): vk_gpu_written below
+int merge_mode = -1;                              // ORBITALS_SHADOW_MERGE (default 1; "ab")
+int read_traps;                                   // ORBITALS_READ_TRAPS (default 1): GPU writes reach guest memory on access
+int wb_defer;                                     // ORBITALS_SHADOW_WB_DEFER (default 1; "ab"): vk_gpu_written below
 
-// Fences whose write-back found shadow_lock taken (MKW_SHADOW_WB_DEFER): their ranges leave spend at the next taker
+// Fences whose write-back found shadow_lock taken (ORBITALS_SHADOW_WB_DEFER): their ranges leave spend at the next taker
 // that reads it. The completion thread waited there for a shadow sync's write-watch queries, ~25 waits of ~1 ms per s
 // of race (aq-on2, 06/11/2026), so the fence was done that much later. Until a range leaves, syncs skip it: the same
 // as when the fence waited for the sync to end.
@@ -104,7 +104,7 @@ int vk_mem_gpu_may_write(uint64_t addr, uint64_t size) {
     return hit;
 }
 
-// MKW_WB_ORDER (default 1; "ab"): a write-back copies the GPU's bytes from the live shadow once its fence is reached,
+// ORBITALS_WB_ORDER (default 1; "ab"): a write-back copies the GPU's bytes from the live shadow once its fence is reached,
 // on the completion thread, and the GPU is by then running the next submission. One that writes the same bytes hands
 // guest memory its half-done state: a dispatch clears counters another one adds to (34331 and 34334, the clouds), and
 // guest memory gets the zeros (tdry1: ~9.5 write-backs a frame with the next writer of their pages queued, over a dozen
@@ -124,7 +124,7 @@ static void wb_order_note(uint64_t addr, uint64_t size, uint64_t fence) {
     if (wb_order < 0) {
         wb_order = rt_knob("WB_ORDER", "1");
         if (wb_order && !(wb_last = plat_mem_alloc(RT_ADDRESS_LIMIT / 0x1000 * sizeof *wb_last))) wb_order = 0;
-        rt_log("mem: a submission writing bytes of an earlier one waits on the GPU for its write-back %s (MKW_WB_ORDER)",
+        rt_log("mem: a submission writing bytes of an earlier one waits on the GPU for its write-back %s (ORBITALS_WB_ORDER)",
                wb_order == 2 ? "in the B blocks" : wb_order ? "on" : "off");
     }
     if (!wb_order || !fence || addr + size > RT_ADDRESS_LIMIT) return;
@@ -139,12 +139,12 @@ static void wb_order_note(uint64_t addr, uint64_t size, uint64_t fence) {
 }
 
 void vk_mem_gpu_pending(uint64_t addr, uint64_t size) {
-    mem_early_gpu_wrote(addr, size, vk_exec_recording_fence());   // MKW_EARLY_READ
+    mem_early_gpu_wrote(addr, size, vk_exec_recording_fence());   // ORBITALS_EARLY_READ
     if (!shadow_on || !size) return;
     uint8_t *base = lost_base(addr, size);
     if (merge_mode < 0) {
         merge_mode = rt_knob("SHADOW_MERGE", "1");
-        rt_log("mem: shadow merged by bytes %s (MKW_SHADOW_MERGE)", merge_mode == 2 ? "in the B blocks" : merge_mode ? "on" : "off");
+        rt_log("mem: shadow merged by bytes %s (ORBITALS_SHADOW_MERGE)", merge_mode == 2 ? "in the B blocks" : merge_mode ? "on" : "off");
     }
     PoolRec *r = NULL;
     if (RT_KNOB_ON(merge_mode)) {   // the record lives while its shadow does; shadow_forget drops it from spend
@@ -181,7 +181,7 @@ void vk_gpu_written(uint64_t addr, uint64_t size) {
         if (r && r->smap && addr >= r->import_lo && addr + size <= r->import_hi) {
             shadow_inval(r, addr, addr + size);   // the GPU's bytes, read below or by a read trap later
             // The bases leave their entry here, before the copy changes guest memory. Without any, no lock: the
-            // completion thread waited for syncs on it (MKW_SHADOW_WB_DEFER).
+            // completion thread waited for syncs on it (ORBITALS_SHADOW_WB_DEFER).
             uint8_t *base = NULL, *mbase = NULL;
             LazyBase *lazy = NULL;
             uint64_t wf = 0;   // the fence written back
@@ -198,7 +198,7 @@ void vk_gpu_written(uint64_t addr, uint64_t size) {
             else if (base) lost_writeback(addr, size, r->smap + (addr - r->import_lo), base);
             int copied = 0;
             if (mbase) {   // merged: the GPU's bytes now, the CPU's stay
-                mem_early_wb_check(addr, size, wf);   // MKW_EARLY_READ_DRY: a later writer running meanwhile
+                mem_early_wb_check(addr, size, wf);   // ORBITALS_EARLY_READ_DRY: a later writer running meanwhile
                 wb = merge_back(addr, size, r->smap + (addr - r->import_lo), mbase, lazy);
                 if (lazy) lazy_free(lazy);
                 else free(mbase);

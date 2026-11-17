@@ -18,7 +18,7 @@
 #include "platform/platform.h"
 
 // ---------------------------------------------------------------- images
-// MKW_TEX_MAX=<texels> (default 1024 on Adreno, 0 = off elsewhere): 2D images of 8192 texels or more lose their top
+// ORBITALS_TEX_MAX=<texels> (default 1024 on Adreno, 0 = off elsewhere): 2D images of 8192 texels or more lose their top
 // levels until they fit. Turnip has no sparseResidencyImage2D, so the game's sparse terrain arrays (8192x8192x68) and
 // their 8192x8192 ASTC sources get all their memory: 5.5 GiB of textures at the first race (Odin 2, 10/11/2026) against
 // 1.7 GiB on a GPU with sparse images, and the render targets failed after them (black race). The game copies only
@@ -27,10 +27,10 @@
 static uint32_t tex_drop(VkImageType type, uint32_t w, uint32_t h, uint32_t levels, uint32_t samples) {
     static int64_t limit = -1;
     if (limit < 0) {
-        const char *e = cfg_get("MKW_TEX_MAX");
+        const char *e = cfg_get("ORBITALS_TEX_MAX");
         VkCtx *c = vk_ctx();
         limit = e && *e ? atoll(e) : c && c->props.vendorID == 0x5143 ? 1024 : 0;
-        if (limit > 0) rt_log("vk: textures of 8192 texels or more cut to %lld (MKW_TEX_MAX)", (long long)limit);
+        if (limit > 0) rt_log("vk: textures of 8192 texels or more cut to %lld (ORBITALS_TEX_MAX)", (long long)limit);
     }
     uint32_t side = w > h ? w : h, drop = 0;
     if (limit <= 0 || type != VK_IMAGE_TYPE_2D || samples > 1 || side < 8192) return 0;
@@ -71,7 +71,7 @@ static int bind_pool_memory(VkCtx *c, Tex *e, VkImage img) {
     return 1;
 }
 
-// MKW_CTL "tex ADDR" (ctl.c): every live texture whose storage covers addr, with the size NVN gives its storage and the
+// ORBITALS_CTL "tex ADDR" (ctl.c): every live texture whose storage covers addr, with the size NVN gives its storage and the
 // size of its Vulkan image, which is what a pool-bound image really occupies from its address on; addr 0: every
 // pool-bound image whose Vulkan image is larger than its NVN storage (it spills into the memory after it).
 void vk_texture_report(uint64_t addr) {
@@ -114,7 +114,7 @@ void vk_texture_report(uint64_t addr) {
 // its view formats; without a list every render target was uncompressed. smo-recomp perf/dcc-format-list (Radeon 660M,
 // RADV): GPU ms per frame median 14.92 -> 13.97. A colour render target lists its own format and its sRGB / UNORM twin,
 // and without a twin is not mutable; a target view of another format then uses the image's own (vk_texture_view_format).
-// MKW_VK_FORMAT_LIST=0 / 1: off / on; by default on with an integrated GPU.
+// ORBITALS_VK_FORMAT_LIST=0 / 1: off / on; by default on with an integrated GPU.
 VkFormat vk_srgb_twin(VkFormat f) {
     static const VkFormat pairs[][2] = {
         {VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB}, {VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SRGB},
@@ -142,9 +142,9 @@ int vk_format_numeric(VkFormat f) {
 static int list_storage(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_VK_FORMAT_LIST_STORAGE");
+        const char *e = cfg_get("ORBITALS_VK_FORMAT_LIST_STORAGE");
         on = !e || !*e || atoi(e) != 0;
-        if (!on) rt_log("vk: render targets with storage usage do not list their view formats (MKW_VK_FORMAT_LIST_STORAGE=0)");
+        if (!on) rt_log("vk: render targets with storage usage do not list their view formats (ORBITALS_VK_FORMAT_LIST_STORAGE=0)");
     }
     return on;
 }
@@ -152,7 +152,7 @@ static int list_storage(void) {
 static int format_list_on(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_VK_FORMAT_LIST");
+        const char *e = cfg_get("ORBITALS_VK_FORMAT_LIST");
         on = e && *e ? atoi(e) != 0 : vk_ctx()->props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
         rt_log("vk: render targets list their view formats (DCC): %s", on ? "on" : "off");
     }
@@ -285,7 +285,7 @@ static int astc_alpha_one(const uint8_t *p, uint64_t size, int bw, int bh) {
     return any;
 }
 
-// Texture memory made before play (MKW_VK_TEX_POOL_MIN=<blocks>, default half the VRAM up to 8, 0 off; by default on
+// Texture memory made before play (ORBITALS_VK_TEX_POOL_MIN=<blocks>, default half the VRAM up to 8, 0 off; by default on
 // discrete GPUs only, a value set makes it on any): a pool of fixed 256 MiB blocks, that many of them allocated at
 // start on a thread of their own, takes the textures of its memory type.
 // On a GTX 1050 Ti the race load spent 79-93 % of a 2.2 s frame on the replay thread in vkAllocateMemory: VMA's
@@ -315,7 +315,7 @@ static void tex_pool_main(void *arg) {
         VmaPoolCreateInfo pi = {.memoryTypeIndex = type, .blockSize = TEX_POOL_BLOCK, .minBlockCount = (size_t)blocks};
         if (vmaCreatePool(c->vma, &pi, &pool) != VK_SUCCESS) pool = NULL;
     }
-    rt_log("vk: texture pool: %s (%d blocks of %llu MiB, memory type %u, %.0f ms; MKW_VK_TEX_POOL_MIN)",
+    rt_log("vk: texture pool: %s (%d blocks of %llu MiB, memory type %u, %.0f ms; ORBITALS_VK_TEX_POOL_MIN)",
            pool ? "made" : "failed", blocks, (unsigned long long)(TEX_POOL_BLOCK >> 20), type, (plat_now_ns() - t0) / 1e6);
     if (!pool) return;
     __atomic_store_n(&tex_pool_type, type, __ATOMIC_RELAXED);
@@ -324,7 +324,7 @@ static void tex_pool_main(void *arg) {
 
 void vk_tex_pool_start(void) {
     VkCtx *c = vk_ctx();
-    const char *e = cfg_get("MKW_VK_TEX_POOL_MIN");
+    const char *e = cfg_get("ORBITALS_VK_TEX_POOL_MIN");
     // A value set by hand makes the pool on any GPU: the discrete GPUs' memory paths tried on an integrated one (the
     // AMD discrete device losses of issues #4 and #5 happened with it, on a path no integrated GPU runs).
     if (!c || (c->props.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && !(e && *e))) return;
@@ -384,12 +384,12 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     // ASTC without alpha in any block becomes BC1 (half of BC7): run-race11 held 1 136 MiB of BC7 in a 3 GB heap and
     // the race's targets did not fit. Only storage the CPU can read (the scan), under 4096 texels a side (the 8192x8192
     // ASTC textures are copy sources of the sparse arrays, which must stay BC7 to match them: vk_exec_xfer.c).
-    // MKW_ASTC_BC1 (default 1; 0 keeps BC7). On by default since 08/11/2026: the GPU the same on the 660M with 230-285
+    // ORBITALS_ASTC_BC1 (default 1; 0 keeps BC7). On by default since 08/11/2026: the GPU the same on the 660M with 230-285
     // MiB less of textures (lb0a-lb1b), the 1920x1080 scene 17.6-18.3 -> 15.7 ms on a GTX 1050 Ti (wbc*, wms*), the
     // image 0.0039 -> 0.0063 from the game's (bca5), no GPU fault at the default 768 MiB of tiles. run-race41 hung
-    // the GPU with it and MKW_SPARSE_MIB=1024 (31/10/2026).
+    // the GPU with it and ORBITALS_SPARSE_MIB=1024 (31/10/2026).
     static int bc1_on = -1;
-    if (bc1_on < 0) bc1_on = !cfg_get("MKW_ASTC_BC1") || !*cfg_get("MKW_ASTC_BC1") || atoi(cfg_get("MKW_ASTC_BC1"));
+    if (bc1_on < 0) bc1_on = !cfg_get("ORBITALS_ASTC_BC1") || !*cfg_get("ORBITALS_ASTC_BC1") || atoi(cfg_get("ORBITALS_ASTC_BC1"));
     if (f.astc_bc7 && bc1_on) {
         // why an image stays BC7, counted (bc1-t, 08/11/2026: texture memory as without BC1)
         static volatile int32_t why[6], alpha_one;   // BC1, 4096 or more, no CPU storage, GPU-only, sparse, alpha
@@ -409,7 +409,7 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
         int32_t all = 0;
         for (int i = 0; i < 6; i++) all += why[i];
         if (all % 256 == 0)
-            rt_log("vk: ASTC BC1 (MKW_ASTC_BC1): %d of %d images; BC7 for 4096+ %d, no CPU storage %d, GPU-only %d, "
+            rt_log("vk: ASTC BC1 (ORBITALS_ASTC_BC1): %d of %d images; BC7 for 4096+ %d, no CPU storage %d, GPU-only %d, "
                    "sparse %d, alpha %d (BC1 for alpha 1 decoded in every texel %d, %.0f ms decoding)", why[0], all,
                    why[1], why[2], why[3], why[4], why[5], alpha_one, alpha_ns / 1e6);
     }
@@ -475,7 +475,7 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     VkFormat listed[2] = {f.vk, vk_srgb_twin(f.vk)};
     VkImageFormatListCreateInfo fl = {.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO, .pNext = ci.pNext,
                                       .viewFormatCount = listed[1] ? 2u : 1u, .pViewFormats = listed};
-    // Storage images list too (MKW_VK_FORMAT_LIST_STORAGE, default 1): without a list RADV keeps them without DCC. Race,
+    // Storage images list too (ORBITALS_VK_FORMAT_LIST_STORAGE, default 1): without a list RADV keeps them without DCC. Race,
     // runs alternated: GPU 19.71 / 20.25 -> 19.13 / 18.96 ms (dc-a*, dc-b*). They lose the R32_UINT view of 32-bit
     // texels for image atomics (vk_exec_view.c get_view warns once; none in those runs).
     int list = (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) && (!(usage & VK_IMAGE_USAGE_STORAGE_BIT) || list_storage()) &&

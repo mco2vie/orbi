@@ -3,10 +3,10 @@
 // arguments, on the guest main thread. Checks that each one matches a relocation of the loaded modules, then the
 // values: language, operation mode, notification messages, account, time round trips, controllers, codec state,
 // graphics records, the system events behind nfp and vi, the software keyboard with arguments built by the guest SDK
-// (answers from MKW_SWKBD_ANSWER, then the window pressed by MKW_SWKBD_TEST) and the shared fonts when
+// (answers from ORBITALS_SWKBD_ANSWER, then the window pressed by ORBITALS_SWKBD_TEST) and the shared fonts when
 // tools/extract_fonts.py has written them. The named fatal stubs, and the account UID of a second run, are checked in
-// child processes (this executable again, MKW_PROBE_SERVICES_CHILD=<case>). The overrides only MKW imports
-// (ov_mkw_list.h) are rows of the same table, called by ov_mkw_probe.c through the helpers of ov_probe.h.
+// child processes (this executable again, ORBITALS_PROBE_SERVICES_CHILD=<case>). The Switch 2 SDK overrides
+// totk-pc-recomp's game does not import (ov_sdk2_list.h) are rows of the same table, called by ov_sdk2_probe.c through the helpers of ov_probe.h.
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@
 #include "ui_text.h"
 #include "ov_probe.h"
 
-#define CHILD_ENV "MKW_PROBE_SERVICES_CHILD"
+#define CHILD_ENV "ORBITALS_PROBE_SERVICES_CHILD"
 #define TRY_WAIT_SYSTEM_EVENT "_ZN2nn2os18TryWaitSystemEventEPNS0_15SystemEventTypeE"
 
 typedef struct { const char *key, *name; int fatal; uint64_t addr; int bound, calls; } Ov;
@@ -170,7 +170,7 @@ static Ov ovs[] = {
     {"nimg.Finalize", "_Z22nvnNativeImageFinalizeP14NVNnativeImage"},
     {"nimg.TextureInitialize", "_Z35nvnTextureInitializeFromNativeImageP10NVNtextureP14NVNnativeImage"},
 #define OV(key, name) {key, name},
-#include "ov_mkw_list.h"
+#include "ov_sdk2_list.h"
 #undef OV
 };
 #define NOV ((int)(sizeof ovs / sizeof *ovs))
@@ -181,7 +181,7 @@ static const char *const observers[] = {"_ZN2nn2os21AllocateAddressRegionEPmm", 
 
 // Fatal stubs, each in its own child process: the case name, the override, what its FATAL line must say and an
 // environment variable the child runs with (the shared fonts: a font directory that does not exist).
-#define NO_FONTS "MKW_SHARED_FONTS=:probe-services:no-such-dir"
+#define NO_FONTS "ORBITALS_SHARED_FONTS=:probe-services:no-such-dir"
 static const struct { const char *child, *key, *fatal, *env; } fatals[] = {
     {"opus", "codec.Decode", "FATAL: nn::codec::DecodeOpusInterleavedWithHardware"},
     {"font-address", "pl.GetSharedFontAddress", "FATAL: nn::pl::GetSharedFontAddress(0)", NO_FONTS},
@@ -226,7 +226,7 @@ static uint64_t call8(const char *key, const uint64_t a[8]) {
 }
 #define CALL(key, ...) call8(key, (const uint64_t[8]){__VA_ARGS__})
 
-// ---- ov_probe.h, for ov_mkw_probe.c
+// ---- ov_probe.h, for ov_sdk2_probe.c
 uint64_t ovp_call(const char *key, const uint64_t a[8]) { return call8(key, a); }
 
 uint64_t ovp_call_full(const char *key, const uint64_t a[8], uint64_t x8, const uint64_t *stack, int nstack) {
@@ -279,10 +279,10 @@ static char *lang(void) {
 static void set_env(const char *name, const char *value) { plat_setenv(name, value ? value : ""); }
 
 static void probe_oe(void) {
-    char *keep_lang = cfg_get("MKW_LANG") ? strdup(cfg_get("MKW_LANG")) : NULL;
-    char *keep_locale = cfg_get("MKW_LOCALE") ? strdup(cfg_get("MKW_LOCALE")) : NULL;
-    char *keep_menu = cfg_get("MKW_MENU_LANG") ? strdup(cfg_get("MKW_MENU_LANG")) : NULL;
-    set_env("MKW_MENU_LANG", NULL);   // the locale cases: a menu language from orbital.ini would decide instead
+    char *keep_lang = cfg_get("ORBITALS_LANG") ? strdup(cfg_get("ORBITALS_LANG")) : NULL;
+    char *keep_locale = cfg_get("ORBITALS_LOCALE") ? strdup(cfg_get("ORBITALS_LOCALE")) : NULL;
+    char *keep_menu = cfg_get("ORBITALS_MENU_LANG") ? strdup(cfg_get("ORBITALS_MENU_LANG")) : NULL;
+    set_env("ORBITALS_MENU_LANG", NULL);   // the locale cases: a menu language from orbitals.ini would decide instead
     static const struct { const char *lang, *locale, *want; } cases[] = {
         {NULL, "en-US", "en-US"}, {NULL, "be-BY", "en-US"}, {NULL, "xx", "en-US"},     {NULL, "ja-JP", "ja"},
         {NULL, "fr-CA", "fr-CA"}, {NULL, "es-MX", "es-419"}, {NULL, "es_ES", "es"},     {NULL, "zh-Hant-TW", "zh-Hant"},
@@ -290,12 +290,12 @@ static void probe_oe(void) {
         {"en-US", NULL, "en-US"}, {NULL, "ca-ES", "es"}, {NULL, "eu", "es"},       {NULL, "pl-PL", "en-US"}, {"ca", NULL, "es"}};
     int bad = 0;
     for (size_t i = 0; i < sizeof cases / sizeof *cases; i++) {
-        set_env("MKW_LANG", cases[i].lang);
-        set_env("MKW_LOCALE", cases[i].locale);
+        set_env("ORBITALS_LANG", cases[i].lang);
+        set_env("ORBITALS_LOCALE", cases[i].locale);
         const char *got = lang();
         if (strcmp(got, cases[i].want)) {
             bad++;
-            printf("  FAIL: language for MKW_LANG=%s MKW_LOCALE=%s is %s, not %s\n", cases[i].lang ? cases[i].lang : "",
+            printf("  FAIL: language for ORBITALS_LANG=%s ORBITALS_LOCALE=%s is %s, not %s\n", cases[i].lang ? cases[i].lang : "",
                    cases[i].locale ? cases[i].locale : "", got, cases[i].want);
         }
     }
@@ -303,34 +303,34 @@ static void probe_oe(void) {
     static const struct { const char *menu, *locale, *want; } menus[] = {
         {"ja", "en-US", "ja"}, {"en", "en-GB", "en-GB"}, {"en", "de-DE", "en-US"}, {"tr", "de-DE", "de"},
         {"zh-Hant", "en-US", "zh-Hant"}, {"pt-BR", "pt-PT", "pt-BR"}, {"ca", "en-US", "es"}};
-    set_env("MKW_LANG", NULL);
+    set_env("ORBITALS_LANG", NULL);
     for (size_t i = 0; i < sizeof menus / sizeof *menus; i++) {
-        set_env("MKW_MENU_LANG", menus[i].menu);
-        set_env("MKW_LOCALE", menus[i].locale);
+        set_env("ORBITALS_MENU_LANG", menus[i].menu);
+        set_env("ORBITALS_LOCALE", menus[i].locale);
         const char *got = lang();
         if (strcmp(got, menus[i].want)) {
             bad++;
-            printf("  FAIL: language for MKW_MENU_LANG=%s MKW_LOCALE=%s is %s, not %s\n", menus[i].menu,
+            printf("  FAIL: language for ORBITALS_MENU_LANG=%s ORBITALS_LOCALE=%s is %s, not %s\n", menus[i].menu,
                    menus[i].locale, got, menus[i].want);
         }
     }
-    set_env("MKW_MENU_LANG", NULL);
-    set_env("MKW_LANG", NULL);
-    set_env("MKW_LOCALE", NULL);
+    set_env("ORBITALS_MENU_LANG", NULL);
+    set_env("ORBITALS_LANG", NULL);
+    set_env("ORBITALS_LOCALE", NULL);
     char sys[16];
     snprintf(sys, sizeof sys, "%s", lang());
-    set_env("MKW_LOCALE", "en-US");
+    set_env("ORBITALS_LOCALE", "en-US");
     char def[16];
     snprintf(def, sizeof def, "%s", lang());
-    set_env("MKW_LANG", keep_lang);
-    set_env("MKW_LOCALE", keep_locale);
-    set_env("MKW_MENU_LANG", keep_menu);
+    set_env("ORBITALS_LANG", keep_lang);
+    set_env("ORBITALS_LOCALE", keep_locale);
+    set_env("ORBITALS_MENU_LANG", keep_menu);
     free(keep_lang);
     free(keep_locale);
     free(keep_menu);
     checks++;
     failures += bad > 0;
-    printf("oe: language %s by default (en-US locale), %s for this Windows user locale; %d locale, MKW_LANG and menu cases %s\n",
+    printf("oe: language %s by default (en-US locale), %s for this Windows user locale; %d locale, ORBITALS_LANG and menu cases %s\n",
            def, sys, (int)(sizeof cases / sizeof *cases + sizeof menus / sizeof *menus), bad ? "FAILED" : "ok");
 
     CALL("oe.Initialize", 0);
@@ -528,18 +528,18 @@ static void probe_feedback(uint32_t pid, uint32_t style) {
           "six-axis handle %#x", sh[0]);
     CHECK((int32_t)CALL("hid.GetVibrationDeviceHandles", U(dual), 2, U(&zero), 4) == 2 && dual[0] == 5 &&
           dual[1] == 0x10005, "Joy-Con pair vibration handles %#x %#x (SDK: 0x5 0x10005)", dual[0], dual[1]);
-    char *keep_r = cfg_get("MKW_RUMBLE") ? strdup(cfg_get("MKW_RUMBLE")) : NULL;
-    char *keep_m = cfg_get("MKW_MOTION") ? strdup(cfg_get("MKW_MOTION")) : NULL;
-    set_env("MKW_RUMBLE", "0");
-    set_env("MKW_MOTION", "0");
+    char *keep_r = cfg_get("ORBITALS_RUMBLE") ? strdup(cfg_get("ORBITALS_RUMBLE")) : NULL;
+    char *keep_m = cfg_get("ORBITALS_MOTION") ? strdup(cfg_get("ORBITALS_MOTION")) : NULL;
+    set_env("ORBITALS_RUMBLE", "0");
+    set_env("ORBITALS_MOTION", "0");
     uint32_t none[2] = {0xdead, 0xdead}, six_off[2] = {0};
     CHECK((int32_t)CALL("hid.GetVibrationDeviceHandles", U(none), 2, U(&pid), style) == 0 && none[0] == 0xdead,
-          "MKW_RUMBLE=0 still reports vibration handles");
-    // MKW_MOTION is live: the handle stays (the sensor reads at rest while it is 0)
+          "ORBITALS_RUMBLE=0 still reports vibration handles");
+    // ORBITALS_MOTION is live: the handle stays (the sensor reads at rest while it is 0)
     CHECK((int32_t)CALL("hid.GetSixAxisSensorHandles", U(six_off), 2, U(&pid), style) == 1 && six_off[0] == sh[0],
-          "MKW_MOTION=0 drops the six-axis handle %#x", six_off[0]);
-    set_env("MKW_RUMBLE", keep_r);
-    set_env("MKW_MOTION", keep_m);
+          "ORBITALS_MOTION=0 drops the six-axis handle %#x", six_off[0]);
+    set_env("ORBITALS_RUMBLE", keep_r);
+    set_env("ORBITALS_MOTION", keep_m);
     free(keep_r);
     free(keep_m);
 
@@ -609,7 +609,7 @@ static int controller_applet(int8_t lo, int8_t hi, uint32_t *selected) {
     return (int8_t)res[0];
 }
 
-// Two players on two virtual gamepads (MKW_VIRTUAL_PADS=2, set before the input starts): player 2 is id 1 docked, and
+// Two players on two virtual gamepads (ORBITALS_VIRTUAL_PADS=2, set before the input starts): player 2 is id 1 docked, and
 // in handheld mode only once the applet handed out two players. Player 1 the handheld controller again after a
 // one-player applet.
 static void probe_two_players(uint32_t pid) {
@@ -630,7 +630,7 @@ static void probe_two_players(uint32_t pid) {
 static void probe_input(void) {
     uint32_t pid = ov_handheld() ? 0x20 : 0, other = ov_handheld() ? 0 : 0x20, ids[3] = {0, 0x20, 1};
     uint32_t style = ov_handheld() ? 2 : 1;
-    set_env("MKW_VIRTUAL_PADS", "2");
+    set_env("ORBITALS_VIRTUAL_PADS", "2");
     CALL("hid.InitializeNpad", 0);
     CALL("hid.SetSupportedNpadIdType", U(ids), 3);
     CALL("hid.SetSupportedNpadStyleSet", 3);
@@ -832,9 +832,9 @@ static void probe_swkbd(void) {
         arg[KB_UTF8] = (uint8_t)k->utf8;
         memcpy(arg + ARG_WORK, &w, 8), memcpy(arg + ARG_WORK_SIZE, &ws, 8);
         if (k->initial) rt_call(gc, initial, 2, U(arg), U(u16(k->initial)));
-        set_env(k->window ? "MKW_SWKBD_TEST" : "MKW_SWKBD_ANSWER", k->answer);
+        set_env(k->window ? "ORBITALS_SWKBD_TEST" : "ORBITALS_SWKBD_ANSWER", k->answer);
         uint32_t r = (uint32_t)CALL("swkbd.ShowKeyboard", U(str), U(arg));
-        set_env("MKW_SWKBD_TEST", NULL), set_env("MKW_SWKBD_ANSWER", NULL);
+        set_env("ORBITALS_SWKBD_TEST", NULL), set_env("ORBITALS_SWKBD_ANSWER", NULL);
         int ok = r == k->result && (k->utf8 ? !strcmp((const char *)out, k->want) : u16_is(out, k->want));
         checks++;
         if (!ok) bad++, printf("  FAIL: swkbd case %d (%s%s): result %#x\n", i, k->window ? "window " : "", k->answer, r);
@@ -914,7 +914,7 @@ static void probe_fonts(void) {
 }
 
 // The host catalog (ui_text.c, generated from i18n/*.po): every language has its own text for every menu id, the
-// software keyboard keeps its game-language rows, and menu_text follows MKW_MENU_LANG in each language.
+// software keyboard keeps its game-language rows, and menu_text follows ORBITALS_MENU_LANG in each language.
 static void probe_menu_text(void) {
     static const char *const langs[] = {"en", "ja", "fr", "de", "it", "es", "nl", "pt", "pt-BR", "ru", "zh-Hans",
                                         "zh-Hant", "ko", "es-419", "ca", "gl", "eu", "pl", "tr", "uk", "th"};
@@ -937,10 +937,10 @@ static void probe_menu_text(void) {
           "overlay format lost its conversion");
     // menu_text follows the setting live, in every language
     for (size_t i = 0; i < N; i++) {
-        cfg_set("MKW_MENU_LANG", langs[i]);
+        cfg_set("ORBITALS_MENU_LANG", langs[i]);
         CHECK(menu_text(UI_LAUNCH_PLAY) == ui_text_in(langs[i], UI_LAUNCH_PLAY), "menu_text ignores MENU_LANG=%s", langs[i]);
     }
-    cfg_set("MKW_MENU_LANG", "");
+    cfg_set("ORBITALS_MENU_LANG", "");
     CHECK(menu_text(UI_LAUNCH_PLAY) == ui_text_in(menu_lang(), UI_LAUNCH_PLAY), "menu_text auto differs from menu_lang");
     printf("  menu language with the system's %s: %s\n", plat_ui_language(), menu_lang());
 }
@@ -960,11 +960,11 @@ static void probe_main(Cpu *c) {
     probe_menu_text();
     probe_menu_gate();
     probe_fonts();
-    probe_mkw_services();
+    probe_sdk2_services();
 }
 
 // ---- child processes
-// Runs this executable again with the same command line and MKW_PROBE_SERVICES_CHILD=<mode>; its stdout and stderr
+// Runs this executable again with the same command line and ORBITALS_PROBE_SERVICES_CHILD=<mode>; its stdout and stderr
 // into out. Returns the exit code.
 static uint32_t run_child(const char *mode, const char *env, char *out, size_t cap) {
     char name[64] = "";

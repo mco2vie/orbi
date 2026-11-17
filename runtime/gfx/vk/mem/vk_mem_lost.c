@@ -7,7 +7,7 @@
 #include "vk_exec.h"
 #include "vk_mem_internal.h"
 
-// ---------------------------------------------------------------- MKW_SHADOW_LOST (diagnosis, default 0)
+// ---------------------------------------------------------------- ORBITALS_SHADOW_LOST (diagnosis, default 0)
 // What the shadow (vk_mem_shadow.c) loses of the CPU's writes, per presented frame, against the console, where the CPU
 // and the GPU share the bytes. Found for the flickering trees (06/11/2026): their indirect arguments are written by the
 // CPU every frame and completed by a culling dispatch that binds them writable, and a sync skips every byte of a range
@@ -17,7 +17,7 @@
 //   not) or some belongs to an earlier one ("old": the shadow may hold GPU bytes not copied back).
 // - clobber (2): at the write-back, bytes the GPU left as they were and the CPU changed: the copy replaces the CPU's
 //   value with the stale one. Needs a copy of the shadow at record time of each written range up to LOST_BASE_MAX;
-//   ranges merged by bytes (MKW_SHADOW_MERGE) revert nothing and are not counted.
+//   ranges merged by bytes (ORBITALS_SHADOW_MERGE) revert nothing and are not counted.
 // - args: indirect draws whose arguments in the shadow differ from guest memory right after the sync of their
 //   submission, per VS. Not a loss by itself: a culling dispatch of an earlier part may have written them already, and
 //   guest memory gets its bytes at the fence (lf2: 317 frames with the merge, no skip left).
@@ -40,9 +40,9 @@ static int nvs;
 
 int lost_level(void) {
     if (lost_on < 0) {
-        const char *e = cfg_get("MKW_SHADOW_LOST");
+        const char *e = cfg_get("ORBITALS_SHADOW_LOST");
         lost_on = e ? atoi(e) : 0;
-        if (lost_on) rt_log("mem: lost CPU writes diagnosed, level %d (MKW_SHADOW_LOST)", lost_on);
+        if (lost_on) rt_log("mem: lost CPU writes diagnosed, level %d (ORBITALS_SHADOW_LOST)", lost_on);
     }
     return lost_on;
 }

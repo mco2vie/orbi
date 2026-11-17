@@ -44,7 +44,7 @@ class WindowsProbe:
 
 @pytest.fixture(scope="module")
 def windows_build(tmp_path_factory: pytest.TempPathFactory) -> WindowsProbe:
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("MKW_", "TEST_LOG_", "TEST_STDERR_"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("ORBITALS_", "TEST_LOG_", "TEST_STDERR_"))}
     if os.name == "nt":
         mingw = shutil.which("gcc")
         for location in ("C:/msys64/mingw64/bin/gcc.exe", "C:/msys64/ucrt64/bin/gcc.exe"):
@@ -78,10 +78,10 @@ def windows_build(tmp_path_factory: pytest.TempPathFactory) -> WindowsProbe:
 @pytest.fixture
 def selector(windows_build: WindowsProbe):
     # Keep the launcher itself short even when pytest's generated per-test name is long on Windows runners.
-    with tempfile.TemporaryDirectory(prefix="mkw-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="orbitals-") as tmp:
         folder = Path(tmp) / "launcher"
         folder.mkdir()
-        exe = Path(shutil.copy2(windows_build.exe, folder / "mkw.exe"))
+        exe = Path(shutil.copy2(windows_build.exe, folder / "orbitals-recomp.exe"))
         yield WindowsProbe(exe, windows_build.runner, windows_build.env)
 
 
@@ -110,10 +110,10 @@ def test_windows_boundary_uses_utf16(selector: WindowsProbe, letter: str) -> Non
     assert selector("select", chosen)["selected"] == "1"
     assert selector()["ready"] == "1"  # prepared-file discovery goes through the Windows filesystem API
     assert selector()["dir"] == chosen
-    before = (selector.exe.parent / "orbital.ini").read_bytes()
+    before = (selector.exe.parent / "orbitals.ini").read_bytes()
     result = selector("select", chosen + "x")
     assert result["selected"] == "0" and result["invalid"] == "1"
-    assert (selector.exe.parent / "orbital.ini").read_bytes() == before
+    assert (selector.exe.parent / "orbitals.ini").read_bytes() == before
 
 
 @pytest.mark.parametrize("units", [260, 300])
@@ -121,7 +121,7 @@ def test_windows_long_selection_is_not_saved(selector: WindowsProbe, units: int)
     game = sized_path(selector.exe.parent.parent, units)
     result = selector("select", windows_path(game))
     assert result["selected"] == "0" and result["invalid"] == "1"
-    assert not (selector.exe.parent / "orbital.ini").exists()
+    assert not (selector.exe.parent / "orbitals.ini").exists()
 
 
 def test_windows_relative_path_counts_launcher_prefix(selector: WindowsProbe) -> None:
@@ -129,11 +129,11 @@ def test_windows_relative_path_counts_launcher_prefix(selector: WindowsProbe) ->
     relative = str(target.relative_to(selector.exe.parent))
     assert len(relative) < WINDOWS_LIMIT
     assert selector("select", relative)["invalid"] == "1"
-    assert not (selector.exe.parent / "orbital.ini").exists()
+    assert not (selector.exe.parent / "orbitals.ini").exists()
 
 
 def test_windows_invalid_saved_path_allows_recovery(selector: WindowsProbe) -> None:
-    ini = selector.exe.parent / "orbital.ini"
+    ini = selector.exe.parent / "orbitals.ini"
     bad = windows_path(sized_path(selector.exe.parent.parent, 300))
     ini.write_text(f'game_dir = "{bad}"\n', encoding="utf-8")
     assert selector()["dir"] == windows_path(selector.exe.parent)

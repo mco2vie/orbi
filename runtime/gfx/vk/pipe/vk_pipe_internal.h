@@ -19,14 +19,14 @@ typedef struct {
     VkDevice device;
     VkPipelineCache cache;
     uint32_t max_push;
-    int draw_cache;                    // MKW_DRAW_CACHE: no push sets, uniform buffers dynamic (vk_exec_dcache.c)
-    uint32_t smem_limit;               // workgroup memory for spirv_clamp_shared (MKW_VK_SHARED_LIMIT lowers it)
+    int draw_cache;                    // ORBITALS_DRAW_CACHE: no push sets, uniform buffers dynamic (vk_exec_dcache.c)
+    uint32_t smem_limit;               // workgroup memory for spirv_clamp_shared (ORBITALS_VK_SHARED_LIMIT lowers it)
     uint32_t max_dyn_ubo;              // maxDescriptorSetUniformBuffersDynamic
     int indep;                         // stage-independent layouts (vk_caps.gpl): vertex set 0, fragment set 1
     int push_stage;                    // GFX_STAGE_* whose set is pushed with independent layouts
     int gpl;                           // draws whose pipeline is building get a fast-linked one (vk_caps.gpl)
     struct { uint64_t links, wlinks, dlinks, requeued, link_fail, defer, lib_n[4], lib_fail, swaps, slow; double link_ms, link_max, lib_ms[4], lib_max[4], dlink_ms, dlink_max; } g;
-    int vs_outs_all;                   // MKW_VS_OUTS: 0 union of paired fragment inputs, 1 (all) all 32 output locations
+    int vs_outs_all;                   // ORBITALS_VS_OUTS: 0 union of paired fragment inputs, 1 (all) all 32 output locations
     int dyn_vi, dyn_clamp, dyn_poly, dyn_blend_en, dyn_blend_eq, dyn_wmask, dyn_a2c;
     int f_logic_op, f_depth_clamp, f_fill_non_solid, f_dual_src;
     int pv_last;                       // provokingVertexLast enabled: NVN's default is the last vertex
@@ -145,7 +145,7 @@ typedef struct {
     LibJob *head, *tail;
     int idle;                          // workers asleep on work_cv
     int running;                       // jobs workers are building
-    int on;                            // MKW_PIPE_WAIT: 1 workers (default), 0 the drawing thread builds them (draw);
+    int on;                            // ORBITALS_PIPE_WAIT: 1 workers (default), 0 the drawing thread builds them (draw);
                                        // set by vk_pipeline_async_enable, before the replay runs
     int helpers;                       // lib_wait's helper threads still building
     uint64_t waits, queued, by_worker, stolen, timeouts;
@@ -207,7 +207,7 @@ extern KeyFile K;
 
 uint64_t pipe_fnv(uint64_t h, const void *p, size_t n);
 uint64_t key_hash(const void *k, size_t n);
-void pipe_test_stall(const GfxShader *vs, const GfxShader *fs);   // MKW_PIPE_STALL (vk_pipeline.c)
+void pipe_test_stall(const GfxShader *vs, const GfxShader *fs);   // ORBITALS_PIPE_STALL (vk_pipeline.c)
 int ensure_init(void);
 void pin_subgroup32(VkPipelineShaderStageCreateInfo *st, VkPipelineShaderStageRequiredSubgroupSizeCreateInfo *rq,
                            const uint32_t *w, uint64_t words);
@@ -225,7 +225,7 @@ int mesh_pipe(const VkPipeState *s);
 void gkey_fill(const VkPipeState *s, GKey *k);
 void mesh_offsets(const VkPipeState *s, uint32_t *mesh_off, uint32_t *fs_off);
 VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l, uint32_t fs_off);
-void log_stats(VkPipeline pipe, const VkPipeState *s);   // MKW_SPEC_STATS=1 (and MKW_SPEC_ISA), vk_pipeline.c
+void log_stats(VkPipeline pipe, const VkPipeState *s);   // ORBITALS_SPEC_STATS=1 (and ORBITALS_SPEC_ISA), vk_pipeline.c
 typedef struct {
     uint32_t n_attr, n_bind;
     VkVertexInputAttributeDescription2EXT a[32];

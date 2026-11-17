@@ -39,7 +39,7 @@ void rt_spin_gate(Cpu *c, uint64_t head);  // a pass of a spin wait loop (kernel
 void rt_svc(Cpu *c, uint32_t imm, uint64_t pc);
 void rt_brk(Cpu *c, uint32_t imm, uint64_t pc) __attribute__((noreturn));
 void rt_udf(Cpu *c, uint64_t pc) __attribute__((noreturn));
-// The Switch 2 counter runs at 31.25 MHz (32 ns a tick): MKW's sdk returns 31,250,000 from
+// The Switch 2 counter runs at 31.25 MHz (32 ns a tick): the first game's sdk returns 31,250,000 from
 // nn::os::GetSystemTickFrequency and converts with it (TickManager::ConvertToTimeSpan, sdk+0x147208).
 #define RT_TICK_HZ 31250000u
 #define RT_TICK_NS 32u
@@ -79,7 +79,7 @@ typedef uint32_t __attribute__((aligned(1), may_alias)) u32u;
 typedef uint64_t __attribute__((aligned(1), may_alias)) u64u;
 typedef uint8_t __attribute__((may_alias)) u8a;
 
-// Function-entry profiler (core/diag/seqwatch.c, impcensus.c): one predictable branch per call when off. g_fnprof and
+// Function-entry profiler (core/diag/impcensus.c): one predictable branch per call when off. g_fnprof and
 // rt_patch_on (recomp/gen.py) are defined beside the generated code (build.py modules.c): hidden, so the game code
 // library reads them directly rather than through an import.
 extern volatile int g_fnprof __attribute__((visibility("hidden")));

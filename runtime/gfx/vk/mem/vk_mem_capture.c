@@ -4,7 +4,7 @@
 #include "nvn_api.h"
 #include "vk_mem_internal.h"
 
-// ---------------------------------------------------------------- the CPU's writes as at each submit (MKW_SHADOW_SUBMIT)
+// ---------------------------------------------------------------- the CPU's writes as at each submit (ORBITALS_SHADOW_SUBMIT)
 // On the console the GPU reads the memory a submission uses right after nvnQueueSubmitCommands; the asynchronous
 // replay records ~3 submits behind the game (lf6, 06/11/2026), and its shadow sync copied guest memory as it was then:
 // the game had already rewritten the next frame's indirect arguments and per-instance data, and a tree drew from
@@ -18,7 +18,7 @@
 //   never newer ones that a capture would then take back).
 // - Read-trapped pages hold the shadow's bytes already: left out. Pages of untracked memory (no write watch): the pool
 //   leaves the list and is read as before.
-// MKW_SHADOW_SUBMIT (a measurement, default 0; "ab"): 1 captures. fe2 (06/11/2026): no fewer dark trees (55 in 770
+// ORBITALS_SHADOW_SUBMIT (a measurement, default 0; "ab"): 1 captures. fe2 (06/11/2026): no fewer dark trees (55 in 770
 // frames with it, 46 in 1,030 without) and 2.3 ms a submit on the game thread (685 pools, 3.5 MB each). Switching in the A/B blocks drops
 // every pool at the edge: a block's first syncs may see the bytes older captures hold.
 #define CAP_IDLE 64
@@ -111,7 +111,7 @@ static void capture_run(PoolRec *r, uint64_t a, uint64_t b, CapRun **runs, int *
     if (*nruns == *cruns) vk_mem_grow((void **)runs, cruns, sizeof **runs);
     uint8_t *d = malloc(b - a);
     if (!d) rt_fatal("vk: out of memory (shadow capture)");
-    mem_copy_out(d, a, b - a);   // MKW_EARLY_READ: on the game's thread, a watched page must not count as its read
+    mem_copy_out(d, a, b - a);   // ORBITALS_EARLY_READ: on the game's thread, a watched page must not count as its read
     (*runs)[(*nruns)++] = (CapRun){r, a, b - a, d};
     *bytes += b - a;
 }
@@ -143,7 +143,7 @@ void vk_mem_shadow_capture(uint64_t sub) {
     if (!shadow_on) return;
     if (mode < 0) {
         mode = rt_knob("SHADOW_SUBMIT", "0");
-        rt_log("mem: the CPU's writes captured at each submit %s (MKW_SHADOW_SUBMIT)",
+        rt_log("mem: the CPU's writes captured at each submit %s (ORBITALS_SHADOW_SUBMIT)",
                mode == 2 ? "in the B blocks" : mode ? "on" : "off");
     }
     uint64_t t0 = qpc();

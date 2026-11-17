@@ -6,7 +6,7 @@ it stops the run when it reaches an IPC session the host does not serve (it serv
 a time. Static reachability does not find them: the SDK opens a session once and later calls go through a held proxy
 object. So this lists them by namespace, from the service map below.
 
-With --census (the file of a run with MKW_IMPORT_CENSUS, runtime/core/diag/impcensus.c) it also says which of them the
+With --census (the file of a run with ORBITALS_IMPORT_CENSUS, runtime/core/diag/impcensus.c) it also says which of them the
 game called in that run and how often; SDK functions reached from main only through a function pointer are listed
 apart.
 
@@ -75,7 +75,7 @@ def main() -> None:
     ap.add_argument("--db", type=Path, default=ROOT / "build/bindb.sqlite")
     ap.add_argument("--all", action="store_true", help="also list namespaces with no service behind them")
     ap.add_argument("--namespace", help="print the imports of one namespace")
-    ap.add_argument("--census", type=Path, help="MKW_IMPORT_CENSUS file of a run")
+    ap.add_argument("--census", type=Path, help="ORBITALS_IMPORT_CENSUS file of a run")
     args = ap.parse_args()
     db = sqlite3.connect(args.db)
     replaced = overrides()

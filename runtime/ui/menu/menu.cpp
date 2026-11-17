@@ -171,7 +171,7 @@ static void make_context(void) {
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
-    io.BackendPlatformName = "mkw_menu";
+    io.BackendPlatformName = "orbitals_menu";
     menu_look_style(g_base_style);
     ImGui::GetStyle() = g_base_style;
     g_ctx_ok = 1;
@@ -231,33 +231,33 @@ extern "C" void menu_vk_release(void) {
 }
 
 // ---- test hooks
-// MKW_MENU_TEST=<frame>[:<frames per page>]: at that presented frame the menu opens on its first tab; each tab stays
-// <frames per page> frames (default 30) and its last frame's swapchain image goes to MKW_MENU_TEST_DIR (default: the
+// ORBITALS_MENU_TEST=<frame>[:<frames per page>]: at that presented frame the menu opens on its first tab; each tab stays
+// <frames per page> frames (default 30) and its last frame's swapchain image goes to ORBITALS_MENU_TEST_DIR (default: the
 // working directory) as menu-test-<frame>-<page>.png; after the last tab the menu closes.
-// MKW_MENU_TEST_SET=<frame>:<key>=<value>[,<key>=<value>...][;<frame>:...]: cfg_set of each key (MKW_ prefix
-// optional) at that presented frame; changes live settings with no input, menu open or not. orbital.ini is written only by
+// ORBITALS_MENU_TEST_SET=<frame>:<key>=<value>[,<key>=<value>...][;<frame>:...]: cfg_set of each key (ORBITALS_ prefix
+// optional) at that presented frame; changes live settings with no input, menu open or not. orbitals.ini is written only by
 // the pseudo-key SAVE=1 (cfg_save, as a row change does; a failed write shows the menu's save note).
 enum { TEST_PAGE_FRAMES = 30, TEST_SETS = 16 };
 struct TestSet { uint64_t frame; char key[64], value[64]; };
 static struct {
     int parsed;
-    uint64_t at;          // MKW_MENU_TEST frame; 0 none
+    uint64_t at;          // ORBITALS_MENU_TEST frame; 0 none
     uint64_t per_page;
     uint64_t opened;      // the frame the hook opened the menu; 0 not yet
     int page;             // the tab being shot; -1 none
     TestSet sets[TEST_SETS];
-    int n_sets, next_set; // MKW_MENU_TEST_SET, in frame order
+    int n_sets, next_set; // ORBITALS_MENU_TEST_SET, in frame order
 } g_test = {0, 0, 0, 0, -1, {}, 0, 0};
 
 static void test_parse(void) {
     g_test.parsed = 1;
-    if (const char *e = cfg_get("MKW_MENU_TEST")) {
+    if (const char *e = cfg_get("ORBITALS_MENU_TEST")) {
         long long at = atoll(e), per = 0;
         if (const char *c = strchr(e, ':')) per = atoll(c + 1);
         g_test.at = at > 0 ? (uint64_t)at : 0;
         g_test.per_page = per > 0 ? (uint64_t)per : TEST_PAGE_FRAMES;
     }
-    const char *s = cfg_get("MKW_MENU_TEST_SET");
+    const char *s = cfg_get("ORBITALS_MENU_TEST_SET");
     while (s && *s) {   // groups "<frame>:<key>=<value>,..." separated by ';'
         char *end;
         unsigned long long f = strtoull(s, &end, 10);
@@ -270,7 +270,7 @@ static void test_parse(void) {
                 TestSet &t = g_test.sets[g_test.n_sets++];
                 t.frame = f;
                 int kn = (int)(eq - s), vn = (int)(s + n - eq - 1);
-                snprintf(t.key, sizeof t.key, "%s%.*s", strncmp(s, "MKW_", 4) ? "MKW_" : "", kn, s);
+                snprintf(t.key, sizeof t.key, "%s%.*s", strncmp(s, "ORBITALS_", sizeof "ORBITALS_" - 1) ? "ORBITALS_" : "", kn, s);
                 snprintf(t.value, sizeof t.value, "%.*s", vn, eq + 1);
             }
             s += n;
@@ -288,7 +288,7 @@ static void test_apply_sets(uint64_t frame) {
     for (; g_test.next_set < g_test.n_sets && g_test.sets[g_test.next_set].frame <= frame; g_test.next_set++) {
         const TestSet &t = g_test.sets[g_test.next_set];
         rt_log("menu: test hook: frame %llu: %s=%s", (unsigned long long)frame, t.key, t.value);
-        if (!strcmp(t.key, "MKW_SAVE")) rt_log("menu: test hook: cfg_save %s", cfg_save() ? "wrote" : "failed");
+        if (!strcmp(t.key, "ORBITALS_SAVE")) rt_log("menu: test hook: cfg_save %s", cfg_save() ? "wrote" : "failed");
         else cfg_set(t.key, t.value);
     }
 }
@@ -415,16 +415,16 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
     ImGui::End();
 }
 
-static int g_save_pending;   // a changed setting still waits for its write to orbital.ini (opt_save_tick)
+static int g_save_pending;   // a changed setting still waits for its write to orbitals.ini (opt_save_tick)
 
-// ---- the performance overlay (MKW_PERF_OVERLAY), in the top right corner. "fps": the frame rate over the presents of
-// the last half second; with frame generation on (MKW_FRAMEGEN), the game's frames and the presents, "60/240 fps" as
+// ---- the performance overlay (ORBITALS_PERF_OVERLAY), in the top right corner. "fps": the frame rate over the presents of
+// the last half second; with frame generation on (ORBITALS_FRAMEGEN), the game's frames and the presents, "60/240 fps" as
 // Lossless Scaling shows them. "full": a panel of perfmon.c's numbers, in the style of SavageWindRecomp's perf_overlay_draw
 // (menu.mm): the machine's load and temperatures, the frame rate and frame times with a graph, the render thread's waits.
 // Off, it costs a cfg_version load per present.
 static unsigned g_perf_ver = ~0u;
 static int g_perf_mode;                  // 0 off, 1 fps, 2 full
-static std::atomic<int> g_perf_save;     // F10 changed the mode: orbital.ini is written on the present thread
+static std::atomic<int> g_perf_save;     // F10 changed the mode: orbitals.ini is written on the present thread
 static uint64_t g_perf_last_ns, g_perf_win_ns, g_perf_max_ns;
 static int g_perf_frames, g_perf_game;   // presents and game frames in the window
 static uint64_t g_perf_last_frame;
@@ -434,7 +434,7 @@ static int perf_mode_of(const char *s) { return !strcmp(s, "full") ? 2 : !strcmp
 
 extern "C" void menu_perf_cycle(void) {
     static const char *const modes[] = {"off", "fps", "full"};
-    cfg_set("MKW_PERF_OVERLAY", modes[(perf_mode_of(cfg_value("MKW_PERF_OVERLAY")) + 1) % 3]);
+    cfg_set("ORBITALS_PERF_OVERLAY", modes[(perf_mode_of(cfg_value("ORBITALS_PERF_OVERLAY")) + 1) % 3]);
     g_perf_save.store(1);
 }
 
@@ -467,7 +467,7 @@ static void perf_gpu_once(const MenuTarget *t) {
 static void perf_tick(uint64_t now, uint64_t frame, const MenuTarget *t) {
     if (cfg_version() != g_perf_ver) {
         g_perf_ver = cfg_version();
-        int m = perf_mode_of(cfg_value("MKW_PERF_OVERLAY"));
+        int m = perf_mode_of(cfg_value("ORBITALS_PERF_OVERLAY"));
         if (m != g_perf_mode) {
             g_perf_last_ns = 0, g_perf_text[0] = 0;
             if (m == 2) perf_gpu_once(t);
@@ -489,7 +489,7 @@ static void perf_tick(uint64_t now, uint64_t frame, const MenuTarget *t) {
         if (d > g_perf_max_ns) g_perf_max_ns = d;
         if (g_perf_win_ns >= 500000000ull) {
             double s = 1e9 / (double)g_perf_win_ns;
-            if (strcmp(cfg_value("MKW_FRAMEGEN"), "off"))
+            if (strcmp(cfg_value("ORBITALS_FRAMEGEN"), "off"))
                 snprintf(g_perf_text, sizeof g_perf_text, menu_text(UI_PERF_LINE_FPS_FG), g_perf_game * s, g_perf_frames * s);
             else
                 snprintf(g_perf_text, sizeof g_perf_text, menu_text(UI_PERF_LINE_FPS), g_perf_frames * s);
@@ -541,27 +541,22 @@ static void perf_label(UiTextId label, const ImVec4 &c) {
 
 static float perf_gb(float mb) { return mb < 0 ? -1 : mb / 1024; }
 
-// The picture lines: the window, the game image the present shows, the resolution the game renders at inside it (the
-// MKW_RESOLUTION applied at start, sdk/fs/romfs_res.c: the scene at those lines, 16:9), how the present scales the image to
-// the window (gfx_present.c, the last present) and the presentation mode in use.
+// The picture lines: the window, the game image the present shows, how the present scales the image to the window
+// (gfx_present.c, the last present) and the presentation mode in use.
 static void perf_picture(const MenuTarget *t, const ImVec4 &c) {
-    enum { N = 5 };
+    enum { N = 4 };
     char v[N][64];
     snprintf(v[0], sizeof v[0], menu_text(UI_MENU_OV_FMT_SIZE), t->width, t->height);
     snprintf(v[1], sizeof v[1], menu_text(UI_MENU_OV_FMT_SIZE), (unsigned)t->image_w, (unsigned)t->image_h);
-    int lines = romfs_resolution_lines();
-    if (lines > 0) snprintf(v[2], sizeof v[2], menu_text(UI_MENU_OV_FMT_SIZE), (unsigned)(lines * 16 / 9), (unsigned)lines);
-    else snprintf(v[2], sizeof v[2], "%s", menu_text(lines ? UI_MENU_OV_NONE : UI_MENU_RESOLUTION_ORIGINAL));
     if (t->scaler == 2) {
-        int s = cfg_int("MKW_SHARPNESS");
-        snprintf(v[3], sizeof v[3], menu_text(UI_MENU_OV_FMT_FSR), s < 0 ? 0 : s > 100 ? 100 : s);
+        int s = cfg_int("ORBITALS_SHARPNESS");
+        snprintf(v[2], sizeof v[2], menu_text(UI_MENU_OV_FMT_FSR), s < 0 ? 0 : s > 100 ? 100 : s);
     } else {
-        snprintf(v[3], sizeof v[3], "%s", menu_text(t->scaler ? UI_MENU_OV_SCALE_BILINEAR : UI_MENU_OV_SCALE_NONE));
+        snprintf(v[2], sizeof v[2], "%s", menu_text(t->scaler ? UI_MENU_OV_SCALE_BILINEAR : UI_MENU_OV_SCALE_NONE));
     }
     const char *pm = settings_present_name(gfx_window_present_mode());
-    snprintf(v[4], sizeof v[4], "%s", pm ? pm : menu_text(UI_MENU_OV_NONE));
-    static const UiTextId labels[N] = {UI_MENU_OV_WINDOW, UI_MENU_OV_OUTPUT, UI_MENU_OV_INTERNAL, UI_MENU_OV_SCALING,
-                                       UI_MENU_OV_PRESENT};
+    snprintf(v[3], sizeof v[3], "%s", pm ? pm : menu_text(UI_MENU_OV_NONE));
+    static const UiTextId labels[N] = {UI_MENU_OV_WINDOW, UI_MENU_OV_OUTPUT, UI_MENU_OV_SCALING, UI_MENU_OV_PRESENT};
     if (!ImGui::BeginTable("##perfp", 2, ImGuiTableFlags_SizingFixedFit)) return;
     float vw = 0;
     for (auto &s : v) vw = fmaxf(vw, ImGui::CalcTextSize(s).x);
@@ -681,7 +676,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     bool open = g_open.load(std::memory_order_relaxed);
     if (!open && g_choice_up.load()) choice_answer(-1);   // F1 or Esc closed the menu over a choice: no answer
     if (!open) {
-        if (g_save_pending) g_save_pending = opt_save_tick(1);   // closed: the last change goes to orbital.ini now
+        if (g_save_pending) g_save_pending = opt_save_tick(1);   // closed: the last change goes to orbitals.ini now
         if (g_test.at && !g_test.opened && frame >= g_test.at) {
             g_test.opened = frame;
             g_test.page = 0;
@@ -744,7 +739,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     g_cost_ns += plat_now_ns() - t0;
     if (g_test.page >= 0 && frame >= g_test.opened + g_test.per_page * (uint64_t)(g_test.page + 1)) {
         static char path[512];   // this frame's image goes to a file; then the next tab, or the menu closes
-        const char *dir = cfg_get("MKW_MENU_TEST_DIR");
+        const char *dir = cfg_get("ORBITALS_MENU_TEST_DIR");
         snprintf(path, sizeof path, "%s/menu-test-%llu-%d.png", dir ? dir : ".", (unsigned long long)frame, g_test.page);
         *shot = path;
         if (++g_test.page == TAB_COUNT) {

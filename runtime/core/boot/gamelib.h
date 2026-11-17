@@ -1,6 +1,6 @@
 // The game code's tables: module layout, lifted function tables, the ExeFS hashes the code was generated from and the
 // code patch sets. tools/build/build.py writes them (build/obj/rt/modules.c) from the generator's layout.json and
-// patches.h. The development build links them into build/mkw (rt_game_builtin); the player's build compiles them into
+// patches.h. The development build links them into build/orbitals-recomp (rt_game_builtin); the player's build compiles them into
 // the game code library, orbitalgame.so / orbitalgame.dll (SavageWindRecomp runtime/gamelib.h, MIT).
 #pragma once
 #include <stdint.h>
@@ -25,7 +25,7 @@ typedef struct {
 typedef struct { const char *file, *sha256; } RtFileHash;
 
 typedef struct {
-    const char *name, *env;  // the set (recomp/patches-mkw.txt) and its MKW_ switch
+    const char *name, *env;  // the set (recomp/patches-*.txt) and its ORBITALS_ switch
     int on;                  // generated default, for a set without a row in cfg.c
 } RtPatchSet;
 
@@ -38,8 +38,8 @@ typedef struct {
     uint32_t n;
 } RtImagePatch;
 
-// A game this port has no version row for (RtGame.version 0, recomp/versions.py unknown()): what setup read from its
-// own exefs (tools/build/build.py port_glue), in place of runtime/core/boot/version.c's fixed values.
+// What setup read from the game's own exefs (tools/build/build.py port_glue), for every build: where a row of
+// runtime/core/boot/version.c has no value (the NVN2 proc table), this one is used.
 typedef struct {
     uint64_t program_id;     // main.npdm ACI0 (svcGetInfo 18)
     const char *title;       // as the dump names it, for the log ("040032B023CA4800 v327680")
@@ -58,13 +58,13 @@ typedef struct {
     const RtPatchSet *patch_sets;
     int npatch_sets;
     uint64_t patch_page;     // 0 without patch sets
-    int version;             // the game build: 100 (MKW 1.0.0)
+    int version;             // the game build: recomp/versions.py number (1: Orbitals, 0: not listed)
     // The data the generated code reads on every call lives beside it, so a library reaches it without an import.
     volatile int *fnprof;    // g_fnprof (cpu.h FN_ENTER)
     uint8_t *patch_on;       // rt_patch_on[RT_MAX_PATCH_SETS]
     const RtImagePatch *image_patches;   // the enabled code mods' (recomp/gen.py --image), applied at load
     int nimage_patches;
-    const RtPort *port;      // NULL for a version of MKW; set for a game ported from its own exefs (version 0)
+    const RtPort *port;      // what setup read from the game's own exefs (tools/build/build.py port_glue)
 } RtGame;
 
 const RtGame *rt_game(void);           // the tables in use; fatal when there are none

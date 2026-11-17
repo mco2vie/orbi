@@ -202,7 +202,7 @@ static void phys_seen(PoolRec *ph, uint64_t off, uint64_t size) {
 int vk_pool_map_virtual(pool_t *v, int n, const void *requests) {
     const nvn_mapping_t *rq = requests;
     static int sparse_trace = -1;
-    if (sparse_trace < 0) sparse_trace = cfg_get("MKW_SPARSE_TRACE") != NULL;
+    if (sparse_trace < 0) sparse_trace = cfg_get("ORBITALS_SPARSE_TRACE") != NULL;
     for (int i = 0; i < n; i++) {
         if (!rq[i].physical_pool) continue;
         plat_mutex_lock_shared(&pool_lock);
@@ -255,7 +255,7 @@ int vk_pool_map_virtual(pool_t *v, int n, const void *requests) {
 // Per-thread copies of resolved import and physical pools that overlap no other index entry (so pidx_find picks them for
 // any range inside), valid while pool_gen is unchanged: the replay resolves a few dozen pools thousands of times per
 // frame (16 vertex streams and every buffer binding of each draw). Direct-mapped by the 4 KiB page of the address, so
-// a hit is one compare however many pools a frame touches. MKW_RESOLVE_CHECK=1 compares every hit with the locked
+// a hit is one compare however many pools a frame touches. ORBITALS_RESOLVE_CHECK=1 compares every hit with the locked
 // lookup and stops on a difference.
 int rec_class(const PoolRec *r) {
     if (r->kind != POOL_IMPORT) return VK_MCLS_DEVICE;
@@ -272,7 +272,7 @@ static ResolveHit *rhit_slot(uint64_t addr) { return &rhit[(addr >> 12 ^ addr >>
 static int resolve_check_on(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_RESOLVE_CHECK");
+        const char *e = cfg_get("ORBITALS_RESOLVE_CHECK");
         on = e && *e && strcmp(e, "0");
     }
     return on;
@@ -304,7 +304,7 @@ int vk_mem_resolve(uint64_t addr, uint64_t size, VkMemSpan *out) {
         return 1;
     }
     int ok = resolve_locked(addr, size, out);
-    if (ru_cap) ru_note_mem(addr, size, out, ok);   // MKW_REUSE: what a captured draw resolved
+    if (ru_cap) ru_note_mem(addr, size, out, ok);   // ORBITALS_REUSE: what a captured draw resolved
     return ok;
 }
 
@@ -398,7 +398,7 @@ static int resolve_locked(uint64_t addr, uint64_t size, VkMemSpan *out) {
         for (int i = 0; i < GONE_N; i++)
             if (addr >= gone[i].lo && addr < gone[i].hi) {
                 if (vk_guard_on() && vk_guard_use())
-                    rt_fatal("vk: MKW_GPU_GUARD: %#llx+%#llx resolved in a pool finalized with this submission still "
+                    rt_fatal("vk: ORBITALS_GPU_GUARD: %#llx+%#llx resolved in a pool finalized with this submission still "
                              "queued", (unsigned long long)addr, (unsigned long long)size);
                 if (plat_inc32(&n_gone_hits) <= 8)
                     rt_log("vk: %#llx+%#llx resolved in a pool finalized with the replay still queued: nothing bound",

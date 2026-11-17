@@ -6,46 +6,46 @@
 #include "nvn_api.h"
 #include "vk_exec.h"
 
-// ---------------------------------------------------------------- MKW_IND_READ (diagnosis, default 0)
+// ---------------------------------------------------------------- ORBITALS_IND_READ (diagnosis, default 0)
 // The arguments indirect draws really used, as the GPU had them: at the end of each pass (nothing writes them inside
 // one) a copy of each draw's arguments and count goes to a host buffer, read at the fence. One line per pass and VS:
 // draws, draws that drew something, instances summed. Found for the flickering trees (06/11/2026): with the shadow's
 // losses at zero (lf2) they still appear for one frame; this tells whether that frame asked for them (a culling
 // result) or drew them otherwise.
-// MKW_IND_READ=1 every VS; =<hex prefix>[,<prefix>...] those VS only, and then one "indd:" line per draw without a
+// ORBITALS_IND_READ=1 every VS; =<hex prefix>[,<prefix>...] those VS only, and then one "indd:" line per draw without a
 // count buffer: its instance count and first instance in guest memory at record time (the CPU's, which the shadow
 // sync copies) against the GPU's, and how many submissions the game was ahead of the replay.
-// MKW_IND_HASH=1 (every frame), =<from>-<to> (those frames only) or =cap (while a capture is written, cap.h) with it;
-// outside its frames not even MKW_IND_READ notes draws, so a run is not slowed by them: one "indh:" line per draw with
+// ORBITALS_IND_HASH=1 (every frame), =<from>-<to> (those frames only) or =cap (while a capture is written, cap.h) with it;
+// outside its frames not even ORBITALS_IND_READ notes draws, so a run is not slowed by them: one "indh:" line per draw with
 // a hash of its arguments and of every storage and
 // uniform buffer its VS and FS bind (vs0..vs15, vu0..vu17, fs0.., fu0..: stage, storage or uniform, slot), as the GPU
 // had them at the pass end; uniform buffers as their pool holds them, which the snapshots of vk_usnap.c may not be. A
 // capture's replay against the run that captured it says which input differed in a frame with a cactus
-//. MKW_IND_DUMP=<dir> with it: each of those buffers written once per frame and address as
+//. ORBITALS_IND_DUMP=<dir> with it: each of those buffers written once per frame and address as
 // <dir>/f<frame>-<address>.bin, to see which bytes differ.
-// MKW_IND_CHECK=<hex address> (instead of the two above): only the storage buffer bound there is copied, and each
+// ORBITALS_IND_CHECK=<hex address> (instead of the two above): only the storage buffer bound there is copied, and each
 // draw's instance records in it, [first, first + count) of 0x50 bytes (the culling dispatch's matrix and material per
 // instance), are checked for one kind (their last word): a draw whose records mix kinds read
-// another draw's instances (an "indc:" line each, the first 200, and a count per frame). MKW_IND_CHECK_SETS=1 adds an
+// another draw's instances (an "indc:" line each, the first 200, and a count per frame). ORBITALS_IND_CHECK_SETS=1 adds an
 // "indk:" line per draw with a hash of its records' set (their order aside), to tell a frame whose draws read other
 // instances from its neighbours (qck2: the counts were the same). In the serial replays of
 // build/cap/qrace every draw of a clean pass read one kind (1 838 of 1 838).
 
-#define HMAX 24   // MKW_IND_HASH: buffers hashed per draw
+#define HMAX 24   // ORBITALS_IND_HASH: buffers hashed per draw
 
 typedef struct {
     VkBuffer buf, cbuf;
     VkDeviceSize off, coff;
     uint32_t vs, stride, max, at;   // at: offset of its copy in the host buffer
     uint8_t has_count, fi_at;   // fi_at: offset of firstInstance (16 indexed, 12 not)
-    uint32_t cpu_ic, cpu_fi;    // the first draw's in guest memory at record time (MKW_IND_READ with a VS list)
+    uint32_t cpu_ic, cpu_fi;    // the first draw's in guest memory at record time (ORBITALS_IND_READ with a VS list)
     uint64_t ahead;             // submissions the game made past the one being recorded
     uint64_t ssbo;              // the VS's storage buffer 0 and what backs it (vk_mem_shadow_state)
     int ssbo_state;
     uint8_t cpu_ok;
     uint64_t ga;                // guest address of its arguments (0: not host-backed)
-    uint32_t uh[2][18];         // MKW_IND_CHECK_SETS: the VS's and FS's uniform blocks as the snapshot holds them
-    uint8_t nres;               // MKW_IND_HASH: its buffers, as indices into the pass's res[] and tags (stage << 7 |
+    uint32_t uh[2][18];         // ORBITALS_IND_CHECK_SETS: the VS's and FS's uniform blocks as the snapshot holds them
+    uint8_t nres;               // ORBITALS_IND_HASH: its buffers, as indices into the pass's res[] and tags (stage << 7 |
     uint16_t res[HMAX];         // uniform << 6 | slot)
     uint8_t rtag[HMAX];
 } IndDraw;
@@ -63,11 +63,11 @@ typedef struct {
 } IndPass;
 
 static int on = -1, hash_on;
-static uint64_t hash_from, hash_to = UINT64_MAX;   // MKW_IND_HASH's frames
-static int hash_cap;                                // MKW_IND_HASH=cap
-static uint64_t check_addr;                         // MKW_IND_CHECK
-static int check_sets;                              // MKW_IND_CHECK_SETS=1: an "indk:" line per draw with its records
-static uint64_t c_draws, c_mixed, c_lines, c_frame; // completion thread: MKW_IND_CHECK's counts in frame c_frame
+static uint64_t hash_from, hash_to = UINT64_MAX;   // ORBITALS_IND_HASH's frames
+static int hash_cap;                                // ORBITALS_IND_HASH=cap
+static uint64_t check_addr;                         // ORBITALS_IND_CHECK
+static int check_sets;                              // ORBITALS_IND_CHECK_SETS=1: an "indk:" line per draw with its records
+static uint64_t c_draws, c_mixed, c_lines, c_frame; // completion thread: ORBITALS_IND_CHECK's counts in frame c_frame
 int cap_busy(void);                                 // cap.h
 static HRes *hres;                                  // replay thread: the open pass's hashed buffers
 static int nhres, chres;
@@ -79,7 +79,7 @@ static uint32_t bytes;
 
 static int enabled(uint32_t vs) {
     if (on < 0) {
-        const char *e = cfg_get("MKW_IND_READ");
+        const char *e = cfg_get("ORBITALS_IND_READ");
         on = e && *e && strcmp(e, "0");
         if (on && strcmp(e, "1"))
             for (const char *p = e; *p && nwant < 16; p += *p == ',') {
@@ -92,15 +92,15 @@ static int enabled(uint32_t vs) {
                 want[nwant++] = (uint32_t)(v << (32 - 4 * digits));
                 p = end;
             }
-        const char *h = cfg_get("MKW_IND_HASH"), *ck = cfg_get("MKW_IND_CHECK");
+        const char *h = cfg_get("ORBITALS_IND_HASH"), *ck = cfg_get("ORBITALS_IND_CHECK");
         if (ck && *ck && strcmp(ck, "0")) check_addr = strtoull(ck, NULL, 16), on = 1, h = "1";
-        check_sets = check_addr && cfg_get("MKW_IND_CHECK_SETS") && atoi(cfg_get("MKW_IND_CHECK_SETS"));
+        check_sets = check_addr && cfg_get("ORBITALS_IND_CHECK_SETS") && atoi(cfg_get("ORBITALS_IND_CHECK_SETS"));
         if (check_sets) vk_usnap_host_wanted = 1;
         hash_on = on && h && strcmp(h, "0");
         if (hash_on && strchr(h, '-')) hash_from = strtoull(h, NULL, 10), hash_to = strtoull(strchr(h, '-') + 1, NULL, 10);
         hash_cap = hash_on && !strcmp(h, "cap");
-        if (on) rt_log("vk: indirect arguments read back at each pass end (MKW_IND_READ=%s)%s", e,
-                       hash_on ? ", hashed with the VS's and FS's buffers (MKW_IND_HASH)" : "");
+        if (on) rt_log("vk: indirect arguments read back at each pass end (ORBITALS_IND_READ=%s)%s", e,
+                       hash_on ? ", hashed with the VS's and FS's buffers (ORBITALS_IND_HASH)" : "");
     }
     if (!on) return 0;
     if (hash_on && (vk_exec_presented < hash_from || vk_exec_presented > hash_to || (hash_cap && !cap_busy()))) return 0;
@@ -110,7 +110,7 @@ static int enabled(uint32_t vs) {
     return 0;
 }
 
-// MKW_IND_HASH: a buffer of the draw, copied once per pass.
+// ORBITALS_IND_HASH: a buffer of the draw, copied once per pass.
 static void hash_add(IndDraw *d, const p_bind_buf *bb, int tag) {
     VkMemSpan s;
     if (check_addr && bb->addr != check_addr) return;
@@ -121,7 +121,7 @@ static void hash_add(IndDraw *d, const p_bind_buf *bb, int tag) {
     if (i == nhres) {
         if (nhres == chres) {
             chres = chres ? chres * 2 : 64;
-            if (!(hres = realloc(hres, sizeof *hres * (size_t)chres))) rt_fatal("vk: out of memory (MKW_IND_HASH)");
+            if (!(hres = realloc(hres, sizeof *hres * (size_t)chres))) rt_fatal("vk: out of memory (ORBITALS_IND_HASH)");
         }
         hres[nhres++] = (HRes){s.buffer, s.offset, bb->addr, (uint32_t)bb->size, bytes};
         bytes += ((uint32_t)bb->size + 3) & ~3u;
@@ -137,7 +137,7 @@ void vk_ind_read_note(VkBuffer buf, VkDeviceSize off, uint32_t stride, uint32_t 
     if (!enabled(vs)) return;
     if (ncur == ccur) {
         ccur = ccur ? ccur * 2 : 64;
-        if (!(cur = realloc(cur, sizeof *cur * (size_t)ccur))) rt_fatal("vk: out of memory (MKW_IND_READ)");
+        if (!(cur = realloc(cur, sizeof *cur * (size_t)ccur))) rt_fatal("vk: out of memory (ORBITALS_IND_READ)");
     }
     uint32_t span = has_count ? (max - 1) * stride + 20 : 20;
     IndDraw *d = &cur[ncur++];
@@ -242,7 +242,7 @@ static void pass_done(void *arg) {   // completion thread
                    (unsigned long long)p->frame, d->vs, i, count, ic, fi,
                    (unsigned long long)fnv(p->map + d->at, span + (d->has_count ? 4 : 0)), (unsigned long long)d->ga,
                    (unsigned long long)p->fence, rs);
-            const char *dd = cfg_get("MKW_IND_DUMP");
+            const char *dd = cfg_get("ORBITALS_IND_DUMP");
             for (int r = 0; dd && *dd && r < d->nres; r++) {
                 const HRes *h = &p->res[d->res[r]];
                 char path[600];
@@ -289,11 +289,11 @@ static void pass_done(void *arg) {   // completion thread
     free(p);
 }
 
-// MKW_IND_BARRIER (a measurement, default 0; "ab"): the two barriers MKW_IND_READ puts after a pass with indirect
-// draws (every write before -> copy, copy -> host), without the copies. lf3 (06/11/2026): with MKW_IND_READ no tree
+// ORBITALS_IND_BARRIER (a measurement, default 0; "ab"): the two barriers ORBITALS_IND_READ puts after a pass with indirect
+// draws (every write before -> copy, copy -> host), without the copies. lf3 (06/11/2026): with ORBITALS_IND_READ no tree
 // flickered in 810 race frames, lf2 had 7 in the same stretch; this separates its barriers from its copies and delay.
 static int ind_barrier = -1;
-static _Thread_local int pass_ind;   // the open pass of this thread (MKW_REPLAY_PAR) recorded an indirect draw
+static _Thread_local int pass_ind;   // the open pass of this thread (ORBITALS_REPLAY_PAR) recorded an indirect draw
 
 void vk_ind_note_pass(void) { pass_ind = 1; }
 
@@ -315,7 +315,7 @@ static void barriers(VkExec *ex) {
 void vk_ind_read_pass_end(VkExec *ex) {
     if (ind_barrier < 0) {
         ind_barrier = rt_knob("IND_BARRIER", "0");
-        if (ind_barrier) rt_log("vk: barriers after passes with indirect draws%s (MKW_IND_BARRIER, a measurement)",
+        if (ind_barrier) rt_log("vk: barriers after passes with indirect draws%s (ORBITALS_IND_BARRIER, a measurement)",
                                 ind_barrier == 2 ? " in the B blocks" : "");
     }
     int had = pass_ind;
@@ -329,7 +329,7 @@ void vk_ind_read_pass_end(VkExec *ex) {
         return;
     }
     IndPass *p = calloc(1, sizeof *p);
-    if (!p) rt_fatal("vk: out of memory (MKW_IND_READ)");
+    if (!p) rt_fatal("vk: out of memory (ORBITALS_IND_READ)");
     p->map = vk_staging(bytes, &p->host, &p->alloc);
     p->d = cur, p->n = ncur, p->frame = vk_exec_presented, p->res = hres, p->fence = ex->fence;
     cur = NULL, ncur = ccur = 0;

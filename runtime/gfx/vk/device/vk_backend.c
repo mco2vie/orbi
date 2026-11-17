@@ -12,7 +12,7 @@
 // replay took. The blit is already on the queue, so the wait blocks no submission. With frame generation
 // (vk_framegen.c) the frames made before the game's are blitted with it and presented one step apart, the game's last.
 //
-// Asynchronous replay (MKW_REPLAY_ASYNC, default 1; 0 turns it off): nvnQueueSubmitCommands
+// Asynchronous replay (ORBITALS_REPLAY_ASYNC, default 1; 0 turns it off): nvnQueueSubmitCommands
 // and nvnQueuePresentTexture only queue. Each item gets its timeline value at enqueue (vk_sync_reserve), in queue
 // order; the replay thread runs the synchronous submit and present bodies in that order, so every value is signalled
 // by the submission it was handed out for. The game runs at most one frame ahead: queueing present N waits until the
@@ -87,7 +87,7 @@ static void present_main(void *arg) {
         wait_until(target);
         uint64_t t1 = kern_now_ns();
         vk_present_flip();
-        // MKW_TRACE=present: one line per present: the host present's interval, the interval of the game's present
+        // ORBITALS_TRACE=present: one line per present: the host present's interval, the interval of the game's present
         // calls (when the host present went out before back-edge pacing), the wait and how far past its target it went;
         // with frame generation, the game's frame and how many were shown before it
         if (rt_trace & RT_TRACE_PRESENT)
@@ -172,10 +172,10 @@ typedef struct {
     const tex_t *tex;   // RI_RELEASE, RI_TEXREG: a copy the item owns (the game may reuse the object's memory)
     void *reg;          // RI_TEXREG: the view (NULL none) and RI_SAMPREG: the sampler state, copies the item owns
     int id;             // RI_TEXREG, RI_SAMPREG: the slot
-    uint32_t reg_at;    // RI_SUBMIT with MKW_REG_LATE: the texture registrations made before it (vk_tex_reg_limit)
+    uint32_t reg_at;    // RI_SUBMIT with ORBITALS_REG_LATE: the texture registrations made before it (vk_tex_reg_limit)
 } ReplayItem;
 #define RQ_CAP 8192   // a frame queues 1 submit and 1 present, up to a few hundred releases and, with
-                     // MKW_REG_QUEUED, its texture and sampler registrations
+                     // ORBITALS_REG_QUEUED, its texture and sampler registrations
 enum { DR_POOL_FINI, DR_MAP_VIRTUAL, DR_TEX_RELEASE, DR_PROG_RELEASE, DR_FINISH, DR_READ_TEXELS, DR_WRITE_TEXELS,
        DR_GUEST_READ, DR_FRAME, DR_FULL, DR_CHECK, DR_N };
 static const char *const dr_name[DR_N] = {
@@ -189,15 +189,15 @@ static int rq_head, rq_n, r_busy, r_started;
 static uint64_t r_presents_queued, r_presents_done, r_submit_done, game_frames;
 // Under rl: calls, calls that waited and the time waited per cause, since the last replay_log line and over the run.
 static uint64_t dr_calls[DR_N], dr_waits[DR_N], dr_ns[DR_N], dr_tcalls[DR_N], dr_twaits[DR_N], dr_tns[DR_N];
-// MKW_REPLAY_CHECK: ReadTexels compared with a read after a full drain (under rl): checked, differing, differing
+// ORBITALS_REPLAY_CHECK: ReadTexels compared with a read after a full drain (under rl): checked, differing, differing
 // although no submission recorded a write to the texture in between, differing with the queue idle at the first read.
 static uint64_t ck_reads, ck_diff, ck_diff_unexplained, ck_diff_idle;
 
 int vk_replay_async(void) {
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("MKW_REPLAY_ASYNC");   // on by default: race 40.0 -> 32.1 and 45.4 -> 35.3 ms (rt-t*), one frame of latency more
-        rt_log("vk: replay %s (MKW_REPLAY_ASYNC=%d)",
+        on = cfg_bool("ORBITALS_REPLAY_ASYNC");   // on by default: race 40.0 -> 32.1 and 45.4 -> 35.3 ms (rt-t*), one frame of latency more
+        rt_log("vk: replay %s (ORBITALS_REPLAY_ASYNC=%d)",
                on ? "on its own thread, at most one frame behind the game" : "on the submitting thread", on);
     }
     return on;
@@ -224,12 +224,12 @@ static uint64_t submit_sync(const uint64_t *handles, int n) {
 }
 
 // The replay reached a held submission: its handles come when the other queue's submit that its waits need does
-// (nvn_qorder.c). After MKW_QUEUE_HOLD_MS (3: Hookshot's first) without them the front end lets it go as it stands.
+// (nvn_qorder.c). After ORBITALS_QUEUE_HOLD_MS (3: Hookshot's first) without them the front end lets it go as it stands.
 // Replay thread, rl not held.
 static uint64_t hd_items, hd_waited, hd_forced, hd_ns, hd_max_ns, hd_presents, hd_drains;
 static void held_wait(Held *h) {
     static int hold_ms = -1;
-    if (hold_ms < 0) hold_ms = cfg_get("MKW_QUEUE_HOLD_MS") ? atoi(cfg_get("MKW_QUEUE_HOLD_MS")) : 3;
+    if (hold_ms < 0) hold_ms = cfg_get("ORBITALS_QUEUE_HOLD_MS") ? atoi(cfg_get("ORBITALS_QUEUE_HOLD_MS")) : 3;
     plat_mutex_lock(&rl);
     uint64_t t0 = kern_now_ns(), d = 0;
     hd_items++;
@@ -252,7 +252,7 @@ static void held_wait(Held *h) {
     plat_mutex_unlock(&rl);
 }
 
-// MKW_REPLAY_CORE (default 1 with 6 physical cores or more and SMT, else 0; "ab" switches it with the A/B blocks): the
+// ORBITALS_REPLAY_CORE (default 1 with 6 physical cores or more and SMT, else 0; "ab" switches it with the A/B blocks): the
 // replay thread alone on the last physical core (one of its logical processors, the sibling left idle) and every other
 // thread off that core. Hookshot measured the replay ~1.7x slower sharing a core with the game's threads; the
 // replay's recording is on the race frame's critical path (frame-carrera). rc-ab1..4
@@ -270,7 +270,7 @@ static void replay_core(void) {
         if (mode && cores >= 2) {
             int c = 63 - __builtin_clzll(first);
             own = 1ull << c, others = all & ((1ull << c) - 1);
-            rt_log("vk: the replay thread alone on processor %d, the others on %#llx%s (MKW_REPLAY_CORE)", c,
+            rt_log("vk: the replay thread alone on processor %d, the others on %#llx%s (ORBITALS_REPLAY_CORE)", c,
                    (unsigned long long)others, mode == 2 ? " in the B blocks" : "");
         } else {
             mode = 0;
@@ -283,15 +283,15 @@ static void replay_core(void) {
     plat_thread_affinity(NULL, on ? own : all);
 }
 
-// MKW_REPLAY_DELAY_US (a measurement, default 0): the replay thread waits that long before each
-// submission, so a capture's replay (--replay with MKW_REPLAY_ASYNC=1) restores the memory the game wrote after a submit
+// ORBITALS_REPLAY_DELAY_US (a measurement, default 0): the replay thread waits that long before each
+// submission, so a capture's replay (--replay with ORBITALS_REPLAY_ASYNC=1) restores the memory the game wrote after a submit
 // while that submit is still to be recorded, as the game's threads do in a run.
 static void replay_main(void *arg) {
     (void)arg;
     perf_replay_thread();
-    const char *de = cfg_get("MKW_REPLAY_DELAY_US");
+    const char *de = cfg_get("ORBITALS_REPLAY_DELAY_US");
     uint64_t delay_ns = de ? strtoull(de, NULL, 10) * 1000 : 0;
-    if (delay_ns) rt_log("vk: the replay waits %llu us before each submission (MKW_REPLAY_DELAY_US)", (unsigned long long)(delay_ns / 1000));
+    if (delay_ns) rt_log("vk: the replay waits %llu us before each submission (ORBITALS_REPLAY_DELAY_US)", (unsigned long long)(delay_ns / 1000));
     plat_mutex_lock(&rl);
     for (;;) {
         int64_t w0 = vk_tl_on() > 0 ? (int64_t)plat_now_ns() : 0;
@@ -434,7 +434,7 @@ static void replay_log(uint64_t frame, int total) {
                       (unsigned long long)ck_diff_idle);
     if (hd_items && k < (int)sizeof buf - 200)   // (run totals)
         k += snprintf(buf + k, sizeof buf - (size_t)k, "; held submissions (run): %llu, %llu reached empty, %llu let go "
-                      "after MKW_QUEUE_HOLD_MS, waited %.1f ms (%.2f at most); waits let go at presents %llu, at drains "
+                      "after ORBITALS_QUEUE_HOLD_MS, waited %.1f ms (%.2f at most); waits let go at presents %llu, at drains "
                       "%llu", (unsigned long long)hd_items, (unsigned long long)hd_waited, (unsigned long long)hd_forced,
                       hd_ns / 1e6, hd_max_ns / 1e6, (unsigned long long)hd_presents, (unsigned long long)hd_drains);
     memset(dr_calls, 0, sizeof dr_calls);
@@ -511,7 +511,7 @@ static void vk_be_pool_fini(pool_t *p) {
 }
 // MapVirtual changes the page table at the call, as NVN does on the CPU timeline; the game remaps pages only once the
 // GPU is done with them. A drain made the loading wait for the queued replays, 94 times and 2.4 s over a course load
-// (rt-u1). MKW_MAPV_DRAIN=1 drains as before (the queued replays then resolve with the old mapping).
+// (rt-u1). ORBITALS_MAPV_DRAIN=1 drains as before (the queued replays then resolve with the old mapping).
 static void vk_be_mapv_drain(void) {
     static int on = -1;
     if (on < 0) on = rt_knob("MAPV_DRAIN", "0");
@@ -528,22 +528,22 @@ static int vk_be_pool_map_virtual(pool_t *v, int n, const void *requests) {
     vk_present_drain();
     return vk_pool_map_virtual(v, n, requests);
 }
-// MKW_REG_QUEUED (default 0; a measurement until the flicker it targets is shown gone): texture and sampler slots
+// ORBITALS_REG_QUEUED (default 0; a measurement until the flicker it targets is shown gone): texture and sampler slots
 // registered in queue order, as releases are. Applied at once, a replay a few submits behind the game resolved a slot
 // to what the game registered there for a later frame: a target not rendered yet has no image and binds a stand-in
 // (the title's shadow map did the same between chunks, grabacion-paralela).
 static int reg_queued(void) {
     static int on = -1;
-    if (on < 0) on = cfg_get("MKW_REG_QUEUED") && atoi(cfg_get("MKW_REG_QUEUED"));
+    if (on < 0) on = cfg_get("ORBITALS_REG_QUEUED") && atoi(cfg_get("ORBITALS_REG_QUEUED"));
     return on && gfx_replay_async();
 }
-// MKW_REG_LATE=1 (a measurement): with the registrations applied at once, which lookups of the replay see one made after
+// ORBITALS_REG_LATE=1 (a measurement): with the registrations applied at once, which lookups of the replay see one made after
 // their submission (vk_tex_slots.c late_note)
 static int reg_late(void) {
     static int on = -1;
     if (on < 0) {
-        on = cfg_get("MKW_REG_LATE") && atoi(cfg_get("MKW_REG_LATE")) > 0 && !reg_queued() && gfx_replay_async();
-        if (on) rt_log("vk: slot lookups of a registration made after their submission logged per frame (MKW_REG_LATE)");
+        on = cfg_get("ORBITALS_REG_LATE") && atoi(cfg_get("ORBITALS_REG_LATE")) > 0 && !reg_queued() && gfx_replay_async();
+        if (on) rt_log("vk: slot lookups of a registration made after their submission logged per frame (ORBITALS_REG_LATE)");
     }
     return on;
 }
@@ -601,7 +601,7 @@ static uint64_t vk_be_submit(const uint64_t *handles, int n) {
     vk_sync_start();
     ReplayItem it = {.kind = RI_SUBMIT, .n = n, .submit_no = nvn_submit_count()};
     vk_mem_shadow_capture(it.submit_no);   // before the replay can sync for it
-    vk_usnap_take(handles, n);              // MKW_USNAP_AT_SUBMIT: the uniform blocks as the submit finds them
+    vk_usnap_take(handles, n);              // ORBITALS_USNAP_AT_SUBMIT: the uniform blocks as the submit finds them
     if (n > 0) {
         it.h = malloc(sizeof *it.h * (size_t)n);
         if (!it.h) rt_fatal("vk: out of memory (replay queue)");
@@ -632,9 +632,9 @@ static void vk_be_finish(void) { vk_sync_start(); replay_drain(DR_FINISH); vk_pr
 static int replay_check(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_REPLAY_CHECK");
+        const char *e = cfg_get("ORBITALS_REPLAY_CHECK");
         on = e && strcmp(e, "0");
-        if (on) rt_log("vk: MKW_REPLAY_CHECK: every ReadTexels is read again after a full replay drain and compared");
+        if (on) rt_log("vk: ORBITALS_REPLAY_CHECK: every ReadTexels is read again after a full replay drain and compared");
     }
     return on;
 }
@@ -643,7 +643,7 @@ static int replay_check(void) {
 // completed), not for the whole queue. The readback copy goes through the upload batch on the same queue, after every
 // submission the replay has submitted. Submissions still queued or being recorded run after the copy, as on hardware
 // when the GPU has not reached them yet: the game only sees their texels after waiting on a sync, and every sync
-// value covers replay and GPU, so a read the game synchronised sees them. MKW_REPLAY_CHECK compares with a full drain.
+// value covers replay and GPU, so a read the game synchronised sees them. ORBITALS_REPLAY_CHECK compares with a full drain.
 static void vk_be_read_texels(const tex_t *t, const view_t *v, const NVNcopyRegion *r, uint8_t *dst, uint64_t row,
                               uint64_t img) {
     vk_sync_start();

@@ -3,18 +3,18 @@
 //   mkw [--exefs DIR] [--romfs DIR|FILE.nup|FILE.nx] [--nup FILE] [--profile DIR] <mode>
 //   mkw --unpack PACKAGE DEST [PREFIX...]   a .nup or .nx dump's files written out (sdk/fs/pack_unpack.c)
 //     --selftest        layout, dispatch table and host-function registry; needs no game files
-//     --replay DIR      a frame capture (MKW_CAPTURE, runtime/gfx/cap) replayed through the back end, no game
+//     --replay DIR      a frame capture (ORBITALS_CAPTURE, runtime/gfx/cap) replayed through the back end, no game
 //     --probe-loader    load and relocate the modules, check them against the measured 1.2.1 values
 //     --probe-kernel, --probe-audio, --probe-services, --probe-fs    host probes
 //     --probe-gfx-abi   NVN object layouts against nvn.h's reserved sizes; needs no game files
 //     --probe-nvn, --probe-nvn-tex, --probe-window, --probe-vkmem, --probe-vkexec    graphics probes
 //     --probe-astc      the compute ASTC decoder against astc_decode_ldr; needs no game files
-//     --probe-framegen  frame generation's passes on two pictures (MKW_FG_PROBE=DIR); needs no game files
+//     --probe-framegen  frame generation's passes on two pictures (ORBITALS_FG_PROBE=DIR); needs no game files
 
 //     --boot            run the game to the first NVN call
 //     --seconds S       run the game (implies --boot's start-up) until the world clock (game time since the loaded
 //                       save's first frame) passed S seconds, then exit 0 at that present
-//     --shot PNG        with --seconds: save that frame; env MKW_GPU=null|vulkan selects the back end
+//     --shot PNG        with --seconds: save that frame; env ORBITALS_GPU=null|vulkan selects the back end
 //     (no mode)         run the game
 //
 // Also here: the runtime services the generated code calls besides rt_dispatch and rt_svc (rt_brk, rt_udf,
@@ -50,9 +50,9 @@
 unsigned rt_trace;
 
 // Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\orbital.log in the selected game folder, so a player has one to attach to a report; run_game.py and
-// `2> file` keep their own file. Each start moves the earlier logs to orbital.1.log .. orbital.4.log. A file stops at 64 MiB
-// (MKW_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
+// writes its log to logs\orbitals.log in the selected game folder, so a player has one to attach to a report; run_game.py and
+// `2> file` keep their own file. Each start moves the earlier logs to orbitals.1.log .. orbitals.4.log. A file stops at 64 MiB
+// (ORBITALS_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
 #define LOG_KEEP 5
 #define LOG_CAP (64ull << 20)
@@ -122,13 +122,13 @@ static void log_open(int game) {
     if (cut && (size_t)(cut - dir) + sizeof "/logs" <= sizeof dir) {
         strcpy(cut, "/logs");
         plat_file_mkdir_p(dir);
-        for (int i = LOG_KEEP - 1; i > 0; i--) {   // orbital.3.log -> orbital.4.log, ..., orbital.log -> orbital.1.log
-            if (i > 1) snprintf(from, sizeof from, "%s/orbital.%d.log", dir, i - 1);
-            else snprintf(from, sizeof from, "%s/orbital.log", dir);
-            snprintf(to, sizeof to, "%s/orbital.%d.log", dir, i);
+        for (int i = LOG_KEEP - 1; i > 0; i--) {   // orbitals.3.log -> orbitals.4.log, ..., orbitals.log -> orbitals.1.log
+            if (i > 1) snprintf(from, sizeof from, "%s/orbitals.%d.log", dir, i - 1);
+            else snprintf(from, sizeof from, "%s/orbitals.log", dir);
+            snprintf(to, sizeof to, "%s/orbitals.%d.log", dir, i);
             if (plat_file_exists(from)) plat_file_replace(from, to);
         }
-        snprintf(g_log_path, sizeof g_log_path, "%s/orbital.log", dir);
+        snprintf(g_log_path, sizeof g_log_path, "%s/orbitals.log", dir);
         g_log_file = plat_append_open(g_log_path);
     }
     if (!g_log_file) {
@@ -147,7 +147,7 @@ static void log_open(int game) {
 }
 
 static void parse_trace(void) {
-    const char *e = cfg_get("MKW_TRACE");   // no default: nothing is traced when unset
+    const char *e = cfg_get("ORBITALS_TRACE");   // no default: nothing is traced when unset
     if (!e) return;
     static const struct { const char *name; unsigned bit; } names[] = {
         {"svc", RT_TRACE_SVC}, {"host", RT_TRACE_HOSTCALL}, {"fs", RT_TRACE_FS},
@@ -158,7 +158,7 @@ static void parse_trace(void) {
         int known = 0;
         for (unsigned i = 0; i < sizeof names / sizeof *names; i++)
             if (strlen(names[i].name) == n && !strncmp(p, names[i].name, n)) rt_trace |= names[i].bit, known = 1;
-        if (!known && n) rt_log("MKW_TRACE: unknown item '%.*s' (svc, host, fs, gfx, perf, sched, audio, present, draw, all)", (int)n, p);
+        if (!known && n) rt_log("ORBITALS_TRACE: unknown item '%.*s' (svc, host, fs, gfx, perf, sched, audio, present, draw, all)", (int)n, p);
         p += n + (p[n] == ',');
     }
 }
@@ -170,7 +170,7 @@ static RtConfig cfg;
 const RtConfig *rt_config(void) { return &cfg; }
 
 // ---- runtime services the generated code calls (cpu.h)
-// fnprof_hit: seqwatch.c (MKW_SEQ_WATCH, MKW_IMPORT_CENSUS)
+// fnprof_hit: impcensus.c (ORBITALS_IMPORT_CENSUS)
 
 // The guest's frame chain (x29) before a fatal stop at a guest instruction: the lr alone names only the last caller
 // (1.8.0's first boot stopped in CentralHeap::Free with nothing about who freed).
@@ -248,7 +248,7 @@ static void crash_handler(const PlatCrash *x) {
     if (plat_xchg32(&busy, 1)) plat_exit(71);
     char d[160];
     uintptr_t rip = x->rip;
-    rt_logf("FATAL: %s (%#x) at host %p (%s+%#llx)", x->what, x->code, (void *)rip, x->module ? x->module : "mkw",
+    rt_logf("FATAL: %s (%#x) at host %p (%s+%#llx)", x->what, x->code, (void *)rip, x->module ? x->module : "orbitals-recomp",
             (unsigned long long)x->offset);
     if (x->access >= 0)
         rt_logf(", %s address %#llx", x->access == 1 ? "writing" : x->access == 8 ? "executing" : "reading",
@@ -483,7 +483,7 @@ static int usage(const char *argv0) {
     return 2;
 }
 
-// Paths for a copied folder (tools/package_build.py). Per path: MKW_EXEFS, MKW_ROMFS, MKW_PROFILE_DIR, else the
+// Paths for a copied folder (tools/package_build.py). Per path: ORBITALS_EXEFS, ORBITALS_ROMFS, ORBITALS_PROFILE_DIR, else the
 // selected game folder (exefs, romfs, profile) if it exists, else the path baked in at build time. A relative
 // value is relative to the selected game folder.
 static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile[PLAT_PATH_MAX * 2];
@@ -506,11 +506,11 @@ static const char *portable_path(const char *dir, const char *var, const char *s
 
 static void portable_paths(RtConfig *c) {
     const char *exe = cfg_game_dir();
-    c->exefs = portable_path(exe, "MKW_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
-    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (MKW_ROMFS, orbital.ini's romfs and
+    c->exefs = portable_path(exe, "ORBITALS_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
+    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (ORBITALS_ROMFS, orbitals.ini's romfs and
     // --romfs may also name a .nup package, romfs.c).
-    c->romfs = portable_path(exe, "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs, c->romfs);
-    c->profile = portable_path(exe, "MKW_PROFILE_DIR", "profile", ".", pp_profile, sizeof pp_profile, c->profile);
+    c->romfs = portable_path(exe, "ORBITALS_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs, c->romfs);
+    c->profile = portable_path(exe, "ORBITALS_PROFILE_DIR", "profile", ".", pp_profile, sizeof pp_profile, c->profile);
     if (!*c->profile) {   // the player's build bakes no path in: saves go to profile/ in the selected game folder
         snprintf(pp_profile, sizeof pp_profile, "%s/profile", exe);
         plat_file_mkdir_p(pp_profile);
@@ -519,10 +519,10 @@ static void portable_paths(RtConfig *c) {
 }
 
 // The start screen (ui/launcher/launcher.cpp) comes first in the player's build (no linked game code) on a plain start, and in
-// build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
-// MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
+// build/orbitals-recomp with --launcher. --play, ORBITALS_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
+// ORBITALS_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
 // gone).
-// Steam launch options `"...\\mkw.exe" %command%` on a Steam game (docs/remote-play.md: RetroArch's, the App ID of
+// Steam launch options `"...\\orbitals-recomp.exe" %command%` on a Steam game (docs/remote-play.md: RetroArch's, the App ID of
 // Remote Play Together) start mkw as that game, with its overlay and Steam Input, and append the game's own program:
 // with SteamAppId set (Steam started us), an argument that is not an option and names an existing file is that
 // program, and is skipped.
@@ -532,12 +532,11 @@ static int steam_command_arg(const char *arg) {
 }
 
 static int want_launcher(int argc, char **argv) {
-    const char *done = getenv("MKW_LAUNCHED"), *off = getenv("MKW_NO_LAUNCHER");
+    const char *done = getenv("ORBITALS_LAUNCHED"), *off = getenv("ORBITALS_NO_LAUNCHER");
     if ((done && *done) || (off && !strcmp(off, "1"))) return 0;
     int asked = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--launcher")) asked = 1;
-        else if (!strcmp(argv[i], "--gb-install")) asked = 1, i++;   // GameBanana's 1-Click: the Mods page
         else if (!strcmp(argv[i], "--exefs") || !strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup") ||
                  !strcmp(argv[i], "--profile"))
             i++;
@@ -548,18 +547,18 @@ static int want_launcher(int argc, char **argv) {
 }
 
 static int run_launcher(int argc, char **argv) {
-    cfg_init();   // orbital.ini: the settings pages read and write it
-    // the Mods page merges against the same romfs the game will boot: argv wins, else MKW_ROMFS / orbital.ini,
+    cfg_init();   // orbitals.ini: the settings pages read and write it
+    // the Mods page merges against the same romfs the game will boot: argv wins, else ORBITALS_ROMFS / orbitals.ini,
     // else the selected installation, else the baked-in default (nup packages cannot merge: no loose files)
     const char *romfs = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup")) romfs = argv[i + 1];
     if (!romfs)
-        romfs = portable_path(cfg_game_dir(), "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs,
+        romfs = portable_path(cfg_game_dir(), "ORBITALS_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs,
                               rt_default_romfs);
     if (romfs) launcher_set_romfs(romfs);
-    // the players (Profiles page) live in the profile folder the game will use: --profile, else MKW_PROFILE_DIR /
-    // orbital.ini, else profile/ in the selected installation
+    // the players (Profiles page) live in the profile folder the game will use: --profile, else ORBITALS_PROFILE_DIR /
+    // orbitals.ini, else profile/ in the selected installation
     const char *profile = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--profile")) profile = argv[i + 1];
@@ -574,13 +573,11 @@ static int run_launcher(int argc, char **argv) {
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--exefs")) exefs = argv[i + 1];
     if (!exefs)
-        exefs = portable_path(cfg_game_dir(), "MKW_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs,
+        exefs = portable_path(cfg_game_dir(), "ORBITALS_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs,
                               rt_default_exefs);
     if (exefs) launcher_set_exefs(exefs);
-    for (int i = 1; i + 1 < argc; i++)
-        if (!strcmp(argv[i], "--gb-install")) launcher_gb_install(argv[i + 1]);
     if (launcher_run() != LAUNCHER_PLAY) return 0;
-    plat_setenv("MKW_LAUNCHED", "1");
+    plat_setenv("ORBITALS_LAUNCHED", "1");
     plat_reexec();
 }
 
@@ -590,24 +587,24 @@ int main(int argc, char **argv) {
     if (argc >= 2 && !strcmp(argv[1], "--unpack")) return pack_unpack_main(argc - 2, argv + 2);
     if (want_launcher(argc, argv)) return run_launcher(argc, argv);
 #ifdef __linux__
-    // MKW_ALLOW_PTRACE=1: let a debugger attach (tools/run/stacks.py) under yama ptrace_scope 1, without root.
-    const char *pt = getenv("MKW_ALLOW_PTRACE");
+    // ORBITALS_ALLOW_PTRACE=1: let a debugger attach (tools/run/stacks.py) under yama ptrace_scope 1, without root.
+    const char *pt = getenv("ORBITALS_ALLOW_PTRACE");
     if (pt && !strcmp(pt, "1")) prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
 #endif
-    mem_init();   // first: claim the guest address space before anything else can land there; reads orbital.ini
+    mem_init();   // first: claim the guest address space before anything else can land there; reads orbitals.ini
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
     plat_crash_hook(crash_handler);
     parse_trace();
     prof_start();
     // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds; at the default 15.6 ms tick a 1 ms wait
-    // costs a full tick. MKW_TIMER_1MS=0 keeps the default for comparison.
-    if (cfg_bool("MKW_TIMER_1MS")) plat_timer_1ms();
+    // costs a full tick. ORBITALS_TIMER_1MS=0 keeps the default for comparison.
+    if (cfg_bool("ORBITALS_TIMER_1MS")) plat_timer_1ms();
     cfg = (RtConfig){.exefs = rt_default_exefs, .romfs = rt_default_romfs, .profile = rt_default_profile,
-                     .gpu = cfg_get("MKW_GPU")};
+                     .gpu = cfg_get("ORBITALS_GPU")};
     portable_paths(&cfg);   // command-line paths below still win
     if (cfg.gpu && strcmp(cfg.gpu, "null") && strcmp(cfg.gpu, "vulkan")) {
-        rt_logf("MKW_GPU must be null or vulkan, not '%s'\n", cfg.gpu);
+        rt_logf("ORBITALS_GPU must be null or vulkan, not '%s'\n", cfg.gpu);
         return 2;
     }
     // --replay DIR [options]: a capture (runtime/gfx/cap) through the back end, without the game
@@ -652,7 +649,7 @@ int main(int argc, char **argv) {
     cfg.profile = player_profile;
     if (!mode) {
         cfg.boot = cfg.seconds > 0;   // --seconds starts the game like --boot, with its checkpoints
-        // Remote Play Together (MKW_STEAM_APPID): before the boot creates the Vulkan device (the overlay) and scans
+        // Remote Play Together (ORBITALS_STEAM_APPID): before the boot creates the Vulkan device (the overlay) and scans
         // the gamepads (Steam's virtual ones); a game run only, not the probes or the start screen
         steam_rpt_start();
         rt_boot();

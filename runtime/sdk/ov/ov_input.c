@@ -1,13 +1,13 @@
 // Adapted from MacNativeGames games/totk/runtime/input.c and hid_feedback.c @ b75be8cf (MIT, Copyright (c) 2026
 // MacNativeGames contributors).
 // nn::hid overrides: one connected controller per player (input_player_mask), player 1 fed by input_poll (gamepad and
-// keyboard, input/input_sdl.c; nothing pressed with MKW_INPUT=none), the others by input_poll_player (one gamepad
+// keyboard, input/input_sdl.c; nothing pressed with ORBITALS_INPUT=none), the others by input_poll_player (one gamepad
 // each). Docked (default) player N is a full-key controller with id N - 1 (style bit 0); with
-// MKW_OPERATION_MODE=handheld player 1 is the handheld controller (id 0x20, style bit 1) and no other is connected,
+// ORBITALS_OPERATION_MODE=handheld player 1 is the handheld controller (id 0x20, style bit 1) and no other is connected,
 // until the controller applet hands out two or more players: then, as on the console when controllers are detached,
 // every player is full-key with ids from 0. Mouse and keyboard report no input. Each controller has two vibration
-// devices (left, right) played on its gamepad's motors (MKW_RUMBLE=0: none); player 1's six-axis sensor is fed by its
-// gamepad's gyro and accelerometer (MKW_MOTION=0, live: reads at rest), the others read at rest. State layouts follow
+// devices (left, right) played on its gamepad's motors (ORBITALS_RUMBLE=0: none); player 1's six-axis sensor is fed by its
+// gamepad's gyro and accelerometer (ORBITALS_MOTION=0, live: reads at rest), the others read at rest. State layouts follow
 // libnx HID.
 #include <math.h>
 #include <stdint.h>
@@ -200,7 +200,8 @@ static void ov_disconnect(Cpu *c) {
 // Result ShowControllerSupport(ControllerSupportResultInfo *out, const ControllerSupportArg &arg): the controllers are
 // already connected, so the applet returns at once with as many players as have one, up to the arg's maximum. Fewer
 // than its minimum is what a player who closes the applet gets: no players (the game goes back). ControllerSupportArg
-// (libnx HidLaControllerSupportArg; MKW fills it at main+0x25da6c8): s8 minimum and maximum players at 0 and 1.
+// (libnx HidLaControllerSupportArg): s8 minimum and maximum players at 0 and 1. Orbitals is a 2-player game: a maximum
+// above INPUT_MAX_PLAYERS is answered with 2.
 static void ov_controller_support(Cpu *c) {
     ControllerSupportResult *out = arg_p(c, 0);
     const int8_t *arg = arg_p(c, 1);
@@ -254,7 +255,7 @@ static void once(volatile int32_t *flag, const char *fmt, uint32_t v) {
     if (!plat_xchg32(flag, 1)) rt_log(fmt, v);
 }
 
-// MKW_RUMBLE_STRENGTH (percent, 0..300, default 130; 0 = off) and MKW_RUMBLE_CURVE (exponent on the amplitude, 0.2..1.5,
+// ORBITALS_RUMBLE_STRENGTH (percent, 0..300, default 130; 0 = off) and ORBITALS_RUMBLE_CURVE (exponent on the amplitude, 0.2..1.5,
 // default 0.6). HD rumble is strong at low amplitude, an ERM motor hardly turns there, so weak values are lifted by the
 // curve (0.1 -> 0.25) and the strength scales the result (saturating at 65535; 0.66 and up reach full drive at 130 %).
 // Both are live settings (the menu): read again whenever cfg_version changes.
@@ -269,8 +270,8 @@ static void rumble_cfg(void) {
     unsigned v = cfg_version();
     if (v == rumble_cfg_seen) return;
     rumble_cfg_seen = v;
-    rumble_strength = cfg_float("MKW_RUMBLE_STRENGTH", 0, 300) / 100;
-    rumble_curve = cfg_float("MKW_RUMBLE_CURVE", 0.2f, 1.5f);
+    rumble_strength = cfg_float("ORBITALS_RUMBLE_STRENGTH", 0, 300) / 100;
+    rumble_curve = cfg_float("ORBITALS_RUMBLE_CURVE", 0.2f, 1.5f);
     int trig = input_rumble_triggers_enabled();
     if (!plat_xchg32(&rumble_cfg_logged, 1))
         rt_log("hid: rumble strength %.0f%%, curve %.2f, triggers %s", rumble_strength * 100, rumble_curve, trig ? "on" : "off");
@@ -296,7 +297,7 @@ static uint32_t handle_id(Cpu *c, const char *fn) {
 }
 
 // int GetVibrationDeviceHandles(VibrationDeviceHandle *out, int count, const NpadIdType &id, NpadStyleSet style):
-// utility::GetVibrationDeviceHandles' table, the first style bit in its order; none with MKW_RUMBLE=0.
+// utility::GetVibrationDeviceHandles' table, the first style bit in its order; none with ORBITALS_RUMBLE=0.
 static void ov_vibration_handles(Cpu *c) {
     uint32_t *out = arg_p(c, 0), style = (uint32_t)arg_x(c, 3);
     int max = (int)arg_x(c, 1);
@@ -306,7 +307,7 @@ static void ov_vibration_handles(Cpu *c) {
     static volatile int32_t asked;
     rumble_cfg();
     // strength 0 keeps the devices (silent), so the menu can turn rumble up again
-    if (env_zero("MKW_RUMBLE")) { once(&asked, "hid: no vibration devices (MKW_RUMBLE=%u)", 0); ret_x(c, 0); return; }
+    if (env_zero("ORBITALS_RUMBLE")) { once(&asked, "hid: no vibration devices (ORBITALS_RUMBLE=%u)", 0); ret_x(c, 0); return; }
     static const struct { uint8_t bit, n; uint32_t base; } t[] = {
         {0, 2, 0x3}, {1, 2, 0x4}, {2, 2, 0x5}, {3, 1, 0x6}, {4, 1, 0x10007}, {5, 1, 0x8}, {10, 1, 0xd}, {8, 2, 0x4},
         {30, 2, 0x21}, {29, 2, 0x20}};
@@ -321,7 +322,7 @@ static void ov_vibration_handles(Cpu *c) {
 }
 
 // int GetSixAxisSensorHandles(SixAxisSensorHandle *out, int count, const NpadIdType &id, NpadStyleSet style):
-// utility::GetSixAxisSensorHandle's order (one sensor per style, two for the Joy-Con pair). Also with MKW_MOTION=0: the
+// utility::GetSixAxisSensorHandle's order (one sensor per style, two for the Joy-Con pair). Also with ORBITALS_MOTION=0: the
 // sensor then reads at rest (six_fill), so the menu can turn motion on while the game runs.
 static void ov_six_axis_handles(Cpu *c) {
     uint32_t *out = arg_p(c, 0), style = (uint32_t)arg_x(c, 3);
@@ -527,7 +528,7 @@ static void ov_six_stop(Cpu *c) {
 }
 
 // All max entries, newest first: the game reads all 16 it asks for and ignores the count (main+0x2a268e0). A short
-// history repeats its oldest sample. No motion (sensor not started, no gamepad, one without a gyro, MKW_MOTION=0):
+// history repeats its oldest sample. No motion (sensor not started, no gamepad, one without a gyro, ORBITALS_MOTION=0):
 // a controller lying still, not marked connected.
 static int six_fill(MotionState *s, int max, const uint32_t *h, const char *fn) {
     if (max <= 0) return 0;

@@ -1,6 +1,6 @@
 // The last run's end (launcher_lastrun.h): tools/prepare/lastrun.py in the package's Python, its one line read by a
 // thread of ours, as launcher_update.cpp reads update.py. The log it reads is the previous game run's: the next Play
-// moves it to orbital.1.log (core/boot/main.c log_open), and the start screen alone writes no log file.
+// moves it to orbitals.1.log (core/boot/main.c log_open), and the start screen alone writes no log file.
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>

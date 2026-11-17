@@ -1,11 +1,11 @@
-// MKW_FLIGHT=1 flight recorder: a ring of the last MKW_FLIGHT_FRAMES (600) presents, one record each (interval,
+// ORBITALS_FLIGHT=1 flight recorder: a ring of the last ORBITALS_FLIGHT_FRAMES (600) presents, one record each (interval,
 // render-thread blocked time per perf kind, event counts) and a 320x180 thumbnail each (gfx_present.c, blitted on the
 // GPU by the present thread). A dump goes to <dir>/<YYYYMMDD-HHMMSS>-f<frame>/: frames.tsv and f<frame>.png per
 // thumbnail, written by a background thread. Triggers: F8 while the game window has focus, a frame interval over
-// MKW_FLIGHT_SPIKE_MS (100; 0 off; at most one dump per 10 s), and MKW_FLIGHT_AT=<frame>[,<frame>...]. A dump holds
+// ORBITALS_FLIGHT_SPIKE_MS (100; 0 off; at most one dump per 10 s), and ORBITALS_FLIGHT_AT=<frame>[,<frame>...]. A dump holds
 // the frames up to FLIGHT_POST presents after the trigger, so the aftermath is in it too. tools/flight_view.py reads it.
 //
-// Records come from perf_present (prof_win.c) on the render thread; the counts are differences of the MKW_TRACE=perf
+// Records come from perf_present (prof_win.c) on the render thread; the counts are differences of the ORBITALS_TRACE=perf
 // running totals and of vk_exec_frame. Off, the only cost is the flight_on branch in perf_present and vk_backend.c.
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,29 +67,29 @@ static unsigned env_u(const char *name, unsigned def) {
 }
 
 void flight_init(void) {
-    if (strcmp(cfg_value("MKW_FLIGHT"), "1")) return;
-    ring_n = (int)env_u("MKW_FLIGHT_FRAMES", 600);
+    if (strcmp(cfg_value("ORBITALS_FLIGHT"), "1")) return;
+    ring_n = (int)env_u("ORBITALS_FLIGHT_FRAMES", 600);
     if (ring_n < 64) ring_n = 64;
     if (ring_n > 7200) ring_n = 7200;
     if (!(ring = calloc((size_t)ring_n, sizeof *ring))) { rt_log("flight: no memory for %d records, off", ring_n); return; }
-    spike_ns = (uint64_t)cfg_int("MKW_FLIGHT_SPIKE_MS") * 1000000ull;
-    for (const char *p = cfg_get("MKW_FLIGHT_AT"); p && *p && n_at < 16;) {
+    spike_ns = (uint64_t)cfg_int("ORBITALS_FLIGHT_SPIKE_MS") * 1000000ull;
+    for (const char *p = cfg_get("ORBITALS_FLIGHT_AT"); p && *p && n_at < 16;) {
         char *end;
         unsigned long long f = strtoull(p, &end, 10);
         if (end == p) break;
         at_frames[n_at++] = f;
         p = *end == ',' ? end + 1 : end;
     }
-    const char *d = cfg_get("MKW_FLIGHT_DIR");
+    const char *d = cfg_get("ORBITALS_FLIGHT_DIR");
     char tmp[PLAT_PATH_MAX];
     if (d && *d) snprintf(tmp, sizeof tmp, "%s", d);
-    else {   // <exe dir>/../flight: build/flight for build/v121*/mkw
+    else {   // <exe dir>/../flight: build/flight for build/v121*/orbitals-recomp
         char *slash = plat_exe_path(tmp, sizeof tmp) ? plat_last_sep(tmp) : NULL;
         if (slash) snprintf(slash, sizeof tmp - (size_t)(slash - tmp), "/../flight");
         else snprintf(tmp, sizeof tmp, "flight");
     }
     if (!plat_full_path(tmp, base_dir, sizeof base_dir)) snprintf(base_dir, sizeof base_dir, "%s", tmp);
-    thumbs_on = env_u("MKW_FLIGHT_THUMBS", 1) != 0;
+    thumbs_on = env_u("ORBITALS_FLIGHT_THUMBS", 1) != 0;
     if (thumbs_on) vk_thumbs_enable(ring_n);
     flight_on = 1;
     rt_log("flight: on: last %d frames, %s; dump on F8, on a frame over %llu ms (one per 10 s)%s, to %s", ring_n,
@@ -269,7 +269,7 @@ static void dump_main(void *arg) {
         free(have), free(j);
         return;
     }
-    fprintf(f, "# mkw flight dump: %s at frame %llu, interval %.1f ms\n", j->why, (unsigned long long)j->trig_frame,
+    fprintf(f, "# orbitals-recomp flight dump: %s at frame %llu, interval %.1f ms\n", j->why, (unsigned long long)j->trig_frame,
             j->trig_interval_us / 1000.0);
     fprintf(f, "frame\tt_ms\tinterval_ms");
     for (int k = 0; k < PERF_N; k++) fprintf(f, "\t%s", blocked_names[k]);
@@ -329,7 +329,7 @@ void flight_frame(uint64_t frame, uint64_t now_ns, uint64_t interval_ns, const u
     r->t_ns = now_ns - t0_ns;
     r->interval_us = (uint32_t)(interval_ns / 1000);
     for (int k = 0; k < PERF_N; k++) r->blocked_us[k] = (uint32_t)(blocked_ns[k] / 1000);
-    // vk_exec_frame grows until vk_exec_frame_log resets it, which MKW_TRACE=gfx does right after this call
+    // vk_exec_frame grows until vk_exec_frame_log resets it, which ORBITALS_TRACE=gfx does right after this call
     const VkExecFrame *x = &vk_exec_frame;
     int reset = (rt_trace & RT_TRACE_GFX) != 0;
     r->n[C_SUBMITS] = (uint32_t)(x->submits - (reset ? 0 : prev_exec.submits));
@@ -355,8 +355,8 @@ void flight_frame(uint64_t frame, uint64_t now_ns, uint64_t interval_ns, const u
     if (key && !key_was) trigger(frame, interval_ns, "F8");
     key_was = key;
     for (int i = 0; i < n_at; i++)
-        if (at_frames[i] == frame) trigger(frame, interval_ns, "MKW_FLIGHT_AT");
-    if (__atomic_exchange_n(&ctl_req, 0, __ATOMIC_ACQ_REL)) trigger(frame, interval_ns, "MKW_CTL");
+        if (at_frames[i] == frame) trigger(frame, interval_ns, "ORBITALS_FLIGHT_AT");
+    if (__atomic_exchange_n(&ctl_req, 0, __ATOMIC_ACQ_REL)) trigger(frame, interval_ns, "ORBITALS_CTL");
     if (spike_ns && interval_ns > spike_ns && recorded > 30 && (!last_spike_ns || now_ns - last_spike_ns >= FLIGHT_SPIKE_GAP_NS)) {
         if (!dump_at) last_spike_ns = now_ns;
         trigger(frame, interval_ns, "spike");

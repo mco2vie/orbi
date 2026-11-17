@@ -43,7 +43,7 @@ _Static_assert(O_EVENT_W < O_TMEM, "handle kinds");
 enum { W_NONE = KERN_WAIT_NONE, W_LOCK = KERN_WAIT_LOCK, W_CONDVAR = KERN_WAIT_CONDVAR, W_ADDRESS = KERN_WAIT_ADDRESS,
        W_SYNC = KERN_WAIT_SYNC };
 
-// Scheduler accounting states (MKW_TRACE=sched).
+// Scheduler accounting states (ORBITALS_TRACE=sched).
 enum { S_OFF, S_RUN, S_CORE, S_HOST, S_SLEEP, S_SYNC, S_CV, S_LOCK, S_ADDR, S_N };
 extern const char *const s_name[S_N];
 
@@ -80,7 +80,7 @@ struct RtThread {
     Fiber *fiber;              // current guest fiber, NULL on the thread's own context
     Fiber *leaving;            // fiber just switched away from, released by whoever resumes next
     int exit_pending;          // ExitThread on a fiber: unwind once back on the thread's own context
-    // MKW_TRACE=sched accounting (holding G)
+    // ORBITALS_TRACE=sched accounting (holding G)
     uint32_t tid;              // host thread id
     int st;                    // S_* state since st_since
     uint64_t st_since, st_ns[S_N], nblk, npre, pre_since, cpu_last;
@@ -90,19 +90,19 @@ struct RtThread {
     uint64_t lw_ns, lw_n, lw_max, lg_ns, lg_n, lg_max, sl_n, sl_req, sl_act;   // those latencies; SleepThread asked/took
     uint64_t sp_n, sp_ho, sp_site;   // spin wait passes and core handoffs, the last loop head (the thread writes them)
     RtThread *target;          // as a core waiter: the owner core_kick asked to give its core up for it (holding G)
-    // MKW_ASYNC_PREEMPT (holding G)
+    // ORBITALS_ASYNC_PREEMPT (holding G)
     PlatIntr *hthr;            // the host thread, for plat_intr_stop / resume; open while it may own a core
     uint64_t ap_rip;           // the interrupted host rip kern_ap_stub returns to
     uint64_t ap_last;          // the last redirect attempt on this owner
     int ap_pending;            // redirected to kern_ap_stub, which has not reached kern_ap_yield yet
-    // MKW_CORE_DIAG (holding G, except dg_host_end, which only the thread itself writes)
+    // ORBITALS_CORE_DIAG (holding G, except dg_host_end, which only the thread itself writes)
     uint64_t dg_since;         // as a waiter: core wait start
     int dg_cls;                // as a waiter: DG_* class at the start of the wait
     uint64_t dg_kick;          // as an owner: the preempt request
     uint64_t dg_host_end;      // as an owner: the return from the host call or SVC it was in at the request
     uint64_t dg_pc, dg_lr;     // as an owner: guest pc and lr at the checkpoint that gave the core up
     int dg_host_kick;          // as an owner: in a host call or SVC at the request
-    uint32_t dg_svc;           // the thread's latest SVC (MKW_CORE_DIAG: what an owner in a host call is in)
+    uint32_t dg_svc;           // the thread's latest SVC (ORBITALS_CORE_DIAG: what an owner in a host call is in)
     struct DgRel { uint64_t kick, host_end, pc, lr; int host, pre, prio; uint32_t h; } dg_rel;   // as a waiter: the
                                                                                                  // owner that released
 };

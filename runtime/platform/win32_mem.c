@@ -131,7 +131,7 @@ static LONG CALLBACK crash_veh(EXCEPTION_POINTERS *ep) {
                      : code == EXCEPTION_IN_PAGE_ERROR ? "in-page error" : NULL;
     if (!what) return EXCEPTION_CONTINUE_SEARCH;
     uintptr_t rip = (uintptr_t)ep->ContextRecord->Rip;
-    // Ours: mkw.exe, the game code library (orbitalgame.dll), or no module at all (a jump to a wild address). Faults in
+    // Ours: orbitals-recomp.exe, the game code library (orbitalgame.dll), or no module at all (a jump to a wild address). Faults in
     // other modules (drivers) are left to the handler that expects them.
     HMODULE at = NULL, exe = GetModuleHandleW(NULL), game = GetModuleHandleW(L"orbitalgame.dll");
     int in_module = GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
@@ -140,7 +140,7 @@ static LONG CALLBACK crash_veh(EXCEPTION_POINTERS *ep) {
     MODULEINFO mi = {0};
     if (in_module) GetModuleInformation(GetCurrentProcess(), at, &mi, sizeof mi);
     PlatCrash c = {what, (uint32_t)code, rip, in_module ? rip - (uintptr_t)mi.lpBaseOfDll : rip, -1, 0};
-    c.module = !in_module ? "no module" : at == exe ? "mkw" : "orbitalgame";
+    c.module = !in_module ? "no module" : at == exe ? "orbitals-recomp" : "orbitalgame";
     uintptr_t sp = (uintptr_t)ep->ContextRecord->Rsp;   // a wild call left its return address there
     if (!in_module && sp && !(sp & 7) && plat_mem_readable(sp, 8)) c.ret = *(const uintptr_t *)sp;
     if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2)
@@ -159,7 +159,7 @@ static void crt_invalid_parameter(const wchar_t *expr, const wchar_t *fn, const 
     void *frames[32];
     USHORT n = RtlCaptureStackBackTrace(1, 32, frames, NULL);
     HMODULE exe = GetModuleHandleW(NULL), game = GetModuleHandleW(L"orbitalgame.dll"), at = NULL;
-    PlatCrash c = {"C runtime invalid parameter", 0xC0000409u, 0, 0, -1, 0, "mkw", 0};
+    PlatCrash c = {"C runtime invalid parameter", 0xC0000409u, 0, 0, -1, 0, "orbitals-recomp", 0};
     for (USHORT i = 0; i < n && !c.rip; i++) {
         uintptr_t pc = (uintptr_t)frames[i];
         if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
@@ -167,7 +167,7 @@ static void crt_invalid_parameter(const wchar_t *expr, const wchar_t *fn, const 
             continue;
         MODULEINFO mi = {0};
         GetModuleInformation(GetCurrentProcess(), at, &mi, sizeof mi);
-        c.rip = pc, c.offset = pc - (uintptr_t)mi.lpBaseOfDll, c.module = at == exe ? "mkw" : "orbitalgame";
+        c.rip = pc, c.offset = pc - (uintptr_t)mi.lpBaseOfDll, c.module = at == exe ? "orbitals-recomp" : "orbitalgame";
     }
     crash_fn(&c);
 }

@@ -26,7 +26,7 @@ static uint64_t put_h;                 // producer: words written (published up 
 VkCommandBuffer rec_cb;
 int rec_live;
 static PlatThread *rec_thread;
-static uint64_t last_pk;               // producer: the header word of the last packet (MKW_REC_DIFF)
+static uint64_t last_pk;               // producer: the header word of the last packet (ORBITALS_REC_DIFF)
 uint32_t lz[256];
 int nlz;
 static int rec_prio;                   // the submitting thread's priority, which the recorder takes
@@ -127,7 +127,7 @@ void *rec_put(uint32_t op, size_t bytes) {
     }
     wait_space(n);
     ring[pos] = (uint64_t)op | n << 32;
-    // Zeroed: struct padding would carry old ring bytes, and equal calls must give equal packets (MKW_REUSE compares
+    // Zeroed: struct padding would carry old ring bytes, and equal calls must give equal packets (ORBITALS_REUSE compares
     // and hashes them; check found 283 hits differing only there, ru4).
     memset(&ring[pos + 1], 0, 8 * (n - 1));
     last_pk = pos;
@@ -173,7 +173,7 @@ void rec_begin(VkCommandBuffer cb) {
                 mode = 0;
             } else {
                 rt_log("vk_rec: the replay's Vulkan commands are made by a recorder thread%s",
-                       mode == 2 ? " in the B blocks (MKW_AB)" : "");
+                       mode == 2 ? " in the B blocks (ORBITALS_AB)" : "");
             }
         }
     }
@@ -233,7 +233,7 @@ FIXED(BeginQuery, (VkCommandBuffer cb, VkQueryPool p, uint32_t q, VkQueryControl
 #define PACK_BindIndexBuffer *a = (A_BindIndexBuffer){b, o, t}
 FIXED(BindIndexBuffer, (VkCommandBuffer cb, VkBuffer b, VkDeviceSize o, VkIndexType t), (cb, b, o, t), VkBuffer b;
       VkDeviceSize o; VkIndexType t)
-// Not FIXED: MKW_GPU_GUARD notes the bind on both paths (vk_guard.c).
+// Not FIXED: ORBITALS_GPU_GUARD notes the bind on both paths (vk_guard.c).
 void rc_vkCmdBindPipeline(VkCommandBuffer cb, VkPipelineBindPoint bp, VkPipeline p) {
     if (vk_guard_on()) vk_guard_bound_pipe(cb, bp, p);
     if (!OWNED(cb)) { vkCmdBindPipeline(cb, bp, p); return; }

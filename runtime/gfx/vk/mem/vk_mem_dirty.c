@@ -12,7 +12,7 @@
 #include "vk_mem_internal.h"
 #include "platform/platform.h"
 
-// ---------------------------------------------------------------- dirty census (MKW_TRACE=perf)
+// ---------------------------------------------------------------- dirty census (ORBITALS_TRACE=perf)
 // What a device-local mirror of the buffer-bound pools would upload. The replay notes every
 // imported pool it binds as a vertex, index, uniform, storage or indirect buffer (vk_mem_bound_note). At the start of
 // each submit one write-watch query per run of such pools stamps the pages written since with a new generation, in the

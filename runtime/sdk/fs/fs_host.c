@@ -30,7 +30,7 @@
 #include "platform/platform.h"
 #include "romfs_path.h"
 
-#define MKW_APPLICATION_ID 0x0100f2c0115b6000ull
+#define ORBITALS_APPLICATION_ID 0x0100f2c0115b6000ull
 #define FILE_BASE 0x200000000ull
 #define DIR_BASE 0x300000000ull
 #define NFILES 1024
@@ -746,7 +746,7 @@ static uint32_t mount_save(const char *name, const uint64_t *uid) {
 
 static uint8_t save_exists(uint64_t application, const uint64_t *uid) {
     ready();
-    return application == MKW_APPLICATION_ID && my_uid(uid);
+    return application == ORBITALS_APPLICATION_ID && my_uid(uid);
 }
 
 // Other titles' save data (data-link bonuses) is not present on this host.
@@ -882,27 +882,8 @@ static int64_t host_read_at(PlatFile *f, void *buf, uint32_t n, uint64_t off) {
     return got < 0 ? -1 : got;
 }
 
-// MKW_UNLOCK_ALL (core/hacks/unlock.c): Play/account.sav's working copy edited once a session, before the game's first
-// read of it; the committed save changes only when the game saves.
-static void unlock_on_open(const char *host_path, int kind) {
-    static int done;
-    size_t n = strlen(host_path);
-    if (done || n < 16 || strcmp(host_path + n - 16, "Play/account.sav") || !cfg_bool("MKW_UNLOCK_ALL")) return;
-    done = 1;
-    if (kind != M_SAVE) {
-        rt_log("unlock: account.sav opened from a read-only mount: not edited");
-        return;
-    }
-    uint64_t size = 0;
-    uint8_t *data = plat_file_read(host_path, &size);
-    if (data && unlock_save(data, size) && !plat_file_write_atomic(host_path, data, size))
-        rt_log("unlock: cannot write %s", host_path);
-    free(data);
-}
-
 static uint32_t open_file(uint64_t *out, const char *path, int mode) {
     if (romfs_owns(path)) {
-        skip_file_opened(path);   // core/hacks/skip.c: MKW_SKIP_MOVIES
         return romfs_open(out, path, mode);
     }
     fs_trace(mode & FS_OPEN_WRITE ? "write" : "read", path);
@@ -913,7 +894,6 @@ static uint32_t open_file(uint64_t *out, const char *path, int mode) {
     if (r) return r;
     if (plat_fs_kind(p) != PLAT_FS_FILE) return FS_R_PATH_NOT_FOUND;
     if (kind == M_SAVE_RO && (mode & FS_OPEN_WRITE)) return FS_R_UNSUPPORTED_OPEN;
-    unlock_on_open(p, kind);
     int save_writer = kind == M_SAVE && (mode & FS_OPEN_WRITE);
     int err = 0;
     PlatFile *f = plat_fs_open(p, (mode & FS_OPEN_WRITE) != 0, &err);
@@ -1165,7 +1145,7 @@ static void close_directory(uint64_t h) {
 // and ApplicationId are 8-byte structs passed in one register; Uid, ReadOption and WriteOption by reference.
 #define I32(i) ((int32_t)arg_x(c, i))
 #define I64(i) ((int64_t)arg_x(c, i))
-// Another game (port mode) or MKW_TRACE=fs: the paths the game asks for and the result each got, the first 600
+// Another game (port mode) or ORBITALS_TRACE=fs: the paths the game asks for and the result each got, the first 600
 // calls. Orbitals' Unreal PreInit fails (LaunchNintendo.cpp:241) without saying why in a shipping build; what it
 // looked for and did not find is the first thing to know.
 static uint32_t fs_answer(const char *what, const char *path, uint32_t r) {
@@ -1454,7 +1434,7 @@ static uint64_t probe_romfs(void) {
     uint64_t first = 0;
     while (first < count && !romfs_source_path(first, any, sizeof any)) first++;
     if (first == count) {   // a .nx package: every row is read through its blocks, no host bytes to compare with
-        rt_log("probe-fs: %llu RomFS files, all inside a .nx package: reads not compared (mkw --unpack checks them)",
+        rt_log("probe-fs: %llu RomFS files, all inside a .nx package: reads not compared (orbitals-recomp --unpack checks them)",
                (unsigned long long)count);
         return count;
     }
@@ -1536,7 +1516,7 @@ static uint64_t probe_romfs(void) {
     CHECK(write_open == FS_R_UNSUPPORTED_OPEN && write_existing == FS_R_UNSUPPORTED_OPEN,
           "write open -> %#x/%#x, expected 0x6402", write_open, write_existing);
 
-    // Overlays (MKW_ROMFS_PATCHES, MKW_ROMFS_MODS): served in place of the original, added files and their folders
+    // Overlays (ORBITALS_ROMFS_PATCHES, ORBITALS_ROMFS_MODS): served in place of the original, added files and their folders
     // exist, bytes equal the overlay file.
     size_t nov = romfs_overlay_count(), ovok = 0;
     for (size_t k = 0; k < nov; k++) {
@@ -1750,7 +1730,7 @@ static void probe_save_tx(const uint64_t *uid) {
     committed = pending;
 
     // the read-only mount shows the committed save and refuses changes
-    CHECK(tx_write(a, 99) && RES(S_MOUNT_SAVE_RO, U("ro"), MKW_APPLICATION_ID, U(uid)) == 0 &&
+    CHECK(tx_write(a, 99) && RES(S_MOUNT_SAVE_RO, U("ro"), ORBITALS_APPLICATION_ID, U(uid)) == 0 &&
           tx_read("ro:/tx_a.sav") == committed && RES(S_OPEN_FILE, U(&h), U("ro:/tx_a.sav"), FS_OPEN_WRITE) ==
           FS_R_UNSUPPORTED_OPEN && RES(S_CREATE_FILE, U("ro:/x"), 0) == FS_R_UNSUPPORTED_OPEN &&
           RES(S_RENAME_FILE, U("save:/tx_a.sav"), U("ro:/y")) == FS_R_INVALID_PATH, "MountSaveDataReadOnly");
@@ -1774,7 +1754,7 @@ static void probe_save_tx(const uint64_t *uid) {
 static void probe_storage(void) {
     char tmp[PLAT_PATH_MAX * 3], dir[PLAT_PATH_MAX * 3 + 64];
     need(plat_temp_dir(tmp, sizeof tmp), "temporary directory");
-    snprintf(dir, sizeof dir, "%s/mkw-probe-fs-%u", tmp, plat_process_id());
+    snprintf(dir, sizeof dir, "%s/orbitals-probe-fs-%u", tmp, plat_process_id());
     remove_tree(dir);
     fs_host_set_profile(dir);
     uint64_t uid[2], other[2], h = 0, h2 = 0, d = 0, l = 0;
@@ -1790,9 +1770,9 @@ static void probe_storage(void) {
     CHECK(RES(S_MOUNT_SAVE, U("save"), U(other)) == FS_R_TARGET_NOT_FOUND, "MountSaveData for another user");
     CHECK(RES(S_MOUNT_SAVE, U("save"), U(uid)) == 0, "MountSaveData");
     CHECK(RES(S_MOUNT_SAVE, U("save"), U(uid)) == FS_R_ALREADY_EXISTS, "MountSaveData twice");
-    CHECK((CALL(S_SAVE_EXISTS, MKW_APPLICATION_ID, U(uid)) & 0xff) == 1 &&
-          (CALL(S_SAVE_EXISTS, MKW_APPLICATION_ID + 0x1000, U(uid)) & 0xff) == 0, "IsSaveDataExisting");
-    CHECK(RES(S_MOUNT_SAVE_RO, U("other"), MKW_APPLICATION_ID + 0x1000, U(uid)) == FS_R_TARGET_NOT_FOUND,
+    CHECK((CALL(S_SAVE_EXISTS, ORBITALS_APPLICATION_ID, U(uid)) & 0xff) == 1 &&
+          (CALL(S_SAVE_EXISTS, ORBITALS_APPLICATION_ID + 0x1000, U(uid)) & 0xff) == 0, "IsSaveDataExisting");
+    CHECK(RES(S_MOUNT_SAVE_RO, U("other"), ORBITALS_APPLICATION_ID + 0x1000, U(uid)) == FS_R_TARGET_NOT_FOUND,
           "MountSaveDataReadOnly of another title");
     CHECK(!fs_save_busy(), "idle at start");
 

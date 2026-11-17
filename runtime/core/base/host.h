@@ -17,7 +17,7 @@
 
 // ---- logging and results
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   // "[host] <msg>\n" to the log, one write
-// The log is stderr plus, in a game run whose stderr is not a file, logs\orbital.log in the game folder (main.c log_open).
+// The log is stderr plus, in a game run whose stderr is not a file, logs\orbitals.log in the game folder (main.c log_open).
 // rt_logf and rt_log_raw write to both without the prefix and the newline: crash reports, fatal errors, guest output.
 void rt_logf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void rt_vlogf(const char *fmt, va_list ap);
@@ -26,8 +26,8 @@ const char *rt_log_path(void);                  // the log file, NULL when this 
 enum { RT_TRACE_SVC = 1, RT_TRACE_HOSTCALL = 2, RT_TRACE_FS = 8, RT_TRACE_GFX = 16, RT_TRACE_PERF = 32,
        RT_TRACE_SCHED = 64, RT_TRACE_AUDIO = 128, RT_TRACE_PRESENT = 256,
        RT_TRACE_DRAW = 512 };   // draw: the replay's per-op and per-draw clocks (a TSC read per stage of every draw)
-extern unsigned rt_trace;                       // from MKW_TRACE=svc,host,fs,gfx,perf,sched,audio,present (or all)
-// prof_win.c: MKW_PROFILE=<path> sampling profiler; MKW_TRACE=perf frame timing (waits of the render thread)
+extern unsigned rt_trace;                       // from ORBITALS_TRACE=svc,host,fs,gfx,perf,sched,audio,present (or all)
+// prof_win.c: ORBITALS_PROFILE=<path> sampling profiler; ORBITALS_TRACE=perf frame timing (waits of the render thread)
 // PERF_TEX: texture uploads on the render thread (deswizzle, decode, staging), PERF_ASTC included
 enum { PERF_PACE, PERF_FENCE, PERF_DRAIN, PERF_PIPE, PERF_TEX, PERF_ASTC, PERF_N };
 void prof_start(void);
@@ -36,7 +36,7 @@ uint64_t perf_begin(void);                      // start time of a wait; pair wi
 void perf_end(int kind, uint64_t t0);           // counts render-thread time only
 void perf_replay(uint64_t t0);                  // replay (NVN -> Vulkan recording) time on any thread, waits inside it included
 void perf_replay_thread(void);                  // the calling thread replays for the render thread: perf_end counts its waits
-void perf_main_thread(void);                    // the calling thread is the guest main thread (MKW_PROFILE_MAIN)
+void perf_main_thread(void);                    // the calling thread is the guest main thread (ORBITALS_PROFILE_MAIN)
 // Events per 60-frame window: graphics pipelines finished by the background workers, draws skipped while pending,
 // first texture uploads and re-uploads after CPU writes, draws that waited for their pending pipeline and got it, draws
 // into a target the previous frame did not render that waited for their pending pipeline instead of being skipped
@@ -60,9 +60,9 @@ typedef struct {
 } PerfGpu;
 extern void (*perf_gpu_stats)(PerfGpu *out);
 // The performance overlay (perfmon.c): mode 0 off, 1 fps, 2 full. While it is on, perf_present hands every frame to
-// perfmon_frame; full also takes the event counts (perf_count) and the GPU timestamps as MKW_TRACE=perf does.
+// perfmon_frame; full also takes the event counts (perf_count) and the GPU timestamps as ORBITALS_TRACE=perf does.
 void perf_set_overlay(int mode);
-int perf_gpu_timing(void);                      // GPU timestamps wanted: MKW_TRACE=perf or the full overlay
+int perf_gpu_timing(void);                      // GPU timestamps wanted: ORBITALS_TRACE=perf or the full overlay
 void perf_gpu_busy(uint64_t ns);                // GPU busy time of a timed submission part (vk_sync.c, any thread)
 uint64_t perf_gpu_busy_total(void);             // its running total (the overlay's GPU time per frame)
 #define RT_RESULT(module, desc) ((uint32_t)(module) | ((uint32_t)(desc) << 9))
@@ -93,12 +93,12 @@ typedef struct { const char *name; GuestFn fn; } RtHostEntry;
 #define RT_CAT(a, b) RT_CAT2(a, b)
 // File-scope declarations; fn must be declared before. The loader binds them by symbol name. The entries of every
 // object file meet in one section per kind, which hostfn.c walks: on PE/COFF ".ovr$m", which the linker sorts between
-// hostfn.c's ".ovr$a" and ".ovr$z" markers; on ELF "mkw_ovr", which the linker brackets with __start_mkw_ovr and
-// __stop_mkw_ovr.
+// hostfn.c's ".ovr$a" and ".ovr$z" markers; on ELF "orbitals_ovr", which the linker brackets with __start_orbitals_ovr and
+// __stop_orbitals_ovr.
 #ifdef _WIN32
 #define RT_HOST_SECTION(kind) section("." #kind "$m")
 #else
-#define RT_HOST_SECTION(kind) section("mkw_" #kind)
+#define RT_HOST_SECTION(kind) section("orbitals_" #kind)
 #endif
 #define HOST_OVERRIDE(sym, fn) /* replaces sym in every GOT/GLOB_DAT/ABS64 of every module */                  \
     __attribute__((used, RT_HOST_SECTION(ovr))) static const RtHostEntry RT_CAT(rt_ovr_, __COUNTER__) = {sym, fn}
@@ -136,7 +136,7 @@ typedef struct { uint64_t base, size; } RtRange;
 typedef struct { RtRange aslr, stack, heap, alias, kernel, hostfn; uint64_t pool; } RtGuestLayout;
 typedef struct { uint64_t base, size; uint32_t state, attr, perm, ipc, device, pad; } RtMemoryInfo;   // Horizon layout
 void mem_init(void);                                       // reserve every region; on a collision re-run the process
-                                                           // (up to 20 times, MKW_REEXEC), then fatal
+                                                           // (up to 20 times, ORBITALS_REEXEC), then fatal
 const RtGuestLayout *mem_layout(void);
 uint32_t mem_set_heap_size(uint64_t size, uint64_t *addr);                      // 0x01
 uint32_t mem_set_permission(uint64_t a, uint64_t n, uint32_t perm);             // 0x02
@@ -169,7 +169,7 @@ int mem_frozen(uint64_t a);                                // the 2 MiB region o
 void mem_thaw(uint64_t a, uint64_t n);                     // makes the frozen regions over [a, a+n) writable again;
                                                            // before a kernel write (file read) into guest memory;
                                                            // commits the range first (mem_commit_range)
-void mem_commit_range(uint64_t a, uint64_t n);             // Windows' lazy commit (MKW_LAZY_COMMIT): the game's
+void mem_commit_range(uint64_t a, uint64_t n);             // Windows' lazy commit (ORBITALS_LAZY_COMMIT): the game's
                                                            // pages of [a, a+n) committed now, before something that
                                                            // does not fault into the handler reads or writes them
                                                            // (the kernel, a driver import); a no-op elsewhere
@@ -192,11 +192,11 @@ int mem_base_trap(uint64_t lo, uint64_t hi, uint64_t *bits);   // whole pages of
                                                            // bit per page trapped; 0: no trap map (Windows)
 void mem_base_release(uint64_t lo, uint64_t hi);           // the pages still trapped back to read-write, no copy
 int64_t mem_base_pages(void);                              // pages base-trapped now
-// MKW_EARLY_READ=1 (memory_early.c, a diagnosis): the pages a submit's GPU work writes are watched from the submit
+// ORBITALS_EARLY_READ=1 (memory_early.c, a diagnosis): the pages a submit's GPU work writes are watched from the submit
 // (fence: its value) until first touched, counting the game's touches before the GPU finished it.
 int mem_early_on(void);
-int mem_early_waits(void);   // an early read of what the GPU writes waits (MKW_EARLY_READ 2 or 3)
-// MKW_FENCE_EARLY (nvn_api_core.c nvnSyncWait): the game's fence waits end once the submit is recorded, before its GPU
+int mem_early_waits(void);   // an early read of what the GPU writes waits (ORBITALS_EARLY_READ 2 or 3)
+// ORBITALS_FENCE_EARLY (nvn_api_core.c nvnSyncWait): the game's fence waits end once the submit is recorded, before its GPU
 // work; mem_early_rel is the newest fence so released. An early read then also waits for a writer up to it (the console
 // game finds its bytes there after the wait), and the shadow copy waits for its GPU (vk_sync.c prologue).
 extern int mem_fence_early;
@@ -223,20 +223,12 @@ typedef struct {
 void ldr_load(const char *exefs_dir);                      // load, relocate (overrides applied), seal; once
 int ldr_count(void);
 const RtLoaded *ldr_module(int i);                         // order: main, subsdk0, sdk
-void seqwatch_init(void);                                  // MKW_SEQ_WATCH=1: log the game's sequence nodes (seqwatch.c)
-void impcensus_init(void);                                 // MKW_IMPORT_CENSUS=<file>: SDK functions main calls
-void impcensus_hit(uint64_t addr, uint64_t lr);            // from fnprof_hit, while impcensus_on
+void impcensus_init(void);                                 // ORBITALS_IMPORT_CENSUS=<file>: SDK functions main calls
+void impcensus_hit(uint64_t addr, uint64_t lr);            // from fnprof_hit (impcensus.c), while impcensus_on
 void impcensus_write(void);                                // the census file, at exit (prof_write)
 extern volatile int impcensus_on;
-void hostfn_time_report(uint64_t frame);                   // MKW_HOST_TIME=1: host functions by time, every 600 presents
-void hostfn_time_window(uint64_t frame);                   // the same since the last report, now (seqwatch.c MKW_SEQ_EXIT)
-void seqwatch_frame(uint64_t frame);                       // each present: phases whose update stopped have ended
-int seqwatch_window(void);                                 // MKW_SEQ_EXIT's window is open: no periodic host time report
-int64_t seqwatch_since_us(void);                         // since MKW_SEQ_UNTIL's event, -1 before (the A/B world clock)
-int seqwatch_hold(void);                                   // a MKW_SEQ_HOLD node is active: no input script presses
-void seqwatch_movie_end(void);                              // a video reached its end of stream (ov_codec.c)
-void seqwatch_log_active(void);                            // ctl seq: the active sequence nodes
-int seqwatch_probe(void);                                  // inside a MKW_PROBE window: a probe logs every call
+void hostfn_time_report(uint64_t frame);                   // ORBITALS_HOST_TIME=1: host functions by time, every 600 presents
+void hostfn_time_window(uint64_t frame);                   // the same since the last report, now
 uint64_t ldr_symbol(const char *name);                     // exported definition, 0 if none
 uint64_t ldr_plt_stub(const char *module, const char *name); // PLT stub whose GOT slot holds name, 0 if none
 const char *ldr_describe(uint64_t a, char *buf, int n);    // "main+0x1234 (symbol+0x10)", "host <name>", or the address
@@ -261,14 +253,14 @@ void kern_core_back(int *away);
 void kern_checkpoint(void);                                // preemption point, at every SVC and indirect call
 // A preempt request is pending for the thread (Cpu.thread): its RtThread starts with the flag (kernel.c).
 static inline int kern_preempt_pending(const void *thread) { return __atomic_load_n((const int *)thread, __ATOMIC_RELAXED); }
-// Set once before guest threads start (MKW_CORE_DIAG, MKW_ASYNC_PREEMPT): host calls (hostfn.c) and SVCs (svc.c) count their depth in
+// Set once before guest threads start (ORBITALS_CORE_DIAG, ORBITALS_ASYNC_PREEMPT): host calls (hostfn.c) and SVCs (svc.c) count their depth in
 // the thread's second int, so the kernel knows whether a core owner runs game code at the top level.
 extern int kern_host_track;
 static inline int *kern_host_depth(void *thread) { return (int *)thread + 1; }
 void kern_host_left(void *thread);                         // back at depth 0 with a preempt request pending
 void kern_core_diag_frame(uint64_t frame, uint64_t interval_ns);   // perf_present, every present (also logs the
                                                            // asynchronous preemption counters)
-void kern_sched_report(uint64_t frame);                    // MKW_TRACE=sched: per-thread time split, on present
+void kern_sched_report(uint64_t frame);                    // ORBITALS_TRACE=sched: per-thread time split, on present
 uint32_t kern_handle_new(int kind, void *obj);             // kind: KERN_TMEM (svc.c)
 void *kern_handle_get(uint32_t h, int kind);
 void kern_handle_close(uint32_t h);                        // CloseHandle from the host side, any thread; fatal on a
@@ -300,16 +292,16 @@ void rt_patch_hosts(void);                                 // before the dispatc
                                                            // patch page holds (hostfn_seal)
 void rt_patch_switch(int set, int on);                     // at run time (live settings): each site takes the new code
                                                            // the next time it runs
-int64_t frame_step_world_us(void);                         // game time since the phase MKW_SEQ_UNTIL waits for, -1 before
-void ctl_init(void);                                       // MKW_CTL=<fifo>: commands to the running game (ctl.c)
-void ctl_run(char *line);                                  // one ctl command now (MKW_SEQ_CTL, seqwatch.c)
+int64_t frame_step_world_us(void);                         // game time since the first present, -1 before
+void ctl_init(void);                                       // ORBITALS_CTL=<fifo>: commands to the running game (ctl.c)
+void ctl_run(char *line);                                  // one ctl command now
 void rt_shot_request(const char *path);                    // the next presented frame to path, full size (boot.c)
-void gfx_aspect_set(float a);  // gfx_present.c, from patches.c: MKW_ASPECT's width / height when wider than 16:9, else 0
+void gfx_aspect_set(float a);  // gfx_present.c: the output's width / height when wider than 16:9, else 0 (no caller yet)
 int ov_movie_playing(void);  // ov_codec.c: a full-screen movie (1280 wide or more) gave a frame in the last half second
 uint64_t frame_step_ticks(void);                           // game time since the first present in 60 Hz ticks (input scripts)
-// In-launch A/B measurement: MKW_AB=<seconds> splits the world clock (frame_step_world_us) into blocks of that much
-// game time in the order A B B A (repeated; B A A B with MKW_AB_INVERT=1); rt_ab() is 1 in the B blocks, 0 in A
-// blocks, before the world clock and without MKW_AB. rt_knob(name, def) reads the switch MKW_<name> once per call
+// In-launch A/B measurement: ORBITALS_AB=<seconds> splits the world clock (frame_step_world_us) into blocks of that much
+// game time in the order A B B A (repeated; B A A B with ORBITALS_AB_INVERT=1); rt_ab() is 1 in the B blocks, 0 in A
+// blocks, before the world clock and without ORBITALS_AB. rt_knob(name, def) reads the switch ORBITALS_<name> once per call
 // (def when unset): 0 off, 2 for "ab" (on in the B blocks only), 1 for anything else;
 // callers keep it and test it with RT_KNOB_ON. The perf line counts the B frames of its window (tools/ab_summary.py
 // compares the windows that are wholly A or wholly B).
@@ -319,8 +311,6 @@ int rt_knob(const char *name, const char *def);
 extern volatile uint64_t nvn_timestamp_last; // nvn_ext.c: the counter timestamp the game read last (ticks)
 void frame_step_present(uint64_t display_ns, int interval); // nvnQueuePresentTexture: the frame's display time and
                                                            // present interval (60 Hz ticks)
-void frame_rate_host(uint64_t patch_page);                 // game.c MKW_FPS: register its host function (patches.c)
-void frame_rate_init(uint64_t patch_page);                 // and point the frame object's vtable slot at it
 // ---- boot (boot.c, main.c)
 typedef struct { const char *exefs, *romfs, *profile; int boot; double seconds; const char *shot, *gpu, *profile_base; } RtConfig;
                                                            // profile: the player's folder (core/base/players.h);
@@ -328,7 +318,7 @@ typedef struct { const char *exefs, *romfs, *profile; int boot; double seconds; 
                                                            // romfs: the dump's loose romfs/ directory or
                                                            // its .nup package;
                                                            // frames: --frames N (0 = no limit); shot: --shot
-                                                           // PATH; gpu: MKW_GPU
+                                                           // PATH; gpu: ORBITALS_GPU
 const RtConfig *rt_config(void);
 void rt_boot_event(const char *what, Cpu *c, const char *detail);   // checkpoint log; "nvn" ends --boot
 void rt_boot(void);                                        // boot.c

@@ -1,5 +1,5 @@
 // Part of the kernel (kernel.c; split from it 06/11/2026, same sources and licences as its header).
-// MKW_CRIT, the MKW_TRACE=sched accounting and report, and MKW_CORE_DIAG: diagnostics of the scheduler.
+// ORBITALS_CRIT, the ORBITALS_TRACE=sched accounting and report, and ORBITALS_CORE_DIAG: diagnostics of the scheduler.
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,9 +10,9 @@
 #include "platform/platform.h"
 
 
-// ---- MKW_CRIT=<first>-<last frame> with MKW_TRACE=sched: every state change and wake of the guest threads and
-// every present over those frames, written to MKW_CRIT_OUT (default crit.bin) at the last one, for
-// tools/crit_path.py, which walks the chain of waits back from each present (holding G). MKW_CRIT=w<lo>-<hi> takes
+// ---- ORBITALS_CRIT=<first>-<last frame> with ORBITALS_TRACE=sched: every state change and wake of the guest threads and
+// every present over those frames, written to ORBITALS_CRIT_OUT (default crit.bin) at the last one, for
+// tools/crit_path.py, which walks the chain of waits back from each present (holding G). ORBITALS_CRIT=w<lo>-<hi> takes
 // world-clock seconds instead (frame_step_world_us): from the first present at or after lo to the first after hi, so a
 #define CRIT_N (1u << 22)                // 128 MiB, about 2000 fight frames
 static CritEv *g_crit;
@@ -28,7 +28,7 @@ void crit_add(int kind, uint32_t a, uint32_t b, int st, uint64_t obj, uint64_t t
     else __atomic_store_n(&g_crit_n, CRIT_N, __ATOMIC_RELAXED);
 }
 
-// ---- MKW_TRACE=sched accounting (holding G)
+// ---- ORBITALS_TRACE=sched accounting (holding G)
 #define RW_N 32
 static RtThread *g_render;                               // the thread that presents (sched trace, core diag)
 typedef struct { int st; uint32_t waker; uint64_t obj, ns; } WaitRec;
@@ -63,13 +63,13 @@ void acct(RtThread *t, int st) {
     t->st_since = now;
 }
 
-// ---- MKW_CORE_DIAG=1: why ready threads wait for a virtual core, and for how long
+// ---- ORBITALS_CORE_DIAG=1: why ready threads wait for a virtual core, and for how long
 // Each core wait is split into classes: the owner asked to give the core up ran game code (DG_GAME, the part an
 // asynchronous preemption would remove), was in a host call or SVC that kept the core (DG_HOST), every owner the waiter
 // may displace was of better or equal priority (DG_EQ: Horizon waits too), or the worse owners were claimed by better
 // waiters (DG_NOCORE). Per 60 presents: time per frame and a wait-length histogram per class, the owners that cost
 // most; a line per present over 25 ms; a line per wait with over 2 ms of DG_GAME (where the owner reached its
-// checkpoint), and one host RIP sample of the owner per such wait (exe RVA, for mkw.map).
+// checkpoint), and one host RIP sample of the owner per such wait (exe RVA, for orbitals-recomp.map).
 static const char *const dg_name[DG_N] = {"game", "host", "eq", "nocore"};
 #define DG_NB 8   // wait lengths: < 0.05, 0.25, 1, 2, 4, 8, 16 ms, longer
 static const uint64_t dg_edge[DG_NB - 1] = {50000, 250000, 1000000, 2000000, 4000000, 8000000, 16000000};
@@ -89,11 +89,11 @@ uint64_t g_dg_samples, g_dg_lines, g_sync36, g_sync36_flag;
 
 void diag_init(void) {
     if (g_diag >= 0) return;
-    const char *e = cfg_get("MKW_CORE_DIAG");
+    const char *e = cfg_get("ORBITALS_CORE_DIAG");
     g_diag = e && *e && strcmp(e, "0");
     if (g_diag) {
         kern_host_track = 1;
-        rt_log("core-diag: on (MKW_CORE_DIAG)");
+        rt_log("core-diag: on (ORBITALS_CORE_DIAG)");
     }
 }
 
@@ -195,7 +195,7 @@ void dg_sample(RtThread *t) {
 
 // perf_present, every present: a line for a present over 25 ms, the 60-present summary.
 void kern_core_diag_frame(uint64_t frame, uint64_t interval_ns) {
-    if (g_ap > 0 && frame && frame % 600 == 0) {   // MKW_ASYNC_PREEMPT counters since the start
+    if (g_ap > 0 && frame && frame % 600 == 0) {   // ORBITALS_ASYNC_PREEMPT counters since the start
         lock();
         uint64_t v[8] = {g_ap_sent, g_ap_taken, g_ap_host, g_ap_pc, g_ap_deferred, g_ap_fail, g_ap_spin_ok, g_sync36};
         unlock();
@@ -258,18 +258,18 @@ void kern_core_diag_frame(uint64_t frame, uint64_t interval_ns) {
     }
     if (o) rt_log("core-diag: owners (ms/frame):%s", s);
 }
-// MKW_TRACE=sched: every 120 presents, the time split of the busiest threads (running, waiting for a core, host
+// ORBITALS_TRACE=sched: every 120 presents, the time split of the busiest threads (running, waiting for a core, host
 // calls) and of the render thread, the render and the main thread's longest waits by object and by the thread whose
 // signal ended them, and the preemption latency.
 #define REP_N 8
-// At each present (holding G): starts recording at MKW_CRIT's first frame, stops and writes the file at its last.
+// At each present (holding G): starts recording at ORBITALS_CRIT's first frame, stops and writes the file at its last.
 // File: "CRIT", thread count, event count (u32 each); per thread handle, priority, flags (1 main, 2 presents), host
 // tid (u32 each); then the CritEv records.
 static void crit_frame(RtThread *self, uint64_t frame) {
     static int parsed;
     if (!parsed) {
         parsed = 1;
-        const char *e = cfg_get("MKW_CRIT");
+        const char *e = cfg_get("ORBITALS_CRIT");
         unsigned long long lo, hi;
         double wl, wh;
         if (e && e[0] == 'w' && sscanf(e + 1, "%lf-%lf", &wl, &wh) == 2 && wl >= 0 && wl < wh &&
@@ -296,7 +296,7 @@ static void crit_frame(RtThread *self, uint64_t frame) {
     crit_add(CRIT_FRAME, self ? self->handle : 0, 0, 0, frame, kern_now_ns());
     if (frame < g_crit_hi) return;
     g_crit_on = 0;
-    const char *path = cfg_get("MKW_CRIT_OUT");
+    const char *path = cfg_get("ORBITALS_CRIT_OUT");
     FILE *f = fopen(path && *path ? path : "crit.bin", "wb");
     if (!f) {
         rt_log("crit: cannot write %s", path && *path ? path : "crit.bin");

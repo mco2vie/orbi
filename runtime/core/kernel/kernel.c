@@ -110,7 +110,7 @@ static void wait_enqueue(RtThread **list, RtThread *t, int kind, uint64_t seq) {
 
 // The wait re-checks the deadline against the clock, because it may also end early. The time left is rounded up to
 // whole ms (Windows' SleepConditionVariableSRW counts ms; totk-pc-recomp did the same on Linux), so a 100 us timeout
-// ends after 1 ms. MKW_WAIT_NS=1 waits the exact time (Linux futex): three in-race A/B runs gave +3.8, -0.9 and
+// ends after 1 ms. ORBITALS_WAIT_NS=1 waits the exact time (Linux futex): three in-race A/B runs gave +3.8, -0.9 and
 // +1.0 ms per frame (waitns-ab1..3, 06/11/2026), and with the address queues +0.7 mean, -1.0 median (waitns-ab4): no
 // gain over the noise, so it stays off.
 static int g_wait_ns = -1;
@@ -158,10 +158,10 @@ uint32_t block_inner(RtThread *t, int kind, int64_t ns) {   // holding G
 
 // ---- address queues: WaitForAddress / SignalToAddress wait and wake under the lock of one of ADDR_QUEUES lists,
 // by address, instead of G and the single list g_wait that every other wait shares. They were the largest part of
-// the waits for G in a race (~470 ms per 1.6 s, MKW_LOCK_PROF, waitns-ab2, 06/11/2026), and
+// the waits for G in a race (~470 ms per 1.6 s, ORBITALS_LOCK_PROF, waitns-ab2, 06/11/2026), and
 // every priority lookup (eff_prio) walked them on g_wait. The address's value is still read and
 // changed only under its queue's lock, as before under G. G is taken only to give the virtual core up and back.
-// MKW_ADDR_QUEUES=0 keeps them on G and g_wait as before; read once, since a run cannot switch with threads waiting.
+// ORBITALS_ADDR_QUEUES=0 keeps them on G and g_wait as before; read once, since a run cannot switch with threads waiting.
 #define ADDR_QUEUES 256
 static struct { PlatMutex m; RtThread *head; } g_aq[ADDR_QUEUES];
 static int g_aq_on = -1;
@@ -301,7 +301,7 @@ static void thread_finish(RtThread *t) {
 // is offset, and the landing code then reads its locals through the wrong base.)
 __attribute__((noreturn)) void exit_now(RtThread *t) { longjmp(t->exit_jmp, 1); }
 
-// The calling host thread, for ap_try (MKW_ASYNC_PREEMPT) and dg_sample (MKW_CORE_DIAG).
+// The calling host thread, for ap_try (ORBITALS_ASYNC_PREEMPT) and dg_sample (ORBITALS_CORE_DIAG).
 static PlatIntr *ap_open_self(void) {
     if (!cores_enabled() || (!g_ap_int && g_diag <= 0)) return NULL;
     PlatIntr *h = plat_intr_self();

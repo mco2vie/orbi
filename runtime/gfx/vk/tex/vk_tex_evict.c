@@ -20,7 +20,7 @@
 // on their next use), that nothing looked up in the last EVICT_IDLE submissions and the GPU did not write, go oldest
 // use first. By the draw bindings' check alone (checked), a texture the replay used only as a copy source
 // (vk_texture_get) looked idle while a part being recorded could name it: the likely cause of a view destroyed with
-// that part not yet sent (MKW_GPU_GUARD, tsvp1 frame 1 477 and tsvp2, 08/11/2026, both after evictions). The race's downscaled render targets (bloom, the final composite's inputs) found the heap full of decoded
+// that part not yet sent (ORBITALS_GPU_GUARD, tsvp1 frame 1 477 and tsvp2, 08/11/2026, both after evictions). The race's downscaled render targets (bloom, the final composite's inputs) found the heap full of decoded
 // ASTC textures and got no image: a black race (run-race4, 31/10/2026).
 #define EVICT_IDLE 64
 static uint64_t n_evicted, evicted_bytes;
@@ -155,7 +155,7 @@ void destroy_tex(Tex *e) {
             if (p->next_at == e) { p->next_at = e->next_at; break; }
     }
     if (e->released) nreleased--, rel_unlink(e);
-    vk_mem_defer_use(e->use);   // MKW_GPU_GUARD: the image and its views
+    vk_mem_defer_use(e->use);   // ORBITALS_GPU_GUARD: the image and its views
     vk_exec_image_gone(e->pub.image);
     // A sparse image also waits for its binds: they are queue operations the parts sent do not cover (vk_sparse.c).
     uint64_t binds = e->sparse ? vk_sparse_destroy(e->pub.image) : 0, prev = 0;
@@ -170,7 +170,7 @@ void destroy_tex(Tex *e) {
 // they go once the parts already sent are done (vk_mem_defer_idle).
 // Not when the submission being recorded looked it up (seen): a released entry replaced at a new descriptor of its
 // address (entry_of) was still named by the part being recorded, and its view went with the parts already sent only
-// (MKW_GPU_GUARD stack, gstack1 08/11/2026). Then it waits for that submission (the replay records one at a time).
+// (ORBITALS_GPU_GUARD stack, gstack1 08/11/2026). Then it waits for that submission (the replay records one at a time).
 void destroy_idle(Tex *e) {
     if (e->seen == submit_epoch) {
         vk_mem_defer_fence(vk_sync_issued() + 1);
@@ -191,22 +191,22 @@ void destroy_idle(Tex *e) {
 // The count alone let them hold 1 603 MiB on an 8 GB RTX 4070 Laptop (2 032 entries, at the character select after the
 // title's menus, 12/11/2026): with the rest, 7 333 MiB against the driver's 7 180 MiB budget, so Windows moved memory
 // out of the GPU and the game ran at 0.24x (the GPU 80-444 ms a frame at 33 W); the ctl "trim" of them brought it back
-// to 1.00x at once, under the budget. Their memory is bounded too: MKW_TEX_RELEASED_MIB (default a twelfth of the
+// to 1.00x at once, under the budget. Their memory is bounded too: ORBITALS_TEX_RELEASED_MIB (default a twelfth of the
 // device-local budget at start, 256 MiB to 2 GiB: ~600 MiB on 8 GB, 2 GiB from 24 GB), the oldest recreatable ones
 // going first.
 #define RELEASED_MAX 2048
 static uint64_t released_cap(void) {
     static uint64_t cap;
     if (cap) return cap;
-    const char *e = cfg_get("MKW_TEX_RELEASED_MIB");
+    const char *e = cfg_get("ORBITALS_TEX_RELEASED_MIB");
     uint64_t used, budget;
     int exact;
     if (e && *e) cap = (uint64_t)atoll(e) << 20;
     else if (vk_mem_vram(&used, &budget, &exact) && budget) cap = budget / 12;
     else cap = 512ull << 20;
     if (!(e && *e)) cap = cap < (256ull << 20) ? 256ull << 20 : cap > (2048ull << 20) ? 2048ull << 20 : cap;
-    if (!cap) cap = 1;   // MKW_TEX_RELEASED_MIB=0: none kept
-    rt_log("vk: released textures keep at most %d entries and %llu MiB (MKW_TEX_RELEASED_MIB)", RELEASED_MAX,
+    if (!cap) cap = 1;   // ORBITALS_TEX_RELEASED_MIB=0: none kept
+    rt_log("vk: released textures keep at most %d entries and %llu MiB (ORBITALS_TEX_RELEASED_MIB)", RELEASED_MAX,
            (unsigned long long)(cap >> 20));
     return cap;
 }

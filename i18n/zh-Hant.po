@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mkw-recomp\nLanguage: zh_Hant\nMIME-Version: 1.0\nContent-Type: text/plain; "
-"charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: orbitals-recomp\nLanguage: zh_Hant\nMIME-Version: 1.0\nContent-Type: "
+"text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.
 msgctxt "UI_SWKBD_DEFAULT_NAME"
@@ -76,14 +76,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "加快的倍數。效能較低的電腦可能達不到。"
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "跳過影片"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "盃賽和賽道的開場影片一開始就跳過。"
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "每次相同的隨機"
@@ -103,35 +95,6 @@ msgid ""
 "F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
 "look at a moment closely."
 msgstr "F3 在目前幀暫停遊戲並可再次繼續；F4 前進一幀。用於仔細查看某一瞬間。"
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "全部解鎖"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr "解鎖所有角色和服裝、載具、貼紙、特別盃以及鏡像。遊戲存檔時會寫入存檔，關閉後也不會再次鎖定。"
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "直接進入"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr "啟動時自動完成選單操作。計時賽：瑪利歐、標準車、遊戲推薦的賽道（開啟「每次相同的隨機」時始終相同），無對手。自由行駛：開放世界。控制器仍可正常使用。"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "計時賽"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "自由行駛"
 
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
@@ -169,16 +132,6 @@ msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
 msgid "Quarter"
 msgstr "四分之一"
 
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "細節距離"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr "物件在多遠的距離內保持精細模型，超過後會切換為更簡單的模型。「主機」為 Switch 2 的設定。對幀率的影響：小。"
-
 msgctxt "UI_MENU_DETAIL_LOW"
 msgid "Low"
 msgstr "低"
@@ -198,16 +151,6 @@ msgstr "高"
 msgctxt "UI_MENU_DETAIL_ULTRA"
 msgid "Very high"
 msgstr "極高"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "陰影品質"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr "繪製陰影所用貼圖的大小。越小對顯示卡越輕鬆，但陰影邊緣越模糊。主機在底座模式下為 3072，掌機模式下為 2048。對幀率的影響：小。"
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -281,34 +224,6 @@ msgctxt "UI_MENU_QUALITY_CUSTOM"
 msgid "Custom"
 msgstr "自訂"
 
-msgctxt "UI_MENU_RESOLUTION"
-msgid "Internal resolution"
-msgstr "內部解析度"
-
-msgctxt "UI_MENU_RESOLUTION_DESC"
-msgid ""
-"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
-"integrated graphics. Original is the console's (up to 1440p)."
-msgstr "遊戲繪製畫面所用的行數，之後會縮放到視窗大小。越低越快：內建顯示卡適合 720p。「原始」為主機的解析度（最高 1440p）。"
-
-msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
-msgid "Original"
-msgstr "原始"
-
-msgctxt "UI_MENU_ASPECT"
-msgid "Aspect ratio"
-msgstr "畫面比例"
-
-msgctxt "UI_MENU_ASPECT_DESC"
-msgid ""
-"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
-"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
-msgstr "比 16:9 更寬時，超寬螢幕可以看到賽道兩側更多的內容。16:9 為主機的比例；「視窗」則採用視窗或螢幕的比例。選單目前仍會被拉伸。"
-
-msgctxt "UI_MENU_ASPECT_WINDOW"
-msgid "Window"
-msgstr "視窗"
-
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
 msgstr "呈現方式"
@@ -377,16 +292,6 @@ msgstr "%.0f fps"
 msgctxt "UI_PERF_LINE_FPS_FG"
 msgid "%.0f/%.0f fps"
 msgstr "%.0f/%.0f fps"
-
-msgctxt "UI_MENU_FPS"
-msgid "Frame rate"
-msgstr "幀率"
-
-msgctxt "UI_MENU_FPS_DESC"
-msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
-msgstr "遊戲的目標每秒幀數。「自動」與主機相同：60，幀耗時過長時為 30。如果你的電腦無法維持 60，請選擇 30，這樣比賽才能以真實速度進行。"
 
 msgctxt "UI_MENU_FPS_AUTO"
 msgid "Automatic"
@@ -501,10 +406,10 @@ msgstr "區域網路遊戲"
 
 msgctxt "UI_MENU_LAN_DESC"
 msgid ""
-"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
-"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
-"the next start."
-msgstr "標題選單的本地無線遊戲變為區域網路遊戲，可與同一區域網路中的其他電腦比賽（UDP 連接埠 49152 和 35000）。只連線區域網路位址，絕不連線網際網路。下次啟動時生效。"
+"Lets the game reach other PCs on the same local network when it asks for a local network "
+"connection, for local network play. It only reaches local network addresses, never the internet. "
+"Applies at the next start."
+msgstr ""
 
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
@@ -1575,10 +1480,6 @@ msgctxt "UI_MENU_OV_OUTPUT"
 msgid "Game image"
 msgstr "遊戲畫面"
 
-msgctxt "UI_MENU_OV_INTERNAL"
-msgid "Internal resolution"
-msgstr "內部解析度"
-
 msgctxt "UI_MENU_OV_SCALING"
 msgid "Scaling"
 msgstr "縮放"
@@ -1667,12 +1568,10 @@ msgstr "無法選擇此遊戲資料夾。在 Windows 上，請選擇不含換行
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Orbitals with its update, dumped "
+"from your console (a .nup package, or the exefs and romfs folders). The setup checks its build "
+"and builds the game code on this computer."
 msgstr ""
-"本移植版不附帶遊戲：需要你自己從主機中傾印的 Mario Kart World 1.0.0/1.8.0 副本（exefs 和 romfs "
-"資料夾）。設定過程會檢查其版本，在這台電腦上建置遊戲程式碼，並轉換著色器。"
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1740,9 +1639,8 @@ msgstr "%s 已加密：遊戲的 exefs 必須先解密"
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid ""
-"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
-msgstr "遊戲不是 Mario Kart World 1.0.0/1.8.0（建置 ID %s）：僅支援 1.0.0/1.8.0"
+msgid "the game is not a supported build of Orbitals (build id %s)"
+msgstr ""
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"
@@ -1949,85 +1847,6 @@ msgctxt "UI_MOD_ERR_UNPACK"
 msgid "Cannot open this archive: .rar and .7z need bsdtar (libarchive) installed"
 msgstr "無法開啟此壓縮檔：.rar 與 .7z 需要安裝 bsdtar（libarchive）"
 
-#. The Mods page's two tabs: the player's mods, and GameBanana's.
-msgctxt "UI_MOD_TAB_INSTALLED"
-msgid "Installed"
-msgstr "已安裝"
-
-msgctxt "UI_MOD_TAB_FIND"
-msgid "Find on GameBanana"
-msgstr "在 GameBanana 上尋找"
-
-#. Shown above the GameBanana list: the project hosts no mods.
-msgctxt "UI_GB_NOTE"
-msgid ""
-"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
-"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
-"mods. Each mod has its own license."
-msgstr "模組由其作者製作，安裝時從 GameBanana 下載。本專案與 GameBanana 及模組作者無關，也不代管、審核或背書任何模組。每個模組都有各自的授權。"
-
-msgctxt "UI_GB_SEARCH"
-msgid "Search"
-msgstr "搜尋"
-
-msgctxt "UI_GB_SORT_DOWNLOADS"
-msgid "Most downloaded"
-msgstr "下載最多"
-
-msgctxt "UI_GB_SORT_NEW"
-msgid "Newest"
-msgstr "最新"
-
-msgctxt "UI_GB_SORT_LIKES"
-msgid "Most liked"
-msgstr "最受歡迎"
-
-msgctxt "UI_GB_LOADING"
-msgid "Loading..."
-msgstr "正在載入..."
-
-msgctxt "UI_GB_NONE"
-msgid "No mods found"
-msgstr "找不到模組"
-
-#. %s: the mod's author on GameBanana.
-msgctxt "UI_GB_BY"
-msgid "by %s"
-msgstr "作者：%s"
-
-#. %s: the mod's license, e.g. "CC BY-NC-ND 4.0".
-msgctxt "UI_GB_LICENSE"
-msgid "License: %s"
-msgstr "授權：%s"
-
-msgctxt "UI_GB_OPEN"
-msgid "Open its GameBanana page"
-msgstr "開啟其 GameBanana 頁面"
-
-#. %s: the file's name.
-msgctxt "UI_GB_INSTALL"
-msgid "Install %s"
-msgstr "安裝 %s"
-
-#. First %s: the file's name; second %s: its author.
-msgctxt "UI_GB_CONFIRM"
-msgid "Download %s by %s from GameBanana and install it?"
-msgstr "要從 GameBanana 下載 %s（作者：%s）並安裝嗎？"
-
-msgctxt "UI_GB_UNSAFE"
-msgid "Not offered: GameBanana's virus scan has not marked this file clean"
-msgstr "不提供：GameBanana 的病毒掃描未將此檔案標記為安全"
-
-#. %d: this page; %d: how many pages.
-msgctxt "UI_GB_PAGE"
-msgid "Page %d of %d"
-msgstr "第 %d 頁，共 %d 頁"
-
-#. %s: what failed (an English detail from the network).
-msgctxt "UI_GB_ERROR"
-msgid "GameBanana did not answer: %s"
-msgstr "GameBanana 沒有回應：%s"
-
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
 msgid ""
@@ -2096,8 +1915,8 @@ msgstr "上次遊戲因 %s 已修正的問題停止。請更新以取得修正�
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
-msgstr "上次遊戲因錯誤停止。附上 logs/orbital.log 回報有助於修正。"
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
+msgstr "上次遊戲因錯誤停止。附上 logs/orbitals.log 回報有助於修正。"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2203,10 +2022,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "正在等待 Steam"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "需要在 orbital.ini 中設定 steam_appid"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "需要在 orbitals.ini 中設定 steam_appid"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2277,12 +2096,14 @@ msgstr "Steam 應用程式 ID"
 
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
-"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"The Steam game orbitals-recomp runs as for Remote Play Together. Automatic: the game whose launch "
+"options start orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you "
+"own with Remote Play Together works. Another number: steam_appid in orbitals.ini. Takes effect at "
+"the next start."
 msgstr ""
-"mkw 在遠端同樂中所使用的 Steam 遊戲。自動：透過啟動選項啟動 mkw 的遊戲 (\"C:\\...\\mkw.exe\" %command%)，因此你擁有的任何支援遠端同樂的 "
-"Steam 遊戲都可以。其他編號：orbital.ini 中的 steam_appid。下次啟動時生效。"
+"orbitals-recomp 在遠端同樂中所使用的 Steam 遊戲。自動：透過啟動選項啟動 orbitals-recomp 的遊戲 "
+"(\"C:\\...\\orbitals-recomp.exe\" %command%)，因此你擁有的任何支援遠端同樂的 Steam 遊戲都可以。其他編號：orbitals.ini 中的 "
+"steam_appid。下次啟動時生效。"
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2294,8 +2115,8 @@ msgstr "自動（Steam 啟動的遊戲）"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s（orbital.ini）"
+msgid "%s (orbitals.ini)"
+msgstr "%s（orbitals.ini）"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2305,12 +2126,12 @@ msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
-"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"press Enter or A. orbitals-recomp runs as that game from the next start, and the Steam App ID row "
+"above keeps it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "用鍵盤的數字鍵輸入你擁有且支援遠端同樂的 Steam 遊戲的應用程式 ID（即該遊戲商店網址中的數字，store.steampowered.com/app/<number>/），然後按 "
-"Enter 或 A。下次啟動起 mkw 會以該遊戲執行，上方的 Steam 應用程式 ID 一列會把它保留在清單中（orbital.ini 中的 steam_appids）。Backspace "
-"刪除一位數字。"
+"Enter 或 A。下次啟動起 orbitals-recomp 會以該遊戲執行，上方的 Steam 應用程式 ID 一列會把它保留在清單中（orbitals.ini 中的 "
+"steam_appids）。Backspace 刪除一位數字。"
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

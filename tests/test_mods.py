@@ -19,17 +19,17 @@ def mod(root: Path, name: str, p: dict) -> None:
 
 def test_span_only_mod(tmp_path):
     # a mod with spans and no sites (Timer alone) used where/index/clash before they were set
-    mod(tmp_path, "Timer", {"spans": [{"set": "timer", "env": "MKW_TIMER", "module": "main", "off": "48e728",
+    mod(tmp_path, "Timer", {"spans": [{"set": "timer", "env": "ORBITALS_TIMER", "module": "main", "off": "48e728",
                                         "words": ["52800028", "39004328"]}]})
     t = patches.Table()
     patches.load_mods(t, str(tmp_path), BASES)
-    assert t.sets == [("timer", "MKW_TIMER", 0)]
+    assert t.sets == [("timer", "ORBITALS_TIMER", 0)]
     assert t.spans["main"][0x48E728] == (0, [0x52800028, 0x39004328])
 
 
 def test_two_mods_on_one_address(tmp_path):
     for name in ("A", "B"):
-        mod(tmp_path, name, {"sites": [{"set": name.lower(), "env": f"MKW_{name}", "module": "main", "off": "7d201c",
+        mod(tmp_path, name, {"sites": [{"set": name.lower(), "env": f"ORBITALS_{name}", "module": "main", "off": "7d201c",
                                         "orig": "51001D4A", "repl": ["5100214A"]}]})
     with pytest.raises(patches.PatchError):
         patches.load_mods(patches.Table(), str(tmp_path), BASES)

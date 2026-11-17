@@ -7,11 +7,11 @@
 //   exists it holds the BC7 blocks of every region of the upload, in its order (levels, then layers; slices of a 3D level
 //   one after the other), zstd-compressed, and goes to the image as is.
 // - Otherwise the upload goes on through the GPU encoder, and a writer thread stores the storage with its descriptor and
-//   regions in <dir>/src/<hash>.astc.zst (MKW_TEXPRE_RECORD=0: not).
-// - build/mkw --texpre encodes every src file into its .bc7.zst on all cores, with the runtime's own deswizzle and ASTC
+//   regions in <dir>/src/<hash>.astc.zst (ORBITALS_TEXPRE_RECORD=0: not).
+// - build/orbitals-recomp --texpre encodes every src file into its .bc7.zst on all cores, with the runtime's own deswizzle and ASTC
 //   decoder (bit-exact with the GPU decoder: --probe-astc), and deletes the src file; a .bc7.zst of one frame (written
 //   before CHUNK) is split into frames.
-// MKW_TEXPRE=1 (directory <exe dir>/texpre) or =<dir>; off by default: in the menus up to frame 1400 the uploads took
+// ORBITALS_TEXPRE=1 (directory <exe dir>/texpre) or =<dir>; off by default: in the menus up to frame 1400 the uploads took
 // the render thread 3 088 ms with it against 1 543 ms without (live21 / live22, 31/10/2026; tools/run/texms.sh), as the
 // BC7 is 4 times the bytes of the ASTC and the GPU encoder costs the CPU little. What it gives is quality (every BC7
 // mode). The directory listing is read once at the first upload.
@@ -60,14 +60,14 @@ static int list_cb(const char *name, void *ctx) {   // plat_file_list: 1 goes on
 
 static void t_init(void *arg) {
     (void)arg;
-    const char *e = cfg_get("MKW_TEXPRE");
+    const char *e = cfg_get("ORBITALS_TEXPRE");
     if (!e || !*e || !strcmp(e, "0")) return;
     if (strcmp(e, "1") && strlen(e) < sizeof T.dir) {
         strcpy(T.dir, e);
     } else {
         snprintf(T.dir, sizeof T.dir, "%s/texpre", cfg_game_dir());
     }
-    const char *r = cfg_get("MKW_TEXPRE_RECORD");
+    const char *r = cfg_get("ORBITALS_TEXPRE_RECORD");
     T.record = !(r && !strcmp(r, "0"));
     plat_file_list(T.dir, ".zst", list_cb, NULL);
     T.on = 1;
@@ -207,7 +207,7 @@ void vk_texpre_record(uint64_t h, const nvn_texdesc *d, const VkTexpreRegion *rg
     if (!plat_thread_spawn(writer, j, "texpre", 0)) writer(j);
 }
 
-// ---- build/mkw --texpre
+// ---- build/orbitals-recomp --texpre
 typedef struct { char (*names)[64]; int n, cap; volatile int32_t next; uint64_t in_bytes, out_bytes, texels; int failed; } EncList;
 static PlatMutex enc_lock;
 
@@ -311,14 +311,14 @@ static void enc_worker(void *arg) {
 }
 
 int vk_texpre_encode(void) {
-    if (!vk_texpre_on()) { printf("texpre: off (set MKW_TEXPRE=1 or MKW_TEXPRE=<dir>)\n"); return 1; }
+    if (!vk_texpre_on()) { printf("texpre: off (set ORBITALS_TEXPRE=1 or ORBITALS_TEXPRE=<dir>)\n"); return 1; }
     bc7enc_c_init();
     char dir[PLAT_PATH_MAX + 8];
     snprintf(dir, sizeof dir, "%s/src", T.dir);
     EncList L = {0};
     plat_file_list(dir, ".zst", src_cb, &L);
     plat_file_list(T.dir, ".bc7.zst", src_cb, &L);
-    const char *j = cfg_get("MKW_TEXPRE_JOBS");
+    const char *j = cfg_get("ORBITALS_TEXPRE_JOBS");
     int jobs = j && atoi(j) > 0 ? atoi(j) : plat_cpu_count();
     printf("texpre: %d files in %s (to encode) and %s (to check for frames) with %d threads\n", L.n, dir, T.dir, jobs), fflush(stdout);
     uint64_t t0 = kern_now_ns();

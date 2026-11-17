@@ -16,9 +16,9 @@
 // small numbers a console gives. A call that can wait (Poll with a timeout, RecvFrom on a blocking socket) gives its
 // virtual core up meanwhile (kern_core_away), as audio and NVN waits do, so a waiting network thread holds no core.
 //
-// MKW_LAN on, LAN only: Bind and SendTo refuse any address outside a local network (lan_only), and GetAddrInfo resolves
+// ORBITALS_LAN on, LAN only: Bind and SendTo refuse any address outside a local network (lan_only), and GetAddrInfo resolves
 // nothing, so no datagram can go to a server on the internet.
-// MKW_LAN off (the default) keeps main's stub, a console whose network is down: every socket call -1, errno ENETDOWN,
+// ORBITALS_LAN off (the default) keeps main's stub, a console whose network is down: every socket call -1, errno ENETDOWN,
 // IsInitialized 1, no WSAStartup, so the online menu takes its no-connection path as before (issue #63).
 //
 // eventfd exists only on Linux; Windows answers ENOSYS. In main only gRPC's wakeup_fd_eventfd.cc (main+0x10208c0, the
@@ -95,7 +95,7 @@ static short ev_host(int g) { return (short)(g & 0x3f); }
 static int ev_guest(int h) { return h & 0x3f; }
 #endif
 
-#define NSOCK 64   // ponytail: fixed table; Pia opens a handful, raise it if MKW_LOG shows "no free socket"
+#define NSOCK 64   // ponytail: fixed table; Pia opens a handful, raise it if ORBITALS_LOG shows "no free socket"
 
 typedef struct {
     int used, nonblock, eventfd;
@@ -111,8 +111,8 @@ static _Thread_local int last_errno;   // per host thread: each guest thread is 
 static void fail(int e) { last_errno = e; }
 
 #define B_ENETDOWN 50   // what main's stub answered: the console's BSD errno for a network that is down
-int ov_lan(void) { return cfg_bool("MKW_LAN"); }
-// MKW_LAN off: the call fails as main's stub did
+int ov_lan(void) { return cfg_bool("ORBITALS_LAN"); }
+// ORBITALS_LAN off: the call fails as main's stub did
 #define LAN_OR_DOWN(c)                                                                                                \
     do {                                                                                                               \
         if (!ov_lan()) {                                                                                               \
@@ -229,7 +229,7 @@ static int msg_flags(int f, int *dontwait) {
 // ---- lifetime
 // Result internal::Initialize(int concurrency)
 static void ov_init(Cpu *c) {
-    if (!ov_lan()) {   // main's stub: "succeeds" (MKW ignores the result, main+0x2247900)
+    if (!ov_lan()) {   // main's stub: "succeeds" (the first game ignored the result)
         ret_x(c, 0);
         return;
     }

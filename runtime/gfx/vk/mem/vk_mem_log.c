@@ -35,21 +35,21 @@ void flag_names(uint32_t f, char *buf, size_t n) {
 
 // One line per (kind, flags) group of the live pools, then the bytes the replay bound or copied per frame by pool
 // class since the previous census (the first one: since frame 1200). Logged at frame 1800 (in the world from the
-// run-game saves), at frame 600, and with MKW_TRACE=perf every 1800 frames.
+// run-game saves), at frame 600, and with ORBITALS_TRACE=perf every 1800 frames.
 
 
 
-// MKW_VRAM_LOG=<frames> (diagnosis, off by default): the "mem: vram" line every that many presented frames, without
-// the rest of MKW_TRACE=perf (its GPU timestamps change the frame being measured). For a session whose frame rate falls
+// ORBITALS_VRAM_LOG=<frames> (diagnosis, off by default): the "mem: vram" line every that many presented frames, without
+// the rest of ORBITALS_TRACE=perf (its GPU timestamps change the frame being measured). For a session whose frame rate falls
 // after some courses on an 8 GB GPU (7.5 of 8 GB in use, the menu drawn in 80 ms, 12/11/2026): what grows from course
 // to course, and whether it is ever given back. The ctl command "vram" logs one now.
 static uint64_t vram_every(void) {
     static int64_t n = -1;
     if (n < 0) {
-        const char *e = cfg_get("MKW_VRAM_LOG");
+        const char *e = cfg_get("ORBITALS_VRAM_LOG");
         n = e && *e ? atoll(e) : 0;
         if (n < 0) n = 0;
-        if (n) rt_log("mem: the vram line every %lld frames (MKW_VRAM_LOG)", (long long)n);
+        if (n) rt_log("mem: the vram line every %lld frames (ORBITALS_VRAM_LOG)", (long long)n);
     }
     return (uint64_t)n;
 }
@@ -63,7 +63,7 @@ void vk_mem_replay_log(uint64_t frames) {
 
 void vk_mem_census(uint64_t frame) {
     static uint64_t window_start;
-    mem_early_log(frame);   // MKW_EARLY_READ
+    mem_early_log(frame);   // ORBITALS_EARLY_READ
     uint64_t every = vram_every();
     if (((rt_trace & RT_TRACE_PERF) && frame % 150 == 0) || (every && frame % every == 0)) vram_log(frame);
     if (vk_dirty_census && !vk_mirror_on) dirty_frame(frame);
@@ -117,7 +117,7 @@ void vk_mem_census(uint64_t frame) {
 
 static int g_discrete;   // vk_mem_class_log: the device class is discrete
 
-// MKW_VRAM_USED (default: vma on a discrete GPU, driver otherwise; "ab"): what counts as VRAM in use against the
+// ORBITALS_VRAM_USED (default: vma on a discrete GPU, driver otherwise; "ab"): what counts as VRAM in use against the
 // driver's budget. The driver's heap usage on NVIDIA's Windows driver includes the host memory the runtime imports
 // (VK_EXT_external_memory_host): in a race on a GTX 1050 Ti it said 7 657 MiB of device-local memory in use for a
 // 3 437 MiB budget, while Windows counted 3 517 MiB of dedicated memory and VMA held 3 335 (wrace4, wcnt3,
@@ -126,9 +126,9 @@ static int g_discrete;   // vk_mem_class_log: the device class is discrete
 static int vram_used_vma(void) {
     static int mode = -1;
     if (mode < 0) {
-        const char *e = cfg_get("MKW_VRAM_USED");
+        const char *e = cfg_get("ORBITALS_VRAM_USED");
         mode = e && !strcmp(e, "driver") ? 0 : e && !strcmp(e, "vma") ? 1 : e && !strcmp(e, "ab") ? 2 : g_discrete;
-        rt_log("mem: VRAM in use counted from %s (MKW_VRAM_USED)",
+        rt_log("mem: VRAM in use counted from %s (ORBITALS_VRAM_USED)",
                mode == 2 ? "VMA in the B blocks, the driver in the A blocks" : mode ? "VMA's device-local blocks" : "the driver's heap usage");
     }
     return RT_KNOB_ON(mode);
@@ -169,7 +169,7 @@ int vk_mem_vram(uint64_t *used, uint64_t *budget, int *exact) {
     return *budget != 0;
 }
 
-// With MKW_TRACE=perf every 600 frames: what holds device-local memory, to see what grows over a long session.
+// With ORBITALS_TRACE=perf every 600 frames: what holds device-local memory, to see what grows over a long session.
 // VMA's blocks and allocations on the device-local heaps, texture entries with their own memory, the VRAM mirrors and
 // the objects waiting for their last submission to retire.
 void vram_log_now(void) { vram_log(0); }
@@ -205,43 +205,43 @@ void vram_log(uint64_t frame) {
            t.big_bytes / M);
 }
 
-// MKW_MEMORY and the knobs of every part of the memory layer, once the device class is known.
+// ORBITALS_MEMORY and the knobs of every part of the memory layer, once the device class is known.
 static void mirror_mode(int discrete) {
-    const char *e = cfg_value("MKW_MEMORY");
+    const char *e = cfg_value("ORBITALS_MEMORY");
     int mode = discrete ? 1 : 0;   // 0 import, 1 mirror, 2 verify
     const char *why = discrete ? "auto, discrete gpu" : "auto, uma";
     if (strcmp(e, "auto")) {
-        if (!strcmp(e, "import")) mode = 0, why = "MKW_MEMORY=import";
-        else if (!strcmp(e, "mirror")) mode = 1, why = "MKW_MEMORY=mirror";
-        else if (!strcmp(e, "verify")) mode = 2, why = "MKW_MEMORY=verify";
-        else rt_log("mem: MKW_MEMORY=%s is not import, mirror, verify or auto: auto", e);
+        if (!strcmp(e, "import")) mode = 0, why = "ORBITALS_MEMORY=import";
+        else if (!strcmp(e, "mirror")) mode = 1, why = "ORBITALS_MEMORY=mirror";
+        else if (!strcmp(e, "verify")) mode = 2, why = "ORBITALS_MEMORY=verify";
+        else rt_log("mem: ORBITALS_MEMORY=%s is not import, mirror, verify or auto: auto", e);
     }
     vk_mirror_on = mode > 0;
     mirror_verify = mode == 2;
-    const char *g = cfg_get("MKW_MIRROR_GAP");
+    const char *g = cfg_get("ORBITALS_MIRROR_GAP");
     mirror_gap = g && *g ? atoi(g) : 2;
     if (mirror_gap < 0) mirror_gap = 0;
     mirror_cpu_gen = rt_knob("MIRROR_CPU_GEN", "1");
     shadow_cpu_gen = rt_knob("SHADOW_CPU_GEN", "1");
     // Submissions a region stays unwritten before it is frozen. 60 rather than 300: in a fight 100 of the 257 MiB
     // queried a frame lay in regions idle for 30-299 submissions, and a thaw by a write costs about 60 us.
-    const char *fi = cfg_get("MKW_FREEZE_IDLE");
+    const char *fi = cfg_get("ORBITALS_FREEZE_IDLE");
     freeze_idle = fi && *fi ? atoi(fi) : 60;
     if (freeze_idle < 0) freeze_idle = 0;
-    const char *sh = cfg_get("MKW_SHADOW");
+    const char *sh = cfg_get("ORBITALS_SHADOW");
 #ifdef _WIN32
     shadow_on = sh && *sh && strcmp(sh, "0");
 #else
     shadow_on = !sh || !*sh || strcmp(sh, "0");
 #endif
     if (shadow_on) rt_log("mem: shadow storage: CPU-visible pools are host-visible copies of guest memory, not imports%s",
-                          sh && *sh ? " (MKW_SHADOW)" : "");
-    const char *dc = cfg_get("MKW_DIRTY_CENSUS");
+                          sh && *sh ? " (ORBITALS_SHADOW)" : "");
+    const char *dc = cfg_get("ORBITALS_DIRTY_CENSUS");
     vk_dirty_census = (rt_trace & RT_TRACE_PERF) && dc && *dc && strcmp(dc, "0");
-    const char *rt = cfg_get("MKW_READ_TRAPS");
+    const char *rt = cfg_get("ORBITALS_READ_TRAPS");
     read_traps = !rt || !*rt || strcmp(rt, "0");
     wb_defer = rt_knob("SHADOW_WB_DEFER", "1");
-    if (shadow_on) rt_log("mem: fence write-backs %s shadow_lock (MKW_SHADOW_WB_DEFER)",
+    if (shadow_on) rt_log("mem: fence write-backs %s shadow_lock (ORBITALS_SHADOW_WB_DEFER)",
                           wb_defer == 2 ? "queued while another thread holds it in the B blocks; else wait for" :
                           wb_defer ? "queued while another thread holds" : "wait for");
     rt_log("mem: mode %s (%s): %s", mode == 2 ? "verify" : mode ? "mirror" : "import", why,

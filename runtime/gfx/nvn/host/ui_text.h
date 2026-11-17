@@ -21,8 +21,6 @@ typedef enum {
     // Screen
     UI_MENU_FULLSCREEN, UI_MENU_FULLSCREEN_DESC,
     UI_MENU_WINDOW_SIZE, UI_MENU_WINDOW_SIZE_DESC,
-    UI_MENU_RESOLUTION, UI_MENU_RESOLUTION_DESC, UI_MENU_RESOLUTION_ORIGINAL,
-    UI_MENU_ASPECT, UI_MENU_ASPECT_DESC, UI_MENU_ASPECT_WINDOW,
     UI_MENU_QUALITY, UI_MENU_QUALITY_DESC, UI_MENU_QUALITY_CUSTOM,
     UI_MENU_PRESENT, UI_MENU_PRESENT_DESC, UI_MENU_PRESENT_MAILBOX, UI_MENU_PRESENT_VSYNC, UI_MENU_PRESENT_IMMEDIATE,
     UI_MENU_PRESENT_IN_USE,   // "in use: %s" under the value when the swapchain got another mode than the setting
@@ -30,7 +28,7 @@ typedef enum {
     UI_MENU_PERF_OVERLAY, UI_MENU_PERF_OVERLAY_DESC, UI_MENU_PERF_OFF, UI_MENU_PERF_FPS, UI_MENU_PERF_FULL,
     UI_PERF_LINE_FPS,
     UI_PERF_LINE_FPS_FG,   // the same with frame generation on: game frames / frames shown
-    UI_MENU_FPS, UI_MENU_FPS_DESC, UI_MENU_FPS_AUTO,
+    UI_MENU_FPS_AUTO,
     UI_MENU_FRAMEGEN, UI_MENU_FRAMEGEN_DESC,   // values: UI_MENU_PERF_OFF, UI_MENU_FPS_AUTO, 2x..4x
     UI_MENU_GRAPHICS,         // group heading over the picture rows
     UI_MENU_UPSCALER, UI_MENU_UPSCALER_DESC, UI_MENU_UPSCALER_FSR, UI_MENU_UPSCALER_BILINEAR,
@@ -42,16 +40,14 @@ typedef enum {
     UI_MENU_ANISO, UI_MENU_ANISO_DESC, UI_MENU_ANISO_GAME,
     UI_MENU_TEX_QUALITY, UI_MENU_TEX_QUALITY_DESC, UI_MENU_TEX_QUALITY_FULL, UI_MENU_TEX_QUALITY_HALF,
     UI_MENU_TEX_QUALITY_QUARTER,
-    UI_MENU_DETAIL, UI_MENU_DETAIL_DESC, UI_MENU_DETAIL_LOW, UI_MENU_DETAIL_MEDIUM, UI_MENU_DETAIL_CONSOLE,
+    UI_MENU_DETAIL_LOW, UI_MENU_DETAIL_MEDIUM, UI_MENU_DETAIL_CONSOLE,
     UI_MENU_DETAIL_HIGH, UI_MENU_DETAIL_ULTRA,
-    UI_MENU_SHADOW, UI_MENU_SHADOW_DESC,
 
     // Hacks
     UI_MENU_TAB_HACKS, UI_MENU_HACKS_WARNING,
     UI_MENU_TURBO, UI_MENU_TURBO_DESC, UI_MENU_TURBO_HOLD, UI_MENU_TURBO_TOGGLE, UI_MENU_TURBO_SPEED,
-    UI_MENU_TURBO_SPEED_DESC, UI_MENU_SKIP_MOVIES, UI_MENU_SKIP_MOVIES_DESC, UI_MENU_SEED, UI_MENU_SEED_DESC,
-    UI_MENU_UNLOCK_ALL, UI_MENU_UNLOCK_ALL_DESC, UI_MENU_QUICK_RACE, UI_MENU_QUICK_RACE_DESC, UI_MENU_QUICK_RACE_TT,
-    UI_MENU_QUICK_RACE_FREE, UI_MENU_FREEZE_KEYS, UI_MENU_FREEZE_KEYS_DESC,
+    UI_MENU_TURBO_SPEED_DESC, UI_MENU_SEED, UI_MENU_SEED_DESC,
+    UI_MENU_FREEZE_KEYS, UI_MENU_FREEZE_KEYS_DESC,
 
     // Game
     UI_MENU_GAME_LANG, UI_MENU_GAME_LANG_DESC, UI_MENU_GAME_LANG_AUTO,
@@ -169,7 +165,7 @@ typedef enum {
     UI_MENU_OV_FMT_PCT, UI_MENU_OV_FMT_TEMP, UI_MENU_OV_FMT_POWER, UI_MENU_OV_FMT_MHZ, UI_MENU_OV_FMT_GB,
     UI_MENU_OV_FMT_GB_OF, UI_MENU_OV_GAME_GB, UI_MENU_OV_FMT_MS, UI_MENU_OV_PER_FRAME,
     // the picture lines: window and game image sizes, the scaling to the window and presentation
-    UI_MENU_OV_WINDOW, UI_MENU_OV_OUTPUT, UI_MENU_OV_INTERNAL, UI_MENU_OV_SCALING, UI_MENU_OV_PRESENT,
+    UI_MENU_OV_WINDOW, UI_MENU_OV_OUTPUT, UI_MENU_OV_SCALING, UI_MENU_OV_PRESENT,
     UI_MENU_OV_FMT_SIZE,      // "%ux%u"
     UI_MENU_OV_FMT_FSR,       // "AMD FSR 1, sharpness %d%%"
     UI_MENU_OV_SCALE_NONE, UI_MENU_OV_SCALE_BILINEAR,
@@ -197,11 +193,7 @@ typedef enum {
     UI_MOD_CODE_PORT, UI_MOD_CODE_SWITCHES, UI_MOD_CODE_SWITCH_1, UI_MOD_MERGING, UI_MOD_CONFLICTS, UI_MOD_VANILLA, UI_MOD_IMPORTED, UI_MOD_RESOLVE, UI_MOD_OK,
     UI_MOD_ERR_LAYOUT, UI_MOD_ERR_NAME, UI_MOD_ERR_IO, UI_MOD_ERR_NOPORT, UI_MOD_ERR_NOGAME,
     UI_MOD_VARIANTS, UI_MOD_ERR_BIG, UI_MOD_ERR_UNPACK,
-    // the GameBanana tab (ui/launcher/mods_browse.cpp): BY "%s" (author), LICENSE "%s", INSTALL "%s" (file name),
-    // CONFIRM "%s ... %s" (file, author), PAGE "%d ... %d", ERROR "%s" (what failed)
-    UI_MOD_TAB_INSTALLED, UI_MOD_TAB_FIND, UI_GB_NOTE, UI_GB_SEARCH, UI_GB_SORT_DOWNLOADS, UI_GB_SORT_NEW,
-    UI_GB_SORT_LIKES, UI_GB_LOADING, UI_GB_NONE, UI_GB_BY, UI_GB_LICENSE, UI_GB_OPEN, UI_GB_INSTALL, UI_GB_CONFIRM,
-    UI_GB_UNSAFE, UI_GB_PAGE, UI_GB_ERROR, UI_MOD_WARN_GRAPHICS, UI_MOD_WARN_SHADERS, UI_MOD_CODE_REBUILD, UI_MOD_RISK, UI_MOD_RISK_ACK,
+    UI_MOD_WARN_GRAPHICS, UI_MOD_WARN_SHADERS, UI_MOD_CODE_REBUILD, UI_MOD_RISK, UI_MOD_RISK_ACK,
     // the update (ui/launcher/launcher_update.cpp): UPDATE "... %s ... %d MB" (tag, size), FETCHING "... %s" (tag),
     // FAILED "... %s" (why), UPDATED "... %s" (tag); the Menu tab's switch
     UI_LAUNCH_UPDATE, UI_LAUNCH_UPDATE_FETCHING, UI_LAUNCH_UPDATE_FAILED, UI_LAUNCH_UPDATED,
@@ -231,7 +223,7 @@ typedef enum {
     // CHOICE "%d ... %d" (players, controllers) and its two buttons
     UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
     // the Game tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
-    // from orbital.ini that the list lacks)
+    // from orbitals.ini that the list lacks)
     UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
     // the row under it that takes a typed App ID (opt_digits; steam_appids keeps them for the list): label, description,
     // and the hint shown while nothing is typed
@@ -250,7 +242,7 @@ int ui_text_defined(const char *lang, UiTextId id);
 // The catalog language for a Switch language code ("en-GB" -> "en", "zh-CN" -> "zh-Hans", ...).
 const char *ui_text_lang(const char *switch_code);
 
-// Menu text: ui_text_in(menu_lang(), id). The menu language is MKW_MENU_LANG (a catalog language); unset, the system
+// Menu text: ui_text_in(menu_lang(), id). The menu language is ORBITALS_MENU_LANG (a catalog language); unset, the system
 // UI language when the catalog has it, else English. Follows a live change of the setting.
 const char *menu_text(UiTextId id);
 const char *menu_lang(void);

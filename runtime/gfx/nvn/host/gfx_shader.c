@@ -124,13 +124,13 @@ static int spirv_complete(const uint32_t *w, uint64_t n) {
 
 // ---- MKW: SPIR-V prepared before the game runs (tools/shaders/translate.py)
 // <game dir>/spirv/<key>.spv and .res.json, key = nvn2_program_key(control, code): every program the game ships was
-// translated offline, so play never translates. MKW_SPIRV names another directory.
+// translated offline, so play never translates. ORBITALS_SPIRV names another directory.
 static char prepared_dir[PATH_CAP];
 _Static_assert(CFG_GAME_DIR_MAX + 256 <= PATH_CAP, "game directory must leave room for derived shader paths");
 
 static void prepared_init(void *param) {
     (void)param;
-    const char *e = cfg_get("MKW_SPIRV");
+    const char *e = cfg_get("ORBITALS_SPIRV");
     if (e && *e) {
         snprintf(prepared_dir, sizeof prepared_dir, "%s", e);
     } else {
@@ -211,7 +211,7 @@ static const GfxShader *int_io_variant(GfxShader *s, uint32_t um, uint32_t sm, i
     reflect(v);
     for (int l = 0; l < 32; l++)
         if ((um | sm) >> l & 1) (out ? v->out : v->in)[l].type = um >> l & 1 ? GFX_TYPE_UINT : GFX_TYPE_SINT;
-    const char *dd = cfg_get("MKW_SPIRV_INT_DUMP");   // the variants for spirv-val
+    const char *dd = cfg_get("ORBITALS_SPIRV_INT_DUMP");   // the variants for spirv-val
     if (dd && *dd) {
         char path[PATH_CAP + 96], hex[65];
         key_hex(key, hex);
@@ -275,8 +275,8 @@ static const GfxShader *prepared_get(const uint8_t *control, const uint8_t *code
         static volatile int32_t n_missing;
         int32_t n = plat_inc32(&n_missing);
         if (n <= 20 || !(n & (n - 1))) rt_log("gfx_shader: no prepared SPIR-V %s (%d lookups so far)", hex, n);
-        // MKW_SPIRV_DUMP=<dir>: the missing program's control section and code, to find where it comes from.
-        const char *dump = cfg_get("MKW_SPIRV_DUMP");
+        // ORBITALS_SPIRV_DUMP=<dir>: the missing program's control section and code, to find where it comes from.
+        const char *dump = cfg_get("ORBITALS_SPIRV_DUMP");
         if (dump && *dump) {   // every missing program once (the file exists after the first time)
             char p[PATH_CAP + 80];
             uint32_t ctl_size = 0xd8, size;
@@ -549,7 +549,7 @@ static const GfxShader *int_image_variant(GfxShader *s, const GfxShaderAnswers *
     v->reflection_size = s->reflection_size;
     memcpy(v->cs_table, s->cs_table, sizeof v->cs_table), v->cs_known = s->cs_known;   // reflect places the resources by it
     reflect(v);
-    const char *dd = cfg_get("MKW_SPIRV_INT_DUMP");   // the variants for spirv-val
+    const char *dd = cfg_get("ORBITALS_SPIRV_INT_DUMP");   // the variants for spirv-val
     if (dd && *dd) {
         char path[PATH_CAP + 96], hex[65];
         key_hex(key, hex);
@@ -700,7 +700,7 @@ int gfx_shader_cs_of_mesh(const GfxShader *s) { return s && s->cs_of_mesh; }
 
 // The vertex shader of task/mesh as compute: a prepared shader under a fixed key that no program has
 // (tools/shaders/translate.py write_mesh_cs_vs, sm86 head.py MESH_CS_VS_KEY), so pipeline key records name it too.
-static const uint8_t mesh_cs_vs_key[32] = "mkw-mesh-cs-vs-1mkw-mesh-cs-vs-1";
+static const uint8_t mesh_cs_vs_key[32] = "orb-mesh-cs-vs-1orb-mesh-cs-vs-1";
 
 const GfxShader *gfx_shader_mesh_cs_vs(void) {
     static const GfxShader *vs;

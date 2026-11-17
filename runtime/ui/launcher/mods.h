@@ -2,7 +2,7 @@
 // <game>/mods, imported from a zip or a folder by tools/mod/import.py. Enabling a mod takes effect at the next start:
 // its romfs/ overlays the game's (runtime/sdk/fs/romfs.c reads the MODS list) and its mod.json switches are set into
 // the config, which is how a ported code mod's patch sets turn on (patches stay compiled in; the menu only flips
-// their switches). A port declares them bare in "switches" ({"CLASSICGP_MAPLINES": "1"}); the page adds the MKW_
+// their switches). A port declares them bare in "switches" ({"CLASSICGP_MAPLINES": "1"}); the page adds the ORBITALS_
 // prefix when it sets them.
 #pragma once
 
@@ -65,7 +65,7 @@ void mods_clear_pick(void);
 // import.py found several mods in the archive ("error variants", tab-separated): import the one chosen
 void mods_import_variant(const char *exe_dir, const char *variant);
 ModsState mods_state(void);
-// Enabled on/off: writes orbital.ini's MODS (enabled order is the overlay precedence) and re-applies every scanned
+// Enabled on/off: writes orbitals.ini's MODS (enabled order is the overlay precedence) and re-applies every scanned
 // mod's switches, so deleting a mod folder cannot strand a switch on.
 void mods_toggle(const char *name, int on);
 // 1 when the named mod is enabled (its checkbox state).

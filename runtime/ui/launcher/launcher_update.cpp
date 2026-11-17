@@ -2,7 +2,7 @@
 // (urllib and OpenSSL; the runtime has no HTTP), run in a child process whose event lines a thread of ours reads, as
 // launcher_setup.cpp does for prepare.py. The swap is done here, once that Python has exited, because Windows cannot
 // rename a folder whose program is still running:
-//   Windows  each top entry of the new package (mkw.exe, its DLLs, setup/, licenses/) replaces the one next to the
+//   Windows  each top entry of the new package (orbitals-recomp.exe, its DLLs, setup/, licenses/) replaces the one next to the
 //            program, which is renamed to <name>.old first (a running exe and its loaded DLLs can be renamed, not
 //            removed); a failed rename puts back the ones already done.
 //   Linux    the new AppImage replaces $APPIMAGE (a rename in the same folder: the running one keeps its inode), and
@@ -67,7 +67,7 @@ static bool installable(const char *exe_dir, char *dest, size_t cap) {
     snprintf(dest, cap, "%s", app);
     char *cut = strrchr(dest, '/');
     if (!cut) return false;
-    snprintf(cut, cap - (size_t)(cut - dest), "/.mkw-recomp-update");
+    snprintf(cut, cap - (size_t)(cut - dest), "/.orbitals-recomp-update");
     return true;
 #endif
 }
@@ -143,7 +143,7 @@ static bool spawn(const char *const *args) {
 void update_check_start(const char *exe_dir) {
     if (!g_lock) g_lock = SDL_CreateMutex();
     char python[1200], script[1200];
-    if (!cfg_bool("MKW_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
+    if (!cfg_bool("ORBITALS_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
         !find_tools(exe_dir, python, script, sizeof python))
         return;
     g_state = UpdateState{};

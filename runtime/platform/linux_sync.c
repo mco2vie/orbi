@@ -113,7 +113,7 @@ int plat_mutex_trylock(PlatMutex *m) {
     return 0;
 }
 
-// MKW_LOCK_PROF=1: time from finding a lock taken to getting it, per lock, for plat_lock_report (which locks the
+// ORBITALS_LOCK_PROF=1: time from finding a lock taken to getting it, per lock, for plat_lock_report (which locks the
 // replay waits on: its recording spent 25-30 % of its wall time off the CPU, rt-k0/rt-k1). Off: one load per contention.
 // Also how long a holder kept a lock that some thread slept waiting for, per the holder's caller: the waits name who
 // waited, not which section to shorten (shadow_lock's ~1 ms waits at the fence, aq-on2, 06/11/2026).
@@ -122,14 +122,14 @@ typedef struct { volatile uintptr_t a, ra, lk; volatile int64_t ns, n; } LpEnt; 
 static LpEnt lp[LP_N], lp_hold[LP_N];
 static int lp_on = -1;
 
-// The locks this thread holds exclusively since MKW_LOCK_PROF found its first contention, with when and by whom.
+// The locks this thread holds exclusively since ORBITALS_LOCK_PROF found its first contention, with when and by whom.
 #define LH_DEPTH 16
 static __thread struct { const void *m; uintptr_t ra; uint64_t t; } lh[LH_DEPTH];
 static __thread int nlh;
 
 static uint64_t lp_begin(void) {
     if (lp_on < 0) {
-        const char *e = getenv("MKW_LOCK_PROF");
+        const char *e = getenv("ORBITALS_LOCK_PROF");
         lp_on = e && *e && *e != '0';
     }
     return lp_on ? plat_now_ns() : 0;

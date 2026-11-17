@@ -1,5 +1,5 @@
 // input_script.c, for input.c: the script's presses ORed into one poll's buttons and sticks (sl, sr: x, y), and the
-// merged poll written to MKW_INPUT_RECORD.
+// merged poll written to ORBITALS_INPUT_RECORD.
 #pragma once
 #include <stdint.h>
 

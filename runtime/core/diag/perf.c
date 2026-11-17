@@ -1,5 +1,5 @@
-// Frame timing (MKW_TRACE=perf, the frame-time summary, the performance overlay's counts), the A/B switches (rt_ab,
-// rt_knob) and MKW_ONE_PER_CORE. The sampling profiler (MKW_PROFILE) is the OS's (prof_win.c); without one the weak
+// Frame timing (ORBITALS_TRACE=perf, the frame-time summary, the performance overlay's counts), the A/B switches (rt_ab,
+// rt_knob) and ORBITALS_ONE_PER_CORE. The sampling profiler (ORBITALS_PROFILE) is the OS's (prof_win.c); without one the weak
 // prof_sampler_* below do nothing.
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,13 +16,13 @@
 volatile uint32_t prof_render_tid, prof_main_tid, prof_replay_tid;
 
 __attribute__((weak)) int prof_sampler_start(void) {
-    if (cfg_get("MKW_PROFILE")) rt_log("prof: MKW_PROFILE: no sampling profiler on this OS");
+    if (cfg_get("ORBITALS_PROFILE")) rt_log("prof: ORBITALS_PROFILE: no sampling profiler on this OS");
     return 0;
 }
 __attribute__((weak)) void prof_sampler_write(void) {}
 __attribute__((weak)) void prof_sampler_frame(uint64_t frame, uint64_t now, uint64_t d) { (void)frame, (void)now, (void)d; }
 
-// MKW_TRACE=perf, MKW_FLIGHT=1 or the full performance overlay: event counts are taken. Wait times are always taken
+// ORBITALS_TRACE=perf, ORBITALS_FLIGHT=1 or the full performance overlay: event counts are taken. Wait times are always taken
 // (frame-time summary). perf_base: the part fixed at start.
 static int perf_on, perf_base;
 static int overlay;   // performance overlay mode (perf_set_overlay): 0 off, 1 fps, 2 full
@@ -55,8 +55,8 @@ void prof_write(void) {   // everything a run writes at exit for its diagnostics
     prof_sampler_write();
 }
 
-// ---- MKW_TRACE=perf: frame interval and the time the render thread spends waiting, logged every 60 presents. The
-// flight recorder (MKW_FLIGHT=1, flight.c) takes the same numbers per frame.
+// ---- ORBITALS_TRACE=perf: frame interval and the time the render thread spends waiting, logged every 60 presents. The
+// flight recorder (ORBITALS_FLIGHT=1, flight.c) takes the same numbers per frame.
 static uint64_t wait_ns[PERF_N], frame_ns[PERF_N], worst_ns[PERF_N];   // window totals, this frame, the slowest frame
 
 uint64_t perf_begin(void) { return kern_now_ns(); }
@@ -209,16 +209,16 @@ static void perf_gpu_line(uint64_t frame, double interval_ms, double pace_share,
            (unsigned long long)frame, gs, rw, ow, vs, ws, priv, bound);
 }
 
-// MKW_AB_INVERT=1 swaps the blocks (B A A B): a race's stretches are not equally heavy (sl-ab1, 06/11/2026: texture
+// ORBITALS_AB_INVERT=1 swaps the blocks (B A A B): a race's stretches are not equally heavy (sl-ab1, 06/11/2026: texture
 // queries, which no switch changed, 8 % more in B), so a run and its inverted twin put each stretch once on each side.
 int rt_ab(void) {
     static int64_t period = -1;   // us of world clock; 0: off
     static int invert;
     if (period < 0) {
-        const char *e = cfg_get("MKW_AB"), *i = cfg_get("MKW_AB_INVERT");
+        const char *e = cfg_get("ORBITALS_AB"), *i = cfg_get("ORBITALS_AB_INVERT");
         period = e && *e ? (int64_t)(atof(e) * 1e6) : 0;
         invert = i && *i && strcmp(i, "0");
-        if (period && invert) rt_log("perf: A/B blocks in the order B A A B (MKW_AB_INVERT)");
+        if (period && invert) rt_log("perf: A/B blocks in the order B A A B (ORBITALS_AB_INVERT)");
     }
     int64_t w = period ? frame_step_world_us() : -1;
     if (w < 0) return 0;   // before the world clock: A
@@ -228,13 +228,13 @@ int rt_ab(void) {
 
 int rt_knob(const char *name, const char *def) {
     char key[64];
-    snprintf(key, sizeof key, "MKW_%s", name);
+    snprintf(key, sizeof key, "ORBITALS_%s", name);
     const char *e = cfg_get(key);
     if (!e || !*e) e = def;
     return !strcmp(e, "ab") ? 2 : strcmp(e, "0") != 0;
 }
 
-// MKW_ONE_PER_CORE=1: the process keeps the first logical processor of each physical core, so busy threads (the
+// ORBITALS_ONE_PER_CORE=1: the process keeps the first logical processor of each physical core, so busy threads (the
 // render thread, the guest cores, the job workers) never share a core's execution units with another; "ab" switches
 // it with the A/B blocks. Off by default until measured here; Savage Wind Recomp
 // reported +4-10% from the same rule on an 8-core SMT CPU.
@@ -261,8 +261,7 @@ void perf_present(uint64_t frame) {
     static int64_t win_prev[PERF_CNT_N];
     prof_render_tid = plat_thread_id();
     if (rt_trace & RT_TRACE_SCHED) kern_sched_report(frame);
-    seqwatch_frame(frame);
-    if (!seqwatch_window()) hostfn_time_report(frame);
+    hostfn_time_report(frame);
     uint64_t now = kern_now_ns(), d = last ? now - last : 0;
     prof_sampler_frame(frame, now, last ? d : 0);
     uint64_t rep = ft_frame(frame, now, d);   // d is 0 on the first present: it only starts the period
@@ -277,9 +276,9 @@ void perf_present(uint64_t frame) {
         last = now;
         return;
     }
-    static uint64_t slow_ns;   // MKW_PERF_SLOW_MS (default 50): frames at least this long get a line of their own
+    static uint64_t slow_ns;   // ORBITALS_PERF_SLOW_MS (default 50): frames at least this long get a line of their own
     if (!slow_ns) {
-        const char *e = cfg_get("MKW_PERF_SLOW_MS");
+        const char *e = cfg_get("ORBITALS_PERF_SLOW_MS");
         slow_ns = (uint64_t)(e && atoi(e) > 0 ? atoi(e) : 50) * 1000000ull;
     }
     if (last) {
@@ -319,11 +318,11 @@ void perf_present(uint64_t frame) {
                (span > wait_ns[PERF_PACE] ? span - wait_ns[PERF_PACE] : 0) / 1e6 / n,
                plat_xchg64(&replay_ns, 0) / 1e6 / n, (unsigned long long)ab_b, (unsigned long long)n, frame_step_world_us() / 1e6);
     if (n && span) perf_gpu_line(frame, sum / 1e6 / n, (double)wait_ns[PERF_PACE] / span, n);
-    // MKW_LOCK_PROF=1: the waits per lock in this window (vk_sync.c's line needs 1,200 submissions; the boot has fewer)
+    // ORBITALS_LOCK_PROF=1: the waits per lock in this window (vk_sync.c's line needs 1,200 submissions; the boot has fewer)
     if (n && span) {
         char lb[1024];
         if (plat_lock_report(0, lb, sizeof lb))
-            rt_log("perf: frame %llu: lock waits (MKW_LOCK_PROF):%s", (unsigned long long)frame, lb);
+            rt_log("perf: frame %llu: lock waits (ORBITALS_LOCK_PROF):%s", (unsigned long long)frame, lb);
     }
     sum = max = n = ab_b = 0;
     memset(wait_ns, 0, sizeof wait_ns);

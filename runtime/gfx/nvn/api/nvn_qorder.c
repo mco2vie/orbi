@@ -1,4 +1,4 @@
-// The game's queues ordered by their events (MKW_QUEUE_WAITS, default 0; 1 on, "ab": in the B blocks). MKW's two worker
+// The game's queues ordered by their events (ORBITALS_QUEUE_WAITS, default 0; 1 on, "ab": in the B blocks). MKW's two worker
 // queues pass stages back and forth with nvnCommandBufferWaitEvent; replayed in submit order on our one Vulkan queue,
 // a wait the signals submitted before it do not meet ran its work before what it waits for (wc1: 50-65 % of the waits,
 // each met by the other queue's next submit; Hookshot's finding in another MKW recomp, an idea only: GPL-3.0).
@@ -13,8 +13,8 @@
 // than on the console, never earlier. A CPU signal (nvnEventSignal) can let a queue on too.
 //
 // Let go as it stands, as before (gfx_held_force): when the replay reaches a held submission still empty and waits
-// MKW_QUEUE_HOLD_MS (vk_backend.c), the oldest waiting queue goes past its wait, the others as far as theirs allow.
-// MKW_QUEUE_WAITS=0 only counts the waits the submit order breaks (the census of wc1), one line every 1,500 submits.
+// ORBITALS_QUEUE_HOLD_MS (vk_backend.c), the oldest waiting queue goes past its wait, the others as far as theirs allow.
+// ORBITALS_QUEUE_WAITS=0 only counts the waits the submit order breaks (the census of wc1), one line every 1,500 submits.
 // Off by default: on, +3.1 ms a frame (qw2/qw2j, scene balanced) and more one-frame black cacti, not fewer (B ~25 in
 // ~1,350 race frames, A ~7 in ~1,680); the replay of the same work from a capture is clean (qcap1). Hypothesis,
 // unchecked: the scene's first half waits for the compute queue's submit, its replay runs later, and the cacti are a
@@ -50,7 +50,7 @@ static int mode(void) {
     static int m = -1;
     if (m < 0) {
         m = rt_knob("QUEUE_WAITS", "0");
-        rt_log("nvn: the queues' work ordered by their event waits%s (MKW_QUEUE_WAITS)",
+        rt_log("nvn: the queues' work ordered by their event waits%s (ORBITALS_QUEUE_WAITS)",
                !m ? ": off, a census only" : m == 2 ? " in the B blocks" : "");
     }
     return m;
@@ -240,7 +240,7 @@ static void log_line(void) {
     static uint64_t subs;
     if (++subs % 1500) return;
     rt_log("nvn: queue order in the last 1500 submits: %llu event waits, %llu not met in submit order (the census, "
-           "MKW_QUEUE_WAITS=0); %llu episodes, %llu submissions held, %llu waits let go, %llu queues let on by the CPU, "
+           "ORBITALS_QUEUE_WAITS=0); %llu episodes, %llu submissions held, %llu waits let go, %llu queues let on by the CPU, "
            "%.1f MiB of ops ordered", (unsigned long long)st_waits, (unsigned long long)st_unmet,
            (unsigned long long)st_episodes, (unsigned long long)st_held, (unsigned long long)st_forced,
            (unsigned long long)st_cpu, st_bytes / 1048576.0);

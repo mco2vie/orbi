@@ -89,7 +89,7 @@ static int upd_read(const VkExec *ex, uint64_t a, void *out, size_t n) {
     return 0;
 }
 
-// MKW_UBO_PTR_SNAP (default 1; "ab"): the address comes from the block's snapshot (vk_usnap.c), as the shader's other
+// ORBITALS_UBO_PTR_SNAP (default 1; "ab"): the address comes from the block's snapshot (vk_usnap.c), as the shader's other
 // reads of that block do, not from guest memory at record time. The game rewrites per-object blocks once it has
 // submitted (vk_usnap.c), so a pointer read live could be another object's: the draw read that object's storage
 // buffer. A "uptr:" line for each frame with such pointers whose live value differed from the

@@ -11,7 +11,7 @@ SPIR-V and result without glslc or spirv-val (glslc is ~75 % of the time: 196 ms
 translator change only the programs it touched are compiled again; --full compiles everything. The GLSL's sha256 also
 goes in <key>.done, so the shortcut holds where the GLSL was deleted after the pass (a player's setup keeps only .spv and
 .res.json: before, every translator change in an update compiled all ~11 500 programs again). --dumped also takes the programs a run could not find
-(MKW_SPIRV_DUMP=DIR): ones the game builds in play from templates in main, which no extraction can list.
+(ORBITALS_SPIRV_DUMP=DIR): ones the game builds in play from templates in main, which no extraction can list.
 """
 
 import argparse
@@ -176,7 +176,7 @@ def main() -> None:
     )
     ap.add_argument("--dumped-only", action="store_true", help="with --dumped: only those programs")
     ap.add_argument("--full", action="store_true", help="compile every program, also those whose GLSL is unchanged")
-    ap.add_argument("--dumped", type=Path, help="also the <key>.{ctl,code} a run dumped (MKW_SPIRV_DUMP)")
+    ap.add_argument("--dumped", type=Path, help="also the <key>.{ctl,code} a run dumped (ORBITALS_SPIRV_DUMP)")
     ap.add_argument("--spec", type=Path, default=SPEC, help="the SM86 spec (sm86/spec/spec.py)")
     ap.add_argument("--glslc", default=GLSLC, help="the glslc to run (the player's setup ships its own)")
     ap.add_argument("--no-validate", action="store_true", help="no spirv-val: the player's setup ships none")

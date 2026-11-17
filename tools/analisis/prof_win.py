@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Report of a Windows sampling profile (MKW_PROFILE=<path>, runtime/core/diag/prof_win.c): samples per thread, per module
-and per function. Functions of mkw.exe and orbitalgame.dll are named with llvm-symbolizer (llvm-mingw of build/win) from the
+"""Report of a Windows sampling profile (ORBITALS_PROFILE=<path>, runtime/core/diag/prof_win.c): samples per thread, per module
+and per function. Functions of orbitals-recomp.exe and orbitalgame.dll are named with llvm-symbolizer (llvm-mingw of build/win) from the
 binaries of build/dist/windows; other modules (the NVIDIA driver, ntdll, kernel32) are summed by module.
-Slow-frame dumps (MKW_PROFILE_SLOW=<ms>: PROFILE.f<frame>, `tstack` lines with the thread) are summed per thread
+Slow-frame dumps (ORBITALS_PROFILE_SLOW=<ms>: PROFILE.f<frame>, `tstack` lines with the thread) are summed per thread
 instead: for each thread its samples, the functions it was in (leaf) and the first frame of ours under a driver or
 system call, over every dump given.
 
@@ -60,7 +60,7 @@ class Names:
 
     def ours(self, rip: int) -> bool:
         m = self.module(rip)
-        return bool(m) and m[1].lower() in ("mkw.exe", "orbitalgame.dll")
+        return bool(m) and m[1].lower() in ("orbitals-recomp.exe", "orbitalgame.dll")
 
     def resolve(self, rips: set[int]) -> None:
         per: dict[str, list[int]] = {}
@@ -68,7 +68,7 @@ class Names:
             m = self.module(r)
             if not m:
                 self.cache[r] = "?"
-            elif m[1].lower() in ("mkw.exe", "orbitalgame.dll"):
+            elif m[1].lower() in ("orbitals-recomp.exe", "orbitalgame.dll"):
                 per.setdefault(m[1].lower(), []).append(r)
             else:
                 self.cache[r] = f"[{m[1]}]"
@@ -151,14 +151,14 @@ def main() -> None:
             rips.append((int(w[1], 16), int(w[2]), int(w[3]) if len(w) > 3 else 0))
         elif w[0] in ("main", "render", "replay"):
             roles.update({int(w[i + 1]): w[i] for i in range(0, len(w) - 1, 2)})
-        elif w[0] == "stack":   # MKW_PROFILE_CHAINS / _RENDER: count, then the chain from the sampled Rip
+        elif w[0] == "stack":   # ORBITALS_PROFILE_CHAINS / _RENDER: count, then the chain from the sampled Rip
             chains.append((int(w[1]), [int(x, 16) for x in w[2:]]))
     modules.sort()
     starts = [m[0] for m in modules]
     n_rip = sum(n for _, n, _ in rips)
 
     print(f"{a.profile}: {total} samples, {n_rip} in the top Rips, {len(threads)} threads")
-    print("\nthreads (samples, of them in mkw.exe):")
+    print("\nthreads (samples, of them in orbitals-recomp.exe):")
     for tid, n, ex in sorted(threads, key=lambda t: -t[1])[:12]:
         print(f"  {tid:>7} {roles.get(tid, ''):7} {n:>8} {ex:>8}")
 
@@ -172,7 +172,7 @@ def main() -> None:
             continue
         name = Path(modules[i][2].replace("\\", "/")).name
         by_mod[name] += n
-        if name.lower() in ("mkw.exe", "orbitalgame.dll"):
+        if name.lower() in ("orbitals-recomp.exe", "orbitalgame.dll"):
             per_bin.setdefault(name.lower(), []).append((rip - modules[i][0], n, role))
         else:
             per_bin.setdefault("", []).append((0, n, role))
@@ -196,7 +196,7 @@ def main() -> None:
     for role, mods in by_role_mod.items():
         for mod, n in mods.items():
             by_role.setdefault(role, Counter())[f"[{mod}]"] += n
-    print("\nfunctions of mkw.exe and orbitalgame.dll:")
+    print("\nfunctions of orbitals-recomp.exe and orbitalgame.dll:")
     for fn, n in by_fn.most_common(a.top):
         print(f"  {100 * n / n_rip:5.1f}%  {fn[:150]}")
     if chains:   # system time by the first function of ours under it: what calls into the OS and the driver

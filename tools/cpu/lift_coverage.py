@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "recomp"))
 from lifter import Lifter, Unsupported
 from nso import Nso
 
-DEFAULT_EXEFS = Path(os.environ.get("MKW_GAME", "game")) / "exefs"
+DEFAULT_EXEFS = Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs"
 BASE = 0x8000000  # any aligned base: only PC-relative operands depend on it
 
 

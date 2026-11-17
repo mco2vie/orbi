@@ -31,9 +31,9 @@ from nso import R_AARCH64_RELATIVE, Nso
 # sdk build id -> (name pool, name offsets, last index, pointers). The runtime keeps the same rows
 # (runtime/core/boot/version.c, sdk_*): change both together.
 TABLES = {
-    # MKW 1.0.0: adrp/add x25 and x24 and mov w22, #0x2b9 in sdk+0x5b5a70; adrp/add x8 in sdk+0x5ffad0.
+    # the first game's : adrp/add x25 and x24 and mov w22, #0x2b9 in sdk+0x5b5a70; adrp/add x8 in sdk+0x5ffad0.
     "90ebba182862b9ecdc21fcb87b99901224fb8f72": (0xB74C26, 0xB79B90, 0x2B9, 0xD95168),
-    # MKW 1.8.0: the search in sdk+0x65c4xx (mov #0x2da, adrp/add of both tables at sdk+0x65c520); pointers referenced
+    # the first game's : the search in sdk+0x65c4xx (mov #0x2da, adrp/add of both tables at sdk+0x65c520); pointers referenced
     # at sdk+0x65bee0 (11/11/2026, by locate() and checked by disassembly).
     "7a68b13d88183767fb9c7babffe89f3d368752e2": (0xC26452, 0xC2B870, 0x2DA, 0xE45AA8),
 }
@@ -173,7 +173,7 @@ def procs(nso: Nso, search: bool = False) -> dict[str, int]:
 
 def main() -> None:
     search = "--locate" in sys.argv[1:]
-    sdk = Nso(str(Path(os.environ.get("MKW_GAME", "game")) / "exefs/sdk"))
+    sdk = Nso(str(Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs/sdk"))
     table = procs(sdk, search)
     for name, off in sorted(table.items(), key=lambda t: t[1]):
         print(f"sdk+{off:#x} {name}")

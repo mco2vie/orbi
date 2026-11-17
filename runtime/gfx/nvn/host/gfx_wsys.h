@@ -22,12 +22,12 @@ int wsys_probe_click(int where);
 // ---- gfx_hdr.c, for gfx_present.c's swapchain
 int gfx_hdr_pick(const VkSurfaceFormatKHR *fmts, uint32_t n, VkSurfaceFormatKHR *out);   // 1: HDR10 picked into *out
 void gfx_hdr_metadata(VkSwapchainKHR sc);  // VK_EXT_hdr_metadata of a new HDR10 swapchain
-int gfx_hdr_cfg_changed(void);             // MKW_HDR differs from the one the swapchain was made with
+int gfx_hdr_cfg_changed(void);             // ORBITALS_HDR differs from the one the swapchain was made with
 
 // ---- what gfx_present.c provides the back end
 void gfx_window_mark_dirty(void);          // the window changed size: the next present rebuilds the swapchain
 void gfx_window_focus_changed(int in);     // the window gained (1) or lost (0) the focus
 void gfx_window_closed(void);              // the player closed the window: saves, then ends the process
 void gfx_window_set_refresh(double hz);    // the refresh rate of the window's monitor, 0 unknown
-int gfx_cfg_fullscreen(void);              // MKW_FULLSCREEN
-void gfx_cfg_window_size(int *w, int *h);  // MKW_WINDOW_SIZE, the default when unparsable or out of range
+int gfx_cfg_fullscreen(void);              // ORBITALS_FULLSCREEN
+void gfx_cfg_window_size(int *w, int *h);  // ORBITALS_WINDOW_SIZE, the default when unparsable or out of range

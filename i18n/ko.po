@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mkw-recomp\nLanguage: ko\nMIME-Version: 1.0\nContent-Type: text/plain; "
+"Project-Id-Version: orbitals-recomp\nLanguage: ko\nMIME-Version: 1.0\nContent-Type: text/plain; "
 "charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.
@@ -76,14 +76,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "몇 배 빠르게 할지 정합니다. 느린 PC에서는 도달하지 못할 수 있습니다."
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "영상 스킵"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "컵과 코스의 오프닝 영상이 시작되자마자 스킵합니다."
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "항상 같은 랜덤"
@@ -103,37 +95,6 @@ msgid ""
 "F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
 "look at a moment closely."
 msgstr "F3은 현재 프레임에서 게임을 멈추고 다시 재생하며, F4는 한 프레임씩 진행합니다. 한 순간을 자세히 볼 때 사용합니다."
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "모두 해금"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr "모든 드라이버와 코스튬, 탈것, 스티커, 스페셜 컵, 미러가 열립니다. 게임이 저장될 때 세이브에 기록되므로, 끄더라도 다시 잠기지 않습니다."
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "바로 시작"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"시작할 때 메뉴를 자동으로 진행합니다. 타임 어택: 마리오, 스탠더드 카트, 게임이 제안하는 코스(「항상 같은 랜덤」을 켜면 항상 같은 코스), 라이벌 없음. 프리 런: 오픈 "
-"월드. 컨트롤러는 계속 사용할 수 있습니다."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "타임 어택"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "프리 런"
 
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
@@ -173,17 +134,6 @@ msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
 msgid "Quarter"
 msgstr "4분의 1"
 
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "디테일 거리"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"오브젝트가 상세한 모델을 유지하는 거리입니다. 이 거리를 넘으면 더 단순한 모델로 바뀝니다. 「콘솔」은 Switch 2의 값입니다. 프레임 레이트에 미치는 영향: 적음."
-
 msgctxt "UI_MENU_DETAIL_LOW"
 msgid "Low"
 msgstr "낮음"
@@ -203,18 +153,6 @@ msgstr "높음"
 msgctxt "UI_MENU_DETAIL_ULTRA"
 msgid "Very high"
 msgstr "매우 높음"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "그림자 품질"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"그림자를 그릴 때 사용하는 맵의 크기입니다. 작을수록 그래픽 카드 부담이 줄지만 그림자 가장자리가 흐릿해집니다. 콘솔은 독 모드 3072, 휴대 모드 2048입니다. 프레임 "
-"레이트에 미치는 영향: 적음."
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -290,38 +228,6 @@ msgctxt "UI_MENU_QUALITY_CUSTOM"
 msgid "Custom"
 msgstr "사용자 설정"
 
-msgctxt "UI_MENU_RESOLUTION"
-msgid "Internal resolution"
-msgstr "내부 해상도"
-
-msgctxt "UI_MENU_RESOLUTION_DESC"
-msgid ""
-"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
-"integrated graphics. Original is the console's (up to 1440p)."
-msgstr ""
-"게임이 장면을 그리는 라인 수이며, 이후 창 크기에 맞게 확대·축소됩니다. 낮을수록 빠릅니다. 내장 그래픽에는 720p가 적합합니다. 「원본」은 콘솔의 해상도입니다(최대 "
-"1440p)."
-
-msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
-msgid "Original"
-msgstr "원본"
-
-msgctxt "UI_MENU_ASPECT"
-msgid "Aspect ratio"
-msgstr "화면 비율"
-
-msgctxt "UI_MENU_ASPECT_DESC"
-msgid ""
-"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
-"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
-msgstr ""
-"16:9보다 넓게 설정하면 울트라와이드 모니터에서 코스의 좌우가 더 넓게 보입니다. 16:9는 콘솔의 비율이며, 「창」은 창 또는 모니터의 비율을 따릅니다. 메뉴는 아직 "
-"늘어난 채로 표시됩니다."
-
-msgctxt "UI_MENU_ASPECT_WINDOW"
-msgid "Window"
-msgstr "창"
-
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
 msgstr "화면 출력"
@@ -392,18 +298,6 @@ msgstr "%.0f fps"
 msgctxt "UI_PERF_LINE_FPS_FG"
 msgid "%.0f/%.0f fps"
 msgstr "%.0f/%.0f fps"
-
-msgctxt "UI_MENU_FPS"
-msgid "Frame rate"
-msgstr "프레임 레이트"
-
-msgctxt "UI_MENU_FPS_DESC"
-msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
-msgstr ""
-"게임이 목표로 하는 초당 프레임 수입니다. 「자동」은 콘솔과 같아서 60이며, 한 프레임이 너무 오래 걸리면 30이 됩니다. 컴퓨터가 60을 유지하지 못한다면 30으로 "
-"설정해야 레이스가 원래 속도로 진행됩니다."
 
 msgctxt "UI_MENU_FPS_AUTO"
 msgid "Automatic"
@@ -523,12 +417,10 @@ msgstr "LAN 플레이"
 
 msgctxt "UI_MENU_LAN_DESC"
 msgid ""
-"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
-"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
-"the next start."
+"Lets the game reach other PCs on the same local network when it asks for a local network "
+"connection, for local network play. It only reaches local network addresses, never the internet. "
+"Applies at the next start."
 msgstr ""
-"타이틀 메뉴의 로컬 통신이 LAN 플레이로 바뀌어 같은 로컬 네트워크의 다른 PC와 레이스할 수 있습니다(UDP 포트 49152, 35000). 로컬 네트워크 주소에만 "
-"연결하며 인터넷에는 연결하지 않습니다. 다음 실행부터 적용됩니다."
 
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
@@ -1603,10 +1495,6 @@ msgctxt "UI_MENU_OV_OUTPUT"
 msgid "Game image"
 msgstr "게임 화면"
 
-msgctxt "UI_MENU_OV_INTERNAL"
-msgid "Internal resolution"
-msgstr "내부 해상도"
-
 msgctxt "UI_MENU_OV_SCALING"
 msgid "Scaling"
 msgstr "확대"
@@ -1696,12 +1584,10 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Orbitals with its update, dumped "
+"from your console (a .nup package, or the exefs and romfs folders). The setup checks its build "
+"and builds the game code on this computer."
 msgstr ""
-"이 게임은 포트에 포함되어 있지 않습니다. 본인의 콘솔에서 덤프한 Mario Kart World 1.0.0/1.8.0 사본(exefs와 romfs 폴더)이 필요합니다. 설정 "
-"과정에서 버전을 확인하고, 이 컴퓨터에서 게임 코드를 빌드하고, 셰이더를 변환합니다."
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1769,9 +1655,8 @@ msgstr "%s 파일이 암호화되어 있습니다. 게임의 exefs를 복호화�
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid ""
-"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
-msgstr "게임이 Mario Kart World 1.0.0/1.8.0이 아닙니다 (빌드 ID %s). 1.0.0/1.8.0만 지원됩니다"
+msgid "the game is not a supported build of Orbitals (build id %s)"
+msgstr ""
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"
@@ -1978,87 +1863,6 @@ msgctxt "UI_MOD_ERR_UNPACK"
 msgid "Cannot open this archive: .rar and .7z need bsdtar (libarchive) installed"
 msgstr "이 압축 파일을 열 수 없습니다: .rar와 .7z에는 bsdtar(libarchive)가 필요합니다"
 
-#. The Mods page's two tabs: the player's mods, and GameBanana's.
-msgctxt "UI_MOD_TAB_INSTALLED"
-msgid "Installed"
-msgstr "설치됨"
-
-msgctxt "UI_MOD_TAB_FIND"
-msgid "Find on GameBanana"
-msgstr "GameBanana에서 찾기"
-
-#. Shown above the GameBanana list: the project hosts no mods.
-msgctxt "UI_GB_NOTE"
-msgid ""
-"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
-"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
-"mods. Each mod has its own license."
-msgstr ""
-"모드는 제작자가 만들며, 설치할 때 GameBanana에서 다운로드됩니다. 이 프로젝트는 GameBanana 및 모드 제작자와 관련이 없으며, 모드를 호스팅하거나 검토하거나 "
-"보증하지 않습니다. 각 모드에는 고유한 라이선스가 있습니다."
-
-msgctxt "UI_GB_SEARCH"
-msgid "Search"
-msgstr "검색"
-
-msgctxt "UI_GB_SORT_DOWNLOADS"
-msgid "Most downloaded"
-msgstr "다운로드 많은 순"
-
-msgctxt "UI_GB_SORT_NEW"
-msgid "Newest"
-msgstr "최신순"
-
-msgctxt "UI_GB_SORT_LIKES"
-msgid "Most liked"
-msgstr "좋아요 많은 순"
-
-msgctxt "UI_GB_LOADING"
-msgid "Loading..."
-msgstr "불러오는 중..."
-
-msgctxt "UI_GB_NONE"
-msgid "No mods found"
-msgstr "모드를 찾을 수 없습니다"
-
-#. %s: the mod's author on GameBanana.
-msgctxt "UI_GB_BY"
-msgid "by %s"
-msgstr "제작: %s"
-
-#. %s: the mod's license, e.g. "CC BY-NC-ND 4.0".
-msgctxt "UI_GB_LICENSE"
-msgid "License: %s"
-msgstr "라이선스: %s"
-
-msgctxt "UI_GB_OPEN"
-msgid "Open its GameBanana page"
-msgstr "GameBanana 페이지 열기"
-
-#. %s: the file's name.
-msgctxt "UI_GB_INSTALL"
-msgid "Install %s"
-msgstr "%s 설치"
-
-#. First %s: the file's name; second %s: its author.
-msgctxt "UI_GB_CONFIRM"
-msgid "Download %s by %s from GameBanana and install it?"
-msgstr "GameBanana에서 %s(제작: %s)을(를) 다운로드해 설치할까요?"
-
-msgctxt "UI_GB_UNSAFE"
-msgid "Not offered: GameBanana's virus scan has not marked this file clean"
-msgstr "제공 안 됨: GameBanana의 바이러스 검사에서 이 파일이 안전한 것으로 표시되지 않았습니다"
-
-#. %d: this page; %d: how many pages.
-msgctxt "UI_GB_PAGE"
-msgid "Page %d of %d"
-msgstr "%d / %d 페이지"
-
-#. %s: what failed (an English detail from the network).
-msgctxt "UI_GB_ERROR"
-msgid "GameBanana did not answer: %s"
-msgstr "GameBanana가 응답하지 않았습니다: %s"
-
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
 msgid ""
@@ -2129,8 +1933,8 @@ msgstr "지난 게임이 %s에서 수정된 문제로 멈췄습니다. 수정 �
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
-msgstr "지난 게임이 오류로 멈췄습니다. logs/orbital.log를 첨부해 보고하면 수정에 도움이 됩니다."
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
+msgstr "지난 게임이 오류로 멈췄습니다. logs/orbitals.log를 첨부해 보고하면 수정에 도움이 됩니다."
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2237,10 +2041,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "Steam 대기 중"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "orbital.ini에 steam_appid가 필요합니다"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "orbitals.ini에 steam_appid가 필요합니다"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2311,13 +2115,14 @@ msgstr "Steam 앱 ID"
 
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
-"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"The Steam game orbitals-recomp runs as for Remote Play Together. Automatic: the game whose launch "
+"options start orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you "
+"own with Remote Play Together works. Another number: steam_appid in orbitals.ini. Takes effect at "
+"the next start."
 msgstr ""
-"Remote Play Together에서 mkw가 실행되는 Steam 게임. 자동: 실행 옵션으로 mkw를 시작하는 게임 (\"C:\\...\\mkw.exe\" "
-"%command%)이므로 Remote Play Together를 지원하는 보유 게임이면 모두 됩니다. 다른 번호: orbital.ini의 steam_appid. 다음 실행부터 "
-"적용됩니다."
+"Remote Play Together에서 orbitals-recomp가 실행되는 Steam 게임. 자동: 실행 옵션으로 orbitals-recomp를 시작하는 게임 "
+"(\"C:\\...\\orbitals-recomp.exe\" %command%)이므로 Remote Play Together를 지원하는 보유 게임이면 모두 됩니다. 다른 번호: "
+"orbitals.ini의 steam_appid. 다음 실행부터 적용됩니다."
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2329,8 +2134,8 @@ msgstr "자동 (Steam이 실행한 게임)"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
+msgstr "%s (orbitals.ini)"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2340,12 +2145,12 @@ msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
-"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"press Enter or A. orbitals-recomp runs as that game from the next start, and the Steam App ID row "
+"above keeps it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "보유한 Remote Play Together 지원 Steam 게임의 앱 ID를 키보드 숫자 키로 입력하고 (게임 상점 주소의 숫자, "
-"store.steampowered.com/app/<number>/) Enter 또는 A를 누르세요. 다음 실행부터 mkw가 그 게임으로 실행되고, 위의 Steam 앱 ID "
-"줄이 목록에 남겨 둡니다 (orbital.ini의 steam_appids). Backspace는 숫자 하나를 지웁니다."
+"store.steampowered.com/app/<number>/) Enter 또는 A를 누르세요. 다음 실행부터 orbitals-recomp가 그 게임으로 실행되고, 위의 "
+"Steam 앱 ID 줄이 목록에 남겨 둡니다 (orbitals.ini의 steam_appids). Backspace는 숫자 하나를 지웁니다."
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

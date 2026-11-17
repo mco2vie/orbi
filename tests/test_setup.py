@@ -99,38 +99,22 @@ def test_versions() -> None:
     assert update.version_key("dev") is None
 
 
-def test_romfs_version_matches_main() -> None:
-    # #315: 1.0.0's exefs/main with 1.8.0's RomFS passed the file count and crashed while warming up
+def test_check_detects_orbitals(tmp_path: Path, monkeypatch) -> None:
+    # check() on a loose dump: Orbitals' main (its build id in an NSO header) is version 1, a build not listed is set
+    # up from its own exefs (version 0)
     import versions
 
-    v100, v180 = versions.VERSIONS
-    res = "System/Resource/ResourceSizeTable."
-    r100 = [f"{res}Product.100.Nin_Ounce_NVN2.rsizetable.zs", f"{res}Pilot.100.Nin_Ounce_NVN2.rsizetable.zs"]
-    r180 = [f"{res}Product.180.Nin_Ounce_NVN2.rsizetable.zs", "Layout/Title.sarc.zs"]
-    assert versions.romfs_mismatch(v100, r100) == "" and versions.romfs_mismatch(v180, r180) == ""
-    assert versions.romfs_mismatch(v100, r180) == "RomFS 1.8.0, exefs/main 1.0.0"
-    assert versions.romfs_mismatch(v180, r100) == "RomFS 1.0.0, exefs/main 1.8.0"
-    assert versions.romfs_mismatch(v100, ["Layout/Title.sarc.zs"]) == ""  # no marker: the file count decides
-
-
-@pytest.mark.parametrize("product, ok", [(100, True), (180, False)])
-def test_check_refuses_other_romfs(tmp_path: Path, monkeypatch, product: int, ok: bool) -> None:
-    # check() on a loose dump: 1.0.0's main (its build id in an NSO header) and a RomFS naming `product`
-    import versions
-
-    v100 = versions.VERSIONS[0]
+    (orbitals,) = versions.VERSIONS
+    assert orbitals.number == 1 and orbitals.program_ids[0] == "040032B023CA4000"
+    assert orbitals.module_build_ids["main"] == orbitals.main_build_id
     (tmp_path / "exefs").mkdir()
-    (tmp_path / "exefs/main").write_bytes(b"NSO0" + bytes(0x3C) + bytes.fromhex(v100.main_build_id))
-    res = tmp_path / "romfs/System/Resource"
-    res.mkdir(parents=True)
-    (res / f"ResourceSizeTable.Product.{product}.Nin_Ounce_NVN2.rsizetable.zs").write_bytes(b"")
+    (tmp_path / "romfs").mkdir()
     monkeypatch.setattr(gamesource, "count_files", lambda top, enough: enough)  # the file count is not under test
-    if ok:
-        assert prepare.check(tmp_path, tmp_path)[2] == v100
-    else:
-        with pytest.raises(prepare.Failed) as e:
-            prepare.check(tmp_path, tmp_path)
-        assert "RomFS 1.8.0, exefs/main 1.0.0" in str(e.value)
+    (tmp_path / "exefs/main").write_bytes(b"NSO0" + bytes(0x3C) + bytes.fromhex(orbitals.main_build_id))
+    assert prepare.check(tmp_path, tmp_path)[2] == orbitals
+    (tmp_path / "exefs/main").write_bytes(b"NSO0" + bytes(0x3C) + bytes.fromhex("0123456789abcdef"))
+    other = prepare.check(tmp_path, tmp_path)[2]
+    assert other.number == 0 and other.name == "port-0123456789abcdef"
 
 
 @pytest.mark.parametrize("name", ["stale.old", "setup.old"])
@@ -139,9 +123,9 @@ def test_clean_removes_old(tmp_path: Path, name: str) -> None:
     (game / "update").mkdir(parents=True)
     old = game / name
     old.mkdir() if name == "setup.old" else old.write_text("x")
-    (game / "mkw.exe").write_text("keep")
+    (game / "orbitals-recomp.exe").write_text("keep")
     update.clean(type("A", (), {"game": game})())
-    assert not old.exists() and not (game / "update").exists() and (game / "mkw.exe").exists()
+    assert not old.exists() and not (game / "update").exists() and (game / "orbitals-recomp.exe").exists()
 
 
 def test_package_sources_import(tmp_path: Path) -> None:
@@ -188,9 +172,9 @@ def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypat
     monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
     prepare.warm(game, game / "setup-work", runtime)
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
-    assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
+    assert argv == [str(runtime / ("orbitals-recomp.exe" if os.name == "nt" else "orbitals-recomp"))]
+    assert kwargs["env"]["ORBITALS_GAME_DIR"] == str(game)
+    assert kwargs["env"]["ORBITALS_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
@@ -214,7 +198,8 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
     monkeypatch.setattr(prepare, "STEPS", ("check", "warm"))
     monkeypatch.setattr(prepare, "check", lambda *args: (source / "exefs", source / "romfs",
-                                                       SimpleNamespace(name="test", number=100)))
+                                                       SimpleNamespace(name="test", number=1,
+                                                                       skip_steps=())))
     monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
     monkeypatch.setattr(prepare.subprocess, "Popen", start)
     monkeypatch.setattr(sys, "argv", ["prepare.py", "--game", str(alias), "--runtime", str(runtime),
@@ -229,9 +214,9 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
         if sys.stderr is not original_stderr:
             sys.stderr.close()
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / "mkw")]
-    assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
+    assert argv == [str(runtime / "orbitals-recomp")]
+    assert kwargs["env"]["ORBITALS_GAME_DIR"] == str(alias)
+    assert kwargs["env"]["ORBITALS_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
 
 
 @pytest.mark.parametrize("driver", ["clang", "lld-link", "zig"])
@@ -277,7 +262,7 @@ def test_unpack_uses_launcher_not_installation(tmp_path: Path, monkeypatch: pyte
     monkeypatch.setattr(gamesource.subprocess, "Popen", start)
     package = tmp_path / "Dump ñ.nx"
     assert gamesource.unpack(runtime, package, game, "exefs") == "unpack: 1 files, 64 bytes"
-    assert calls == [[str(runtime / ("mkw.exe" if os.name == "nt" else "mkw")),
+    assert calls == [[str(runtime / ("orbitals-recomp.exe" if os.name == "nt" else "orbitals-recomp")),
                       "--unpack", str(package), str(game), "exefs"]]
 
 
@@ -399,3 +384,8 @@ def test_lastrun_reads_how_the_last_game_ended() -> None:
     assert lastrun.verdict("[host] FATAL: SIGSEGV at host 0x1\n", "0.1.11", sigs) == "crash"
     assert lastrun.verdict("[host] frame 300\n", "0.1.11", sigs) == ""   # killed or power off: nothing to say
     assert (ROOT / "tools/github/signatures.toml").is_file()
+    # the list starts empty for Orbitals: a crash is then "crash", never a known issue that does not exist
+    import tomllib
+
+    rows = tomllib.loads((ROOT / "tools/github/signatures.toml").read_text()).get("signature", [])
+    assert lastrun.verdict("vk: device fault: Instruction pointer invalid\n", "0.2.0", rows) == "crash"

@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mkw-recomp\nLanguage: th\nMIME-Version: 1.0\nContent-Type: text/plain; "
+"Project-Id-Version: orbitals-recomp\nLanguage: th\nMIME-Version: 1.0\nContent-Type: text/plain; "
 "charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.
@@ -78,14 +78,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "เร็วขึ้นกี่เท่า พีซีที่ช้าอาจไปไม่ถึง"
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "ข้ามภาพยนตร์"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "ข้ามฉากเปิดของคัพและสนามทันทีที่เริ่ม"
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "สุ่มเหมือนเดิมทุกครั้ง"
@@ -105,39 +97,6 @@ msgid ""
 "F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
 "look at a moment closely."
 msgstr "F3 หยุดเกมที่เฟรมบนหน้าจอและเล่นต่อ F4 เดินหน้าทีละหนึ่งเฟรม ไว้ดูช่วงเวลาใกล้ ๆ"
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "ปลดล็อกทั้งหมด"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"ตัวละครและชุดทุกแบบ ยานพาหนะและสติกเกอร์ สเปเชียลคัพ และมิเรอร์ จะถูกบันทึกลงเซฟเมื่อเกมบันทึก: "
-"ปิดตัวเลือกนี้แล้วจะไม่ล็อกกลับ"
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "ไปที่"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"ผ่านเมนูเองตอนเริ่ม ไทม์ไทรอัล: มาริโอ คาร์ทมาตรฐาน และสนามที่เกมเสนอ (เหมือนเดิมเสมอเมื่อเปิด "
-"«สุ่มเหมือนเดิมทุกครั้ง») ไม่มีคู่แข่ง ท่องโลกอิสระ: โลกเปิด ยังใช้จอยได้ตามปกติ"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "ไทม์ไทรอัล"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "ท่องโลกอิสระ"
 
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
@@ -179,18 +138,6 @@ msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
 msgid "Quarter"
 msgstr "หนึ่งในสี่"
 
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "ระยะรายละเอียด"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"วัตถุคงโมเดลละเอียดไว้ไกลแค่ไหนก่อนเปลี่ยนเป็นโมเดลที่ง่ายกว่า คอนโซลคือค่าของ Switch 2 "
-"ผลต่อเฟรมเรต: น้อย"
-
 msgctxt "UI_MENU_DETAIL_LOW"
 msgid "Low"
 msgstr "ต่ำ"
@@ -210,18 +157,6 @@ msgstr "สูง"
 msgctxt "UI_MENU_DETAIL_ULTRA"
 msgid "Very high"
 msgstr "สูงมาก"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "คุณภาพเงา"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"ขนาดแผนที่ที่เกมใช้วาดเงา เล็กลงเบากว่าสำหรับการ์ดจอ แต่ขอบเงาเบลอลง ค่าคอนโซลคือ 3072 "
-"เมื่อเสียบแท่นและ 2048 เมื่อเล่นพกพา ผลต่อเฟรมเรต: น้อย"
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -298,38 +233,6 @@ msgctxt "UI_MENU_QUALITY_CUSTOM"
 msgid "Custom"
 msgstr "กำหนดเอง"
 
-msgctxt "UI_MENU_RESOLUTION"
-msgid "Internal resolution"
-msgstr "ความละเอียดภายใน"
-
-msgctxt "UI_MENU_RESOLUTION_DESC"
-msgid ""
-"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
-"integrated graphics. Original is the console's (up to 1440p)."
-msgstr ""
-"จำนวนเส้นที่เกมเรนเดอร์ฉาก แล้วขยายให้พอดีหน้าต่าง ยิ่งต่ำยิ่งเร็ว: 720p เหมาะกับกราฟิกออนบอร์ด "
-"ต้นฉบับคือของคอนโซล (สูงสุด 1440p)"
-
-msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
-msgid "Original"
-msgstr "ต้นฉบับ"
-
-msgctxt "UI_MENU_ASPECT"
-msgid "Aspect ratio"
-msgstr "อัตราส่วนภาพ"
-
-msgctxt "UI_MENU_ASPECT_DESC"
-msgid ""
-"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
-"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
-msgstr ""
-"กว้างกว่า 16:9 จะเห็นสนามด้านข้างมากขึ้น สำหรับจอ ultrawide 16:9 คือของคอนโซล "
-"หน้าต่างใช้รูปทรงของหน้าต่างหรือจอภาพ ตอนนี้เมนูยังถูกยืดอยู่"
-
-msgctxt "UI_MENU_ASPECT_WINDOW"
-msgid "Window"
-msgstr "หน้าต่าง"
-
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
 msgstr "การแสดงผล"
@@ -400,18 +303,6 @@ msgstr "%.0f fps"
 msgctxt "UI_PERF_LINE_FPS_FG"
 msgid "%.0f/%.0f fps"
 msgstr "%.0f/%.0f fps"
-
-msgctxt "UI_MENU_FPS"
-msgid "Frame rate"
-msgstr "เฟรมเรต"
-
-msgctxt "UI_MENU_FPS_DESC"
-msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
-msgstr ""
-"จำนวนเฟรมต่อวินาทีที่เกมตั้งเป้า อัตโนมัติคือแบบคอนโซล: 60 หรือ 30 เมื่อเฟรมใช้เวลานานเกินไป "
-"ถ้าคอมพิวเตอร์ไม่ถึง 60 ให้เลือก 30 เพื่อให้การแข่งเดินด้วยความเร็วจริง"
 
 msgctxt "UI_MENU_FPS_AUTO"
 msgid "Automatic"
@@ -533,13 +424,10 @@ msgstr "เล่นผ่าน LAN"
 
 msgctxt "UI_MENU_LAN_DESC"
 msgid ""
-"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
-"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
-"the next start."
+"Lets the game reach other PCs on the same local network when it asks for a local network "
+"connection, for local network play. It only reaches local network addresses, never the internet. "
+"Applies at the next start."
 msgstr ""
-"«เล่นไร้สาย» ในเมนูไตเติลจะกลายเป็นเล่นผ่าน LAN "
-"เพื่อแข่งกับพีซีเครื่องอื่นในเครือข่ายภายในเดียวกัน (พอร์ต UDP 49152 และ 35000) "
-"เชื่อมต่อได้เฉพาะที่อยู่ในเครือข่ายภายใน ไม่ออกอินเทอร์เน็ต มีผลเมื่อเริ่มครั้งหน้า"
 
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
@@ -1625,10 +1513,6 @@ msgctxt "UI_MENU_OV_OUTPUT"
 msgid "Game image"
 msgstr "ภาพของเกม"
 
-msgctxt "UI_MENU_OV_INTERNAL"
-msgid "Internal resolution"
-msgstr "ความละเอียดภายใน"
-
 msgctxt "UI_MENU_OV_SCALING"
 msgid "Scaling"
 msgstr "การขยายภาพ"
@@ -1724,13 +1608,10 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Orbitals with its update, dumped "
+"from your console (a .nup package, or the exefs and romfs folders). The setup checks its build "
+"and builds the game code on this computer."
 msgstr ""
-"เกมไม่ได้มาพร้อมพอร์ต: ต้องใช้สำเนา Mario Kart World 1.0.0 หรือ 1.8.0 ของคุณเอง "
-"ที่ดัมพ์จากคอนโซลของคุณ (โฟลเดอร์ exefs และ romfs) การตั้งค่าจะตรวจเวอร์ชัน "
-"สร้างโค้ดเกมบนคอมพิวเตอร์เครื่องนี้ และแปลเชเดอร์"
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1798,9 +1679,8 @@ msgstr "%s ถูกเข้ารหัส: ต้องถอดรหัส 
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid ""
-"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
-msgstr "เกมไม่ใช่ Mario Kart World 1.0.0 หรือ 1.8.0 (build id %s): รองรับเฉพาะเวอร์ชันเหล่านั้น"
+msgid "the game is not a supported build of Orbitals (build id %s)"
+msgstr ""
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"
@@ -2009,88 +1889,6 @@ msgctxt "UI_MOD_ERR_UNPACK"
 msgid "Cannot open this archive: .rar and .7z need bsdtar (libarchive) installed"
 msgstr "เปิดไฟล์นี้ไม่ได้: .rar และ .7z ต้องติดตั้ง bsdtar (libarchive)"
 
-#. The Mods page's two tabs: the player's mods, and GameBanana's.
-msgctxt "UI_MOD_TAB_INSTALLED"
-msgid "Installed"
-msgstr "ติดตั้งแล้ว"
-
-msgctxt "UI_MOD_TAB_FIND"
-msgid "Find on GameBanana"
-msgstr "ค้นหาบน GameBanana"
-
-#. Shown above the GameBanana list: the project hosts no mods.
-msgctxt "UI_GB_NOTE"
-msgid ""
-"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
-"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
-"mods. Each mod has its own license."
-msgstr ""
-"ม็อดสร้างโดยผู้เขียน และดาวน์โหลดจาก GameBanana เมื่อคุณติดตั้ง โปรเจกต์นี้ไม่มีส่วนเกี่ยวข้องกับ "
-"GameBanana หรือผู้เขียนม็อด และไม่ได้โฮสต์ ตรวจสอบ หรือรับรองม็อดใด ๆ "
-"ม็อดแต่ละตัวมีใบอนุญาตของตัวเอง"
-
-msgctxt "UI_GB_SEARCH"
-msgid "Search"
-msgstr "ค้นหา"
-
-msgctxt "UI_GB_SORT_DOWNLOADS"
-msgid "Most downloaded"
-msgstr "ดาวน์โหลดมากที่สุด"
-
-msgctxt "UI_GB_SORT_NEW"
-msgid "Newest"
-msgstr "ใหม่ล่าสุด"
-
-msgctxt "UI_GB_SORT_LIKES"
-msgid "Most liked"
-msgstr "ถูกใจมากที่สุด"
-
-msgctxt "UI_GB_LOADING"
-msgid "Loading..."
-msgstr "กำลังโหลด..."
-
-msgctxt "UI_GB_NONE"
-msgid "No mods found"
-msgstr "ไม่พบม็อด"
-
-#. %s: the mod's author on GameBanana.
-msgctxt "UI_GB_BY"
-msgid "by %s"
-msgstr "โดย %s"
-
-#. %s: the mod's license, e.g. "CC BY-NC-ND 4.0".
-msgctxt "UI_GB_LICENSE"
-msgid "License: %s"
-msgstr "ใบอนุญาต: %s"
-
-msgctxt "UI_GB_OPEN"
-msgid "Open its GameBanana page"
-msgstr "เปิดหน้า GameBanana ของม็อดนี้"
-
-#. %s: the file's name.
-msgctxt "UI_GB_INSTALL"
-msgid "Install %s"
-msgstr "ติดตั้ง %s"
-
-#. First %s: the file's name; second %s: its author.
-msgctxt "UI_GB_CONFIRM"
-msgid "Download %s by %s from GameBanana and install it?"
-msgstr "ดาวน์โหลด %s โดย %s จาก GameBanana แล้วติดตั้งหรือไม่?"
-
-msgctxt "UI_GB_UNSAFE"
-msgid "Not offered: GameBanana's virus scan has not marked this file clean"
-msgstr "ไม่เสนอให้: การสแกนไวรัสของ GameBanana ไม่ได้ทำเครื่องหมายว่าไฟล์นี้ปลอดภัย"
-
-#. %d: this page; %d: how many pages.
-msgctxt "UI_GB_PAGE"
-msgid "Page %d of %d"
-msgstr "หน้า %d จาก %d"
-
-#. %s: what failed (an English detail from the network).
-msgctxt "UI_GB_ERROR"
-msgid "GameBanana did not answer: %s"
-msgstr "GameBanana ไม่ตอบกลับ: %s"
-
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
 msgid ""
@@ -2163,8 +1961,8 @@ msgstr "เกมครั้งล่าสุดหยุดเพราะป
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
-msgstr "เกมครั้งล่าสุดหยุดเพราะข้อผิดพลาด การรายงานพร้อมแนบ logs/orbital.log ช่วยให้แก้ไขได้"
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
+msgstr "เกมครั้งล่าสุดหยุดเพราะข้อผิดพลาด การรายงานพร้อมแนบ logs/orbitals.log ช่วยให้แก้ไขได้"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2278,10 +2076,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "กำลังรอ Steam"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "ต้องตั้ง steam_appid ใน orbital.ini"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "ต้องตั้ง steam_appid ใน orbitals.ini"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2356,13 +2154,15 @@ msgstr "Steam App ID"
 
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
-"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"The Steam game orbitals-recomp runs as for Remote Play Together. Automatic: the game whose launch "
+"options start orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you "
+"own with Remote Play Together works. Another number: steam_appid in orbitals.ini. Takes effect at "
+"the next start."
 msgstr ""
-"เกม Steam ที่ mkw ทำงานในนามสำหรับ Remote Play Together อัตโนมัติ: เกมที่ตัวเลือกการเปิดใช้เปิด "
-"mkw (\"C:\\...\\mkw.exe\" %command%) จึงใช้ได้กับเกม Steam ใดก็ได้ที่คุณมีซึ่งรองรับ Remote Play "
-"Together หมายเลขอื่น: steam_appid ใน orbital.ini มีผลเมื่อเปิดครั้งถัดไป"
+"เกม Steam ที่ orbitals-recomp ทำงานในนามสำหรับ Remote Play Together อัตโนมัติ: "
+"เกมที่ตัวเลือกการเปิดใช้เปิด orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%) "
+"จึงใช้ได้กับเกม Steam ใดก็ได้ที่คุณมีซึ่งรองรับ Remote Play Together หมายเลขอื่น: steam_appid ใน "
+"orbitals.ini มีผลเมื่อเปิดครั้งถัดไป"
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2374,8 +2174,8 @@ msgstr "อัตโนมัติ (เกมที่ Steam เปิด)"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
+msgstr "%s (orbitals.ini)"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2385,13 +2185,13 @@ msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
-"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"press Enter or A. orbitals-recomp runs as that game from the next start, and the Steam App ID row "
+"above keeps it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "พิมพ์ App ID ของเกม Steam ที่คุณมีซึ่งรองรับ Remote Play Together ด้วยปุ่มตัวเลขบนแป้นพิมพ์ "
 "(คือตัวเลขในที่อยู่ร้านค้าของเกม store.steampowered.com/app/<number>/) แล้วกด Enter หรือ A "
-"ตั้งแต่การเปิดครั้งถัดไป mkw จะทำงานในนามเกมนั้น และแถว Steam App ID ด้านบนจะเก็บไว้ในรายการ "
-"(steam_appids ใน orbital.ini) Backspace ลบตัวเลขหนึ่งตัว"
+"ตั้งแต่การเปิดครั้งถัดไป orbitals-recomp จะทำงานในนามเกมนั้น และแถว Steam App ID "
+"ด้านบนจะเก็บไว้ในรายการ (steam_appids ใน orbitals.ini) Backspace ลบตัวเลขหนึ่งตัว"
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

@@ -162,7 +162,7 @@ static int64_t bindings_sort(Bindings *B, uint64_t *h) {
     return total;
 }
 
-// MKW_DRAW_CACHE: a layout's uniform buffers become dynamic when the pipeline layout holds no more than the device
+// ORBITALS_DRAW_CACHE: a layout's uniform buffers become dynamic when the pipeline layout holds no more than the device
 // allows (n_other: those of the layout's other set); over it the layout keeps them static and its sets miss the cache.
 static void dyn_ubos(Bindings *B, uint32_t n_other) {
     if (!P.draw_cache) return;
@@ -286,7 +286,7 @@ Layout *layout_pair(Bindings *B, Bindings *F) {
 
 // Vertex outputs with independent layouts: each vertex shader declares the union of the inputs of every fragment
 // shader met with it (pipeline-keys.bin at the prewarm, then each pipeline built), so its module does not depend on the
-// fragment shader of one pipeline. Unwritten ones read (0, 0, 0, 1) as before. MKW_VS_OUTS=all declares all 32.
+// fragment shader of one pipeline. Unwritten ones read (0, 0, 0, 1) as before. ORBITALS_VS_OUTS=all declares all 32.
 VsOutsCache VO = {.lock = PLAT_MUTEX_INIT};
 
 // Adds fs's inputs (packed ones excepted) to vs's union; returns the union, types in io (the first type met wins).

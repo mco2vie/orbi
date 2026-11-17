@@ -1,6 +1,6 @@
 """The check step of prepare.py: the player's game copy (loose exefs/ and romfs/, a .nup or a .nx package) found, its
-version read from exefs/main's build id, and its RomFS checked against that version (file count and game data
-version), plus the unpacking of packages through the runtime.
+version read from exefs/main's build id, and its RomFS checked against that version (file count), plus the unpacking of
+packages through the runtime.
 
 Why apart: prepare.py holds the order of the steps and their keys; this is everything about the copy itself. Not run
 on its own.
@@ -15,13 +15,13 @@ from machine import Failed, emit
 from nup import Nup, is_nup
 
 # (prepare.py put recomp/ on the path, through build.py)
-from versions import ROMFS_PRODUCT, Version, build_id_of, detect_id, romfs_mismatch, unknown
+from versions import Version, build_id_of, detect_id, unknown
 
 ROMFS_MARGIN = 0.95  # a few short still passes: some dumping tools skip empty files
 
 
 def is_nx(path: Path) -> bool:
-    """A .nx package (NXFormat): read through the runtime (mkw --unpack, runtime/sdk/fs/nx.cpp), which has its reader."""
+    """A .nx package (NXFormat): read through the runtime (orbitals-recomp --unpack, runtime/sdk/fs/nx.cpp), which has its reader."""
     try:
         with path.open("rb") as f:
             return f.read(4) == b"NXAR"
@@ -30,12 +30,8 @@ def is_nx(path: Path) -> bool:
 
 
 def runtime_exe(folder: Path) -> Path:
-    """The runtime program in folder: orbitals-recomp.exe in this branch's Windows package (renamed so it is not
-    taken for the real mkw-recomp), mkw.exe in a build of the tree, mkw on Linux."""
-    if os.name != "nt":
-        return folder / "mkw"
-    renamed = folder / "orbitals-recomp.exe"
-    return renamed if renamed.is_file() else folder / "mkw.exe"
+    """The runtime program in folder: orbitals-recomp.exe on Windows, orbitals-recomp elsewhere."""
+    return folder / ("orbitals-recomp.exe" if os.name == "nt" else "orbitals-recomp")
 
 
 def unpack(runtime: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:
@@ -109,7 +105,7 @@ def check(src: Path, game: Path, runtime: Path | None = None) -> tuple[Path, Pat
     try:
         v = detect_id(got)
     except ValueError as e:
-        # another game (the orbitals-port branch): set up from its own exefs, with no RomFS count or version to check
+        # a build not listed: set up from its own exefs, with no RomFS count to check
         v = unknown(got)
         print(f"setup: {e}: setting it up as another game ({v.name})", file=sys.stderr)
     need = int(v.romfs_files * ROMFS_MARGIN)
@@ -119,14 +115,5 @@ def check(src: Path, game: Path, runtime: Path | None = None) -> tuple[Path, Pat
         n = len(Nup(romfs).files("romfs")) if romfs.is_file() else count_files(romfs, need)
     if n < need:
         raise Failed(f"the RomFS has {n} files, {v.name} has {v.romfs_files}: an incomplete copy", "romfs", str(n))
-    if not is_nx(romfs) and v.number:
-        res = Path(ROMFS_PRODUCT).parent
-        names = (
-            Nup(romfs).files("romfs")
-            if romfs.is_file()
-            else (f"{res.as_posix()}/{p.name}" for p in (romfs / res).glob("*"))
-        )
-        if why := romfs_mismatch(v, names):
-            raise Failed(f"the RomFS and exefs/main are from different versions ({why})", "mismatch", why)
     emit("version", v.name)
     return exefs, romfs, v

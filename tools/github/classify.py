@@ -15,9 +15,9 @@ FILE_ATTACHMENT = re.compile(r"https://github\.com/user-attachments/files/\d+/")
 ANY_ATTACHMENT = re.compile(r"https://github\.com/user-attachments/")
 SEMVER = re.compile(r"\bv?(\d+\.\d+\.\d+)\b")
 COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
-# RecompLauncher (github.com/elripalda/RecompLauncher) files its own report: "- Game: MKW Recomp v0.1.7" and the tail of
+# RecompLauncher (github.com/elripalda/RecompLauncher) files its own report: "- Game: Orbitals Recomp v0.1.7" and the tail of
 # the game's log in a fence, without our form.
-LAUNCHER_VERSION = re.compile(r"Game:\s*MKW Recomp v?(\d+\.\d+\.\d+)", re.I)
+LAUNCHER_VERSION = re.compile(r"Game:\s*Orbitals Recomp v?(\d+\.\d+\.\d+)", re.I)
 # Only words no player uses for a crash: "how do I get the game to start" must not close an issue
 PIRACY = re.compile(r"\b(xci|nsp|nsz|prod\.keys|title\.keys)\b|\b(rom download|download (the |a )?rom)\b", re.I)
 # Form answers that carry no information of their own
@@ -128,7 +128,7 @@ class Signature:
 
 
 def load_signatures(path: Path = SIGNATURES) -> list[Signature]:
-    rows = tomllib.loads(path.read_text())["signature"]
+    rows = tomllib.loads(path.read_text()).get("signature", [])
     return [
         Signature(r["issue"], tuple(s.lower() for s in r["all"]), r["what"], r.get("fixed"), r.get("wiki", ""))
         for r in rows
@@ -153,7 +153,7 @@ STILL = re.compile(
 )
 
 
-PORT_BUILD = re.compile(r"\[host\] log: .*\(MKW Recomp ([^)\s]+)\)")
+PORT_BUILD = re.compile(r"\[host\] log: .*\(Orbitals Recomp ([^)\s]+)\)")
 
 
 def modified_build(log: str) -> str | None:

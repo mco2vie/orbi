@@ -78,7 +78,7 @@ def table_value(cs: Cs, img: bytes, idx: int) -> int | None:
 def main() -> None:
     global QUERY_CASES, QUERY_TABLE, QUERY_COUNT, QUERY_RET, QUERY_DEFAULT
     global TABLE_CASES, TABLE_BYTES, TABLE_COUNT, TABLE_STORE, TABLE_DEFAULT
-    sdk = Nso(str(Path(os.environ.get("MKW_GAME", "game")) / "exefs/sdk"))
+    sdk = Nso(str(Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs/sdk"))
     if sdk.build_id not in LAYOUTS:
         raise SystemExit(f"sdk build {sdk.build_id}: its query tables are not in LAYOUTS")
     query, table, name, version = LAYOUTS[sdk.build_id]

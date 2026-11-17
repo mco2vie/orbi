@@ -1,13 +1,24 @@
 # Performance
 
 Frame times measured on real machines, each with its date: the code changes every week, so an old row says what that
-build did, not what today's does. MKW asks for 60 fps in races (16.7 ms per frame); on the console, when a frame takes
-longer, the game itself drops to 30 fps (33.3 ms), and Settings > Screen > Frame rate on Automatic does the same here
-since 0.1.5 (12/11/2026: no switch between 60 and 30 in nine races). A frame time over 33.3 ms means slow motion even
-at 30: the game counts each frame as 1/30 s. The log's `game: speed` lines give the game speed of a run.
+build did, not what today's does.
 
-To add your machine, open a [performance report](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml);
-it is added here with the issue's date and a link to it.
+To add your machine, open a [performance report](https://github.com/sinedgiveaways/pmocer-latibro/issues/new?template=performance.yml);
+it is added here with the issue's date and a link to it. Rows come from the log attached to the report, not from the
+times written in it: the median of its 60-frame windows (`ORBITALS_TRACE=perf`). Left out: reports without a log, runs
+with frame generation on, and crash reports.
+
+## Orbitals
+
+| Date | Version | GPU (driver) | CPU | OS | Scene | Frame time | Source |
+|---|---|---|---|---|---|---|---|
+
+None yet: Orbitals does not reach a playable scene.
+
+## Historical: the first game
+
+Measured on the first game this runtime was written for (09-12/11/2026), in its races, with links to the reports in
+the repository this one comes from. They say what the shared back end did on those machines, not how Orbitals runs.
 
 | Date | Version | GPU (driver) | CPU | OS | Internal resolution | Scene | Frame time | Source |
 |---|---|---|---|---|---|---|---|---|
@@ -22,8 +33,3 @@ it is added here with the issue's date and a link to it.
 | 11/11/2026 | 0.1.8 | RX 5500 XT (AMD 26.10.1) | Ryzen 5 5600G, 16 GB | Windows 11 | 1080p | Race | ~57 ms | [#151](https://github.com/adriadam10/mkw-recomp/issues/151) |
 | 11/11/2026 | source | RX 9070 XT (Mesa 26.2.5 RADV) | Ryzen 7 7800X3D | Linux (CachyOS) | 720p to 2160p | Race | 16.7 ms (no log attached) | [#97](https://github.com/adriadam10/mkw-recomp/issues/97) |
 | 12/11/2026 | 0.1.8 | RTX 2070 SUPER (NVIDIA 621.01) | Ryzen 7 3700X | Windows 10 | 540p | Race, 2 players | ~35 ms | [#169](https://github.com/adriadam10/mkw-recomp/issues/169) |
-
-Players' rows come from the log attached to each report, not from the times written in it (they were often better
-than the log): the median of its 60-second frame-time windows, or of its race windows where the run had
-`MKW_TRACE=perf`. Left out: reports without a log, runs with frame generation on, and crash reports (those through
-RecompLauncher carry only the end of the log).

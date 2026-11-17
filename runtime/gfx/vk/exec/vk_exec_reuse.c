@@ -1,4 +1,4 @@
-// MKW_REUSE=1|check|ab: a draw whose replay state equals the state of a
+// ORBITALS_REUSE=1|check|ab: a draw whose replay state equals the state of a
 // draw recorded in one of the last submissions gets that draw's packets again (vk_rec_reuse.c) instead of being
 // replayed. MKW draws a race frame like the one two frames before (87.5 % of the draws, period 2: recruns.py), and
 // replaying a draw costs ~3.3 us of the replay thread (ceil*, medidas.tsv).
@@ -81,7 +81,7 @@ struct RuCap {
     RecWin win;
 };
 static RuCap CAPX;
-static int why_on = -1;   // MKW_REUSE_WHY (key diagnosis below)
+static int why_on = -1;   // ORBITALS_REUSE_WHY (key diagnosis below)
 static const VkTexImage *tex_resolve(uint64_t h, uint64_t *vh);
 static void kset_end(void);
 
@@ -120,14 +120,14 @@ static void ru_store_end(VkExec *ex, RuCap *c, int ok);
 
 static int mode_read(void) {
     if (ru_on >= 0) return ru_on;
-    const char *v = cfg_get("MKW_REUSE");
+    const char *v = cfg_get("ORBITALS_REUSE");
     ru_on = !v ? 0 : !strcmp(v, "check") ? 2 : !strcmp(v, "ab") ? 3 : !strcmp(v, "store") ? 4 : atoi(v) ? 1 : 0;
-    const char *par = cfg_get("MKW_REPLAY_PAR");
+    const char *par = cfg_get("ORBITALS_REPLAY_PAR");
     if (ru_on && !vk_pipeline_draw_cache()) {
-        rt_log("vk_reuse: MKW_REUSE needs MKW_DRAW_CACHE=1 (its sets outlive the submission): off");
+        rt_log("vk_reuse: ORBITALS_REUSE needs ORBITALS_DRAW_CACHE=1 (its sets outlive the submission): off");
         ru_on = 0;
     } else if (ru_on && (vk_mirror_on || (par && strcmp(par, "0")))) {   // not handled yet: mirrors' per-use sync, chunks
-        rt_log("vk_reuse: not with VRAM mirrors or MKW_REPLAY_PAR yet: off");
+        rt_log("vk_reuse: not with VRAM mirrors or ORBITALS_REPLAY_PAR yet: off");
         ru_on = 0;
     }
     if (ru_on) {
@@ -135,7 +135,7 @@ static int mode_read(void) {
         if (!tab) rt_fatal("vk_reuse: out of memory");
         rec_slots_on = 1;
         rt_log("vk_reuse: draws equal to an earlier submission's reuse its packets%s",
-               ru_on == 2 ? " (check: replayed as well and compared)" : ru_on == 3 ? " in the B blocks (MKW_AB)" : "");
+               ru_on == 2 ? " (check: replayed as well and compared)" : ru_on == 3 ? " in the B blocks (ORBITALS_AB)" : "");
     }
     return ru_on;
 }
@@ -223,7 +223,7 @@ static VkPipeState pipe_norm(const VkPipeState *p) {
 }
 
 // The attachments written since the pass began are not in the key: they follow where the part was cut, which goes by
-// time (MKW_SPLIT_US: 29 % of the draws repeated this part two frames later, ru11). They matter to a draw only through
+// time (ORBITALS_SPLIT_US: 29 % of the draws repeated this part two frames later, ru11). They matter to a draw only through
 // a feedback barrier, which a cached window never holds: a hit needs none of the attachments it samples written now
 // (RuEnt.fbl_read).
 static uint32_t fb_key(const VkExec *ex) { (void)ex; return 0; }
@@ -257,7 +257,7 @@ static uint64_t draw_key(const VkExec *ex, uint32_t op, const void *payload, siz
     return hbytes(h, payload, bytes) | 1;
 }
 
-// MKW_REUSE_WHY=N (diagnosis): for the first N draws per submission whose key is new but whose program and payload an
+// ORBITALS_REUSE_WHY=N (diagnosis): for the first N draws per submission whose key is new but whose program and payload an
 // earlier draw had, which parts of the key differ from that draw's.
 #define WHY_N 12
 static const char *const why_name[WHY_N] = {"rt", "viewports", "scissor..blend", "copy stride", "pools", "pipe formats",
@@ -281,7 +281,7 @@ static struct { uint64_t pk; uint64_t parts[WHY_N]; p_set_rt rt; } *why_tab;
 static uint64_t why_cnt[WHY_N], why_seen;
 static void why_note(const VkExec *ex, const void *payload, size_t bytes, int miss) {
     if (why_on < 0) {
-        why_on = cfg_get("MKW_REUSE_WHY") ? atoi(cfg_get("MKW_REUSE_WHY")) : 0;
+        why_on = cfg_get("ORBITALS_REUSE_WHY") ? atoi(cfg_get("ORBITALS_REUSE_WHY")) : 0;
         if (why_on && !(why_tab = calloc(1u << 16, sizeof *why_tab))) rt_fatal("vk_reuse: out of memory");
     }
     if (!why_on) return;
@@ -306,7 +306,7 @@ static void why_note(const VkExec *ex, const void *payload, size_t bytes, int mi
     w->pk = pk, memcpy(w->parts, parts, sizeof parts), w->rt = ex->rt;
 }
 
-// With MKW_REUSE_WHY: the share of a large submission's keys present among those of the large submission one and two
+// With ORBITALS_REUSE_WHY: the share of a large submission's keys present among those of the large submission one and two
 // before (key stability, against what the cache finds).
 #define KP (WHY_N + 2)   // the key, program and payload alone, and program and payload with each part
 static uint64_t *kset[KP][3];

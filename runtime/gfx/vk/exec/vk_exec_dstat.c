@@ -1,5 +1,5 @@
-// Diagnostics of the draw replay (vk_draw_internal.h): the last programs drawn (logged at a device loss), MKW_IND_TRACE,
-// MKW_BIND_STATS's repeat census and the MKW_TRACE=perf report of prepare_draw and bind_resources by stage.
+// Diagnostics of the draw replay (vk_draw_internal.h): the last programs drawn (logged at a device loss), ORBITALS_IND_TRACE,
+// ORBITALS_BIND_STATS's repeat census and the ORBITALS_TRACE=perf report of prepare_draw and bind_resources by stage.
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -69,7 +69,7 @@ void vk_exec_recent_log(void) {
     }
 }
 
-// The bound state a draw reads, compared with the previous draw's (MKW_BIND_STATS only).
+// The bound state a draw reads, compared with the previous draw's (ORBITALS_BIND_STATS only).
 void repeat_stats(const VkExec *ex, const VkPipeInfo *info) {
     static struct {
         const prog_t *prog;
@@ -96,7 +96,7 @@ void repeat_stats(const VkExec *ex, const VkPipeInfo *info) {
     last = cur;
 }
 
-// MKW_IND_TRACE=<lines> (diagnosis, default 0): each indirect draw's VS (program key prefix), argument and count
+// ORBITALS_IND_TRACE=<lines> (diagnosis, default 0): each indirect draw's VS (program key prefix), argument and count
 // addresses and, from guest memory when the arguments are host-backed, the count and the first four draws' instance
 // count and first instance as the CPU sees them while recording: GPU-written ones show the last completed write.
 // Found for the title's flickering trees (06/11/2026).
@@ -104,7 +104,7 @@ void ind_trace(VkExec *ex, const p_draw_idx_ind *d, const VkMemSpan *ip, const V
                       uint32_t stride) {
     static int left = -1;
     if (left < 0) {
-        const char *e = cfg_get("MKW_IND_TRACE");
+        const char *e = cfg_get("ORBITALS_IND_TRACE");
         left = e ? atoi(e) : 0;
     }
     if (!left) return;

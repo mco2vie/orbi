@@ -1,33 +1,54 @@
-"""The game versions this port knows, keyed by the build id of exefs/main.
+"""The game builds this port knows, keyed by the build id of exefs/main.
 
-Why: each update of Mario Kart World is a different executable (other addresses, another sdk build, 1.8.0 adds
-subsdk1, the nnEcli module), so everything tied to one build (the patch sites, the RomFS size the setup checks, the
-number the runtime switches its fixed addresses on) is chosen here, from the dump itself, in one place. The runtime
-keeps the matching rows for its own fixed addresses in runtime/core/boot/version.c, keyed by `number`.
+Why: each build of a game is a different executable (other addresses, another sdk build), so everything tied to one
+build (the patch sites, the RomFS size the setup checks, the number the runtime chooses its row of fixed values by) is
+chosen here, from the dump itself, in one place. The runtime keeps the matching row in runtime/core/boot/version.c,
+keyed by `number`.
 
 Usage: from versions import detect; v = detect(exefs)  ->  Version, or ValueError for a build not listed.
        uv run recomp/versions.py [EXEFS]   prints the version of a dump.
 """
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+GAME = "Orbitals"
 
 
 @dataclass(frozen=True)
 class Version:
-    name: str  # as the game shows it: 1.0.0
-    number: int  # RtGame.version (runtime/core/boot/gamelib.h): 100, 180
+    name: str  # what the port shows for this build (the start screen, the setup's log and keys)
+    number: int  # RtGame.version (runtime/core/boot/gamelib.h): the row of runtime/core/boot/version.c; 0: no row
     main_build_id: str  # first 8 bytes of the NSO build id of exefs/main, hex
-    romfs_files: int  # files of its RomFS, counted on a dump
-    patches: Path | None  # recomp/patches-*.txt for this executable; None: setup finds the spin loops (unknown())
+    romfs_files: int  # files of its RomFS, counted on a dump; 0: not counted, no check
+    patches: Path | None  # recomp/patches-*.txt for this executable; None: setup finds the spin loops
+    # setup steps that do not apply to this build: the shader step reads agl/BNSH shader archives and the warm-up runs
+    # the game to a known scene, neither of which this build has (tools/prepare/prepare.py)
+    skip_steps: tuple[str, ...] = ("shaders", "warm")
+    program_ids: tuple[str, ...] = ()  # base, update, add-on (main.npdm ACI0 and the .nup's packages), hex
+    base_version: int = 0  # the base package's version number
+    nintendo_version: int = 0  # the update's version number (a build number, not a display version)
+    module_build_ids: dict[str, str] = field(default_factory=dict, hash=False)  # first 8 bytes of each module's NSO build id
+    module_mib: dict[str, float] = field(default_factory=dict, hash=False)  # each module's image size, MiB, as port_check rounds it
 
 
+# Read from the .nup by tools/analisis/port_check.py (port_check.md, 16/11/2026).
 VERSIONS = (
-    Version("1.0.0", 100, "9e244438c3d8ef1c", 205_660, ROOT / "recomp/patches-mkw.txt"),  # 06/11/2026
-    Version("1.8.0", 180, "d00e4f399e411d06", 206_202, ROOT / "recomp/patches-mkw-180.txt"),  # 11/11/2026
+    Version(
+        name="0.2.0",
+        number=1,
+        main_build_id="d6efcc0a51c1c792",
+        romfs_files=0,
+        patches=None,
+        program_ids=("040032B023CA4000", "040032B023CA4800", "040032B023CA5001"),
+        base_version=65536,
+        nintendo_version=327680,
+        module_build_ids={"main": "d6efcc0a51c1c792", "rtld": "f9060b30c6fa2b69", "sdk": "daa31832ca979cdf",
+                          "subsdk0": "caf9437bacb2aa16"},  # fmt: skip
+        module_mib={"main": 157.8, "rtld": 0.1, "sdk": 16.4, "subsdk0": 0.8},
+    ),
 )
 
 
@@ -51,13 +72,13 @@ def detect_id(got: str) -> Version:
         if v.main_build_id == got:
             return v
     names = ", ".join(v.name for v in VERSIONS)
-    raise ValueError(f"exefs/main is not a known version of Mario Kart World ({names}; build id {got})")
+    raise ValueError(f"exefs/main is not a known build of {GAME} ({names}; build id {got})")
 
 
 def unknown(got: str) -> Version:
-    """Another game (or a build of MKW not listed), set up from its own exefs: number 0, no RomFS count to check, and
-    no checked-in patch table (setup finds its spin loops, tools/prepare/prepare.py spin_table). The runtime runs it
-    with no fixed addresses (runtime/core/boot/version.c)."""
+    """A build not listed (another game, or another build of this one), set up from its own exefs: number 0, no RomFS
+    count to check, and no checked-in patch table (setup finds its spin loops, tools/prepare/prepare.py spin_table).
+    The runtime runs it with no fixed values (runtime/core/boot/version.c)."""
     return Version(f"port-{got}", 0, got, 0, None)
 
 
@@ -68,33 +89,6 @@ def detect_any(exefs: Path) -> Version:
         return detect_id(got)
     except ValueError:
         return unknown(got)
-
-
-# The RomFS names its game data version in one file: System/Resource/ResourceSizeTable.Product.<number>.*.rsizetable.zs
-# (100 in 1.0.0's, 180 in 1.8.0's). An executable opens its own number's files: 1.0.0's main with 1.8.0's RomFS (#315)
-# passed the file count and crashed reading a Gyml parameter (main+0x78ab50) while warming up.
-ROMFS_PRODUCT = "System/Resource/ResourceSizeTable.Product."
-
-
-def romfs_products(names) -> set[int]:
-    """The game data version numbers RomFS file paths (relative, '/'-separated) name, empty when none does."""
-    found = set()
-    for name in names:
-        if name.startswith(ROMFS_PRODUCT):
-            number = name[len(ROMFS_PRODUCT) :].split(".", 1)[0]
-            if number.isdigit():
-                found.add(int(number))
-    return found
-
-
-def romfs_mismatch(v: Version, names) -> str:
-    """Why the RomFS whose file paths are `names` does not belong to v ("" when it does or names no version)."""
-    found = romfs_products(names)
-    if not found or v.number in found:
-        return ""
-    known = {x.number: x.name for x in VERSIONS}
-    got = ", ".join(known.get(n, f"Product.{n}") for n in sorted(found))
-    return f"RomFS {got}, exefs/main {v.name}"
 
 
 def modules(exefs: Path) -> list[str]:
@@ -108,4 +102,5 @@ def modules(exefs: Path) -> list[str]:
 if __name__ == "__main__":
     exefs = Path(sys.argv[1] if len(sys.argv) > 1 else "game/exefs")
     v = detect(exefs)
-    print(f"Mario Kart World {v.name} (version {v.number}), modules {', '.join(modules(exefs))}, patches {v.patches.name}")
+    patches = v.patches.name if v.patches else "found at setup"
+    print(f"{GAME} {v.name} (version {v.number}), modules {', '.join(modules(exefs))}, patches {patches}")

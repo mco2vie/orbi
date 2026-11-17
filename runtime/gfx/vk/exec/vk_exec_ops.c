@@ -131,22 +131,22 @@ static void op_draw_idx(VkExec *ex, const p_draw_idx *d) {
     if (vk_dump_armed) vk_dump_draw_after(ex);
 }
 
-static int lost_on_draw(void) {   // MKW_SHADOW_LOST read once
+static int lost_on_draw(void) {   // ORBITALS_SHADOW_LOST read once
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("MKW_SHADOW_LOST");
+        const char *e = cfg_get("ORBITALS_SHADOW_LOST");
         on = e && atoi(e) > 0;
     }
     return on;
 }
 
-// MKW_IND_SNAP (a measurement, default 0; "ab"): an indirect draw without a count whose arguments were copied at the game's submit
+// ORBITALS_IND_SNAP (a measurement, default 0; "ab"): an indirect draw without a count whose arguments were copied at the game's submit
 // (p_draw_idx_ind.snap) draws with that copy, unless a GPU write not copied back may touch them (then the GPU's bytes
 // in the pool buffer are the right ones). The replay records ~3 submissions behind the game, which by then has written
 // the next frame's arguments at the same address: a tree drew 35 instances from another first instance and read other
 // trees' matrix and material, one dark frame (lf5-lf6, 06/11/2026). One "snap:" line per frame where a copy differs
 // from guest memory at record time.
-// With MKW_IND_SNAP off the count is not made unless MKW_IND_SNAP_COUNT=1 ("ab"): vk_mem_gpu_may_write takes
+// With ORBITALS_IND_SNAP off the count is not made unless ORBITALS_IND_SNAP_COUNT=1 ("ab"): vk_mem_gpu_may_write takes
 // shadow_lock, which the shadow's early thread holds while it syncs a pool, and the replay waited there 40 ms a second
 // of race for a count nobody read (lp1).
 static int snap_mode = -1, snap_count;
@@ -156,7 +156,7 @@ static int use_snap(const p_draw_idx_ind *d, int indexed) {
     if (snap_mode < 0) {
         snap_mode = rt_knob("IND_SNAP", "0");
         snap_count = snap_mode ? 1 : rt_knob("IND_SNAP_COUNT", "0");
-        rt_log("vk: indirect arguments as at the game's submit %s (MKW_IND_SNAP)",
+        rt_log("vk: indirect arguments as at the game's submit %s (ORBITALS_IND_SNAP)",
                snap_mode == 2 ? "in the B blocks" : snap_mode ? "on" : "off");
     }
     if (!d->snapped || d->count || !RT_KNOB_ON(snap_count)) return 0;
@@ -242,14 +242,14 @@ static void op_draw_idx_ind(VkExec *ex, const p_draw_idx_ind *d) {
 
 // ---- dispatch and uniform buffer updates
 
-// MKW_DISPATCH_NOBARRIER (default 0; "ab": in the B blocks): no barrier between a dispatch and the one right after
+// ORBITALS_DISPATCH_NOBARRIER (default 0; "ab": in the B blocks): no barrier between a dispatch and the one right after
 // it. A measurement only, of what the full barrier before every dispatch costs (~110 a race frame, rt-y5); without it
 // a dispatch may read what the previous one has not written yet.
 static void dispatch_barrier(VkExec *ex) {
     static int mode = -1;
     if (mode < 0) {
         mode = rt_knob("DISPATCH_NOBARRIER", "0");
-        if (mode) rt_log("vk: no barrier between consecutive dispatches%s (MKW_DISPATCH_NOBARRIER, a measurement)",
+        if (mode) rt_log("vk: no barrier between consecutive dispatches%s (ORBITALS_DISPATCH_NOBARRIER, a measurement)",
                          mode == 2 ? " in the B blocks" : "");
     }
     if (mode && RT_KNOB_ON(mode) && !ex->in_pass && ex->last_dispatch == ex->recorded) return;
@@ -267,14 +267,14 @@ static void op_dispatch(VkExec *ex, const p_dispatch *d) {
     const VkPipeInfo *info = NULL;
     VkPipeline p = vk_pipeline_compute(cs, &info);
     if (!p || !info) return warn_once(W_PIPELINE, "a compute pipeline could not be created: dispatches with it are skipped");
-    if (ex->render_disabled && vk_cond_trace > 0) {   // MKW_COND_TRACE: dispatches run while a condition says skip
+    if (ex->render_disabled && vk_cond_trace > 0) {   // ORBITALS_COND_TRACE: dispatches run while a condition says skip
         const uint8_t *k = gfx_shader_input_id(cs);
         vk_cond_trace--;
         rt_log("cond: f%llu dispatch while disabled cs %02x%02x%02x%02x %dx%dx%d", (unsigned long long)vk_exec_presented,
                k[0], k[1], k[2], k[3], d->x, d->y, d->z);
     }
     dispatch_barrier(ex);   // ends the pass; earlier writes are visible to the shader
-    vk_ubo_watch(ex, NVN_STAGE_CS);   // MKW_UBO_WATCH (diag/vk_ubo_watch.c)
+    vk_ubo_watch(ex, NVN_STAGE_CS);   // ORBITALS_UBO_WATCH (diag/vk_ubo_watch.c)
     bind_pipeline(ex, VK_PIPELINE_BIND_POINT_COMPUTE, p);
     recent_note(cs, NULL);
     c0_dim[0] = (uint32_t)d->x, c0_dim[1] = (uint32_t)d->y, c0_dim[2] = (uint32_t)d->z, c0_cs = cs;
@@ -283,7 +283,7 @@ static void op_dispatch(VkExec *ex, const p_dispatch *d) {
     if (vk_spec_census_on()) spec_census(ex, cs, NVN_STAGE_CS);
     if (pt && vk_pt_draw_mode()) vk_pt_draw(ex->cb, cs, NULL);
     else if (pt) vk_pt_mark(ex->cb, 1u << 31 | (uint32_t)(ex->prog->serial & 0x7fffffff));
-    vk_cs_hash(ex, d->caller, 0, 0);   // MKW_CS_HASH (diag/vk_cs_hash.c)
+    vk_cs_hash(ex, d->caller, 0, 0);   // ORBITALS_CS_HASH (diag/vk_cs_hash.c)
     uint32_t crumb = vk_crumb_begin(ex->cb, VK_CRUMB_DISPATCH, (uint32_t)d->x, (uint32_t)d->y, (uint32_t)d->z, 0, NULL, 0);
     vk_crumb_cs(crumb, gfx_shader_key(cs));
     vkCmdDispatch(ex->cb, (uint32_t)d->x, (uint32_t)d->y, (uint32_t)d->z);
@@ -312,7 +312,7 @@ static void op_dispatch_ind(VkExec *ex, const p_dispatch_ind *d) {
     const VkPipeInfo *info = NULL;
     VkPipeline p = vk_pipeline_compute(cs, &info);
     if (!p || !info) return warn_once(W_PIPELINE, "a compute pipeline could not be created: dispatches with it are skipped");
-    if (ex->render_disabled && vk_cond_trace > 0) {   // MKW_COND_TRACE
+    if (ex->render_disabled && vk_cond_trace > 0) {   // ORBITALS_COND_TRACE
         const uint8_t *k = gfx_shader_input_id(cs);
         vk_cond_trace--;
         rt_log("cond: f%llu indirect dispatch while disabled cs %02x%02x%02x%02x", (unsigned long long)vk_exec_presented,
@@ -332,8 +332,8 @@ static void op_dispatch_ind(VkExec *ex, const p_dispatch_ind *d) {
         vk_exec_barrier(ex);
         B.c0_valid[2] = 0;   // the range no longer holds B.c0[2]
     }
-    vk_ubo_watch(ex, NVN_STAGE_CS);   // MKW_UBO_WATCH: uw1/uw2 missed the culling dispatch, an indirect one
-    vk_cs_hash(ex, d->caller, d->ind, 0);   // MKW_CS_HASH (diag/vk_cs_hash.c)
+    vk_ubo_watch(ex, NVN_STAGE_CS);   // ORBITALS_UBO_WATCH: uw1/uw2 missed the culling dispatch, an indirect one
+    vk_cs_hash(ex, d->caller, d->ind, 0);   // ORBITALS_CS_HASH (diag/vk_cs_hash.c)
     uint32_t crumb = vk_crumb_begin(ex->cb, VK_CRUMB_DISPATCH, 0, 0, 0, 0, NULL, 0);
     vk_crumb_cs(crumb, gfx_shader_key(cs));
     vkCmdDispatchIndirect(ex->cb, ip.buffer, ip.offset);
@@ -455,7 +455,7 @@ static void op_draw_mesh_cs(VkExec *ex, const p_draw_mesh *d) {
     if (vk_dump_armed) vk_dump_draw_after(ex);
 }
 
-// The bind ops' effect on the replay state alone: 1 when op is one. The light walk (vk_exec.c, MKW_REPLAY_WALK)
+// The bind ops' effect on the replay state alone: 1 when op is one. The light walk (vk_exec.c, ORBITALS_REPLAY_WALK)
 // follows them without touching what the recording caches (bind_gen).
 int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload) {
     switch (op) {
@@ -536,7 +536,7 @@ int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload) {
 void vk_exec_op_draw(VkExec *ex, uint32_t op, const void *payload) {
     if (!dtl_b) vk_exec_draw_thread();
     if (op == OP_DRAW_MESH) {
-        // MKW_MESH_SKIP (diagnosis, default 0; "ab": in the B blocks): task/mesh draws left out, to measure what they
+        // ORBITALS_MESH_SKIP (diagnosis, default 0; "ab": in the B blocks): task/mesh draws left out, to measure what they
         // cost the GPU within one run (the mesh-as-compute form on a GTX 1050 Ti).
         static int skip = -1;
         if (skip < 0) skip = rt_knob("MESH_SKIP", "0");

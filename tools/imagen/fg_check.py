@@ -4,11 +4,11 @@
 """Frame generation without the game: how close a made frame is to the real one.
 
 Why: a game run takes minutes and its frames are never the same twice; frame generation's passes
-(runtime/gfx/vk/device/vk_framegen.c) run here on the GPU in seconds, through `mkw --probe-framegen`, on frames whose
+(runtime/gfx/vk/device/vk_framegen.c) run here on the GPU in seconds, through `orbitals-recomp --probe-framegen`, on frames whose
 middle frame is known. A change to the shaders or their constants is judged by these numbers before any game run.
 
 Two cases:
-  three consecutive frames A B C (MKW_SHOTS=lo-hi:1 with MKW_SHOTS_FULL=1 saves them): the frame made between A and C
+  three consecutive frames A B C (ORBITALS_SHOTS=lo-hi:1 with ORBITALS_SHOTS_FULL=1 saves them): the frame made between A and C
       against B;
   --synthetic IMG: IMG moved by --shift pixels from A to C (B halfway) under a still box standing in for the HUD, so the
       motion is known exactly and the box must not move.
@@ -16,9 +16,9 @@ Prints the PSNR (dB, higher is better) of the made frame, of the plain blend of 
 frame and over the pixels that change between A and C; writes A, the made frame, B and the made frame's error stacked
 into OUT/sheet.png. Pictures stay in OUT (build/, never in git).
 
-Usage: uv run tools/imagen/fg_check.py A.png B.png C.png [--out build/fg] [--mkw build/dist/linux/mkw]
+Usage: uv run tools/imagen/fg_check.py A.png B.png C.png [--out build/fg] [--exe build/dist/linux/orbitals-recomp]
        uv run tools/imagen/fg_check.py --synthetic IMG [--shift 24,6] [--out build/fg]
-Environment (MKW_FG_LAMBDA, MKW_FG_BIAS) reaches the probe.
+Environment (ORBITALS_FG_LAMBDA, ORBITALS_FG_BIAS) reaches the probe.
 """
 
 import argparse
@@ -84,7 +84,7 @@ def main() -> None:
     ap.add_argument("--synthetic", help="one picture, moved by --shift")
     ap.add_argument("--shift", default="24,6", help="dx,dy in pixels from A to C (--synthetic)")
     ap.add_argument("--out", default=str(ROOT / "build/fg"))
-    ap.add_argument("--mkw", default=str(ROOT / "build/dist/linux/mkw"))
+    ap.add_argument("--exe", default=str(ROOT / "build/dist/linux/orbitals-recomp"))
     args = ap.parse_args()
     if args.synthetic:
         dx, dy = (float(v) for v in args.shift.split(","))
@@ -98,8 +98,8 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     write_rgba(out / "a.rgba", a)
     write_rgba(out / "b.rgba", c)
-    env = dict(os.environ, MKW_FG_PROBE=str(out))
-    r = subprocess.run([args.mkw, "--probe-framegen"], env=env, capture_output=True, text=True)
+    env = dict(os.environ, ORBITALS_FG_PROBE=str(out))
+    r = subprocess.run([args.exe, "--probe-framegen"], env=env, capture_output=True, text=True)
     print("\n".join(line for line in r.stdout.splitlines() if line.startswith("probe-framegen")))
     if r.returncode:
         print(r.stderr[-2000:], file=sys.stderr)

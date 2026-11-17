@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mkw-recomp\nLanguage: es_419\nMIME-Version: 1.0\nContent-Type: text/plain; "
-"charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: orbitals-recomp\nLanguage: es_419\nMIME-Version: 1.0\nContent-Type: "
+"text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.
 msgctxt "UI_SWKBD_DEFAULT_NAME"
@@ -80,14 +80,6 @@ msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
 msgstr "Cuántas veces más rápido. Un PC lento puede no llegar."
 
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "Omitir videos"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "Omite las presentaciones de copas y pistas en cuanto empiezan."
-
 msgctxt "UI_MENU_SEED"
 msgid "Same randomness every time"
 msgstr "Mismo azar siempre"
@@ -111,40 +103,6 @@ msgid ""
 msgstr ""
 "F3 detiene el juego en el fotograma que se ve y lo reanuda; F4 lo avanza un fotograma. Para mirar "
 "un momento con calma."
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Desbloquear todo"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Todos los pilotos y trajes, vehículos y calcomanías, la Copa Especial y Espejo. Pasa a tu partida "
-"guardada cuando el juego guarda: apagarlo no los vuelve a bloquear."
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Directo a"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Pasa solo por los menús al arrancar. Contrarreloj: Mario, kart estándar y la pista que propone el "
-"juego (siempre la misma con «Mismo azar siempre»), sin rivales. Paseo libre: el mundo abierto. "
-"Puedes seguir usando el control."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Contrarreloj"
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Paseo libre"
 
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
@@ -186,18 +144,6 @@ msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
 msgid "Quarter"
 msgstr "Baja"
 
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "Distancia de detalle"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"Hasta qué distancia los objetos mantienen sus modelos detallados antes de pasar a los "
-"simplificados. Consola es la de la Switch 2. Impacto en los fps: bajo."
-
 msgctxt "UI_MENU_DETAIL_LOW"
 msgid "Low"
 msgstr "Baja"
@@ -217,19 +163,6 @@ msgstr "Alta"
 msgctxt "UI_MENU_DETAIL_ULTRA"
 msgid "Very high"
 msgstr "Muy alta"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "Calidad de sombras"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"Tamaño del mapa con el que el juego pinta las sombras. Más pequeño es más ligero para la tarjeta "
-"gráfica, con bordes de sombra más borrosos. Consola es 3072 en modo TV y 2048 en modo portátil. "
-"Impacto en los fps: bajo."
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -306,38 +239,6 @@ msgctxt "UI_MENU_QUALITY_CUSTOM"
 msgid "Custom"
 msgstr "Personalizada"
 
-msgctxt "UI_MENU_RESOLUTION"
-msgid "Internal resolution"
-msgstr "Resolución interna"
-
-msgctxt "UI_MENU_RESOLUTION_DESC"
-msgid ""
-"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
-"integrated graphics. Original is the console's (up to 1440p)."
-msgstr ""
-"Líneas a las que el juego dibuja sus escenas, luego escaladas a la ventana. Menos es más rápido: "
-"720p va bien con gráficos integrados. Original es la de la consola (hasta 1440p)."
-
-msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
-msgid "Original"
-msgstr "Original"
-
-msgctxt "UI_MENU_ASPECT"
-msgid "Aspect ratio"
-msgstr "Proporción"
-
-msgctxt "UI_MENU_ASPECT_DESC"
-msgid ""
-"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
-"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
-msgstr ""
-"Más ancha que 16:9 muestra más pista a los lados, para pantallas ultrapanorámicas. 16:9 es la de "
-"la consola; Ventana toma la forma de la ventana o del monitor. Los menús, de momento, estirados."
-
-msgctxt "UI_MENU_ASPECT_WINDOW"
-msgid "Window"
-msgstr "Ventana"
-
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
 msgstr "Presentación"
@@ -409,19 +310,6 @@ msgstr "%.0f fps"
 msgctxt "UI_PERF_LINE_FPS_FG"
 msgid "%.0f/%.0f fps"
 msgstr "%.0f/%.0f fps"
-
-msgctxt "UI_MENU_FPS"
-msgid "Frame rate"
-msgstr "Fotogramas por segundo"
-
-msgctxt "UI_MENU_FPS_DESC"
-msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
-msgstr ""
-"Los fotogramas por segundo a los que va el juego. «Automático» es lo de la consola: 60, o 30 "
-"cuando un fotograma tarda demasiado. Si tu computadora no llega a 60, elige 30 y la carrera irá a "
-"su velocidad real."
 
 msgctxt "UI_MENU_FPS_AUTO"
 msgid "Automatic"
@@ -548,13 +436,10 @@ msgstr "Juego en LAN"
 
 msgctxt "UI_MENU_LAN_DESC"
 msgid ""
-"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
-"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
-"the next start."
+"Lets the game reach other PCs on the same local network when it asks for a local network "
+"connection, for local network play. It only reaches local network addresses, never the internet. "
+"Applies at the next start."
 msgstr ""
-"El juego inalámbrico del menú de título pasa a ser el juego en LAN, para correr con otras PC de "
-"la misma red local (puertos UDP 49152 y 35000). Solo llega a direcciones de la red local, nunca a "
-"internet. Se aplica en el siguiente inicio."
 
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
@@ -1656,10 +1541,6 @@ msgctxt "UI_MENU_OV_OUTPUT"
 msgid "Game image"
 msgstr "Imagen del juego"
 
-msgctxt "UI_MENU_OV_INTERNAL"
-msgid "Internal resolution"
-msgstr "Resolución interna"
-
 msgctxt "UI_MENU_OV_SCALING"
 msgid "Scaling"
 msgstr "Escalado"
@@ -1755,13 +1636,10 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Orbitals with its update, dumped "
+"from your console (a .nup package, or the exefs and romfs folders). The setup checks its build "
+"and builds the game code on this computer."
 msgstr ""
-"El juego no viene con el port: hace falta tu propia copia de Mario Kart World 1.0.0/1.8.0 volcada "
-"de tu consola (carpetas exefs y romfs). La preparación comprueba su versión, compila el código "
-"del juego en esta computadora y traduce los shaders."
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1829,9 +1707,8 @@ msgstr "%s está cifrado: el exefs del juego debe estar descifrado"
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid ""
-"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
-msgstr "el juego no es Mario Kart World 1.0.0/1.8.0 (build id %s): solo se admite la 1.0.0/1.8.0"
+msgid "the game is not a supported build of Orbitals (build id %s)"
+msgstr ""
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"
@@ -2042,88 +1919,6 @@ msgctxt "UI_MOD_ERR_UNPACK"
 msgid "Cannot open this archive: .rar and .7z need bsdtar (libarchive) installed"
 msgstr "No se puede abrir este archivo: los .rar y .7z necesitan bsdtar (libarchive) instalado"
 
-#. The Mods page's two tabs: the player's mods, and GameBanana's.
-msgctxt "UI_MOD_TAB_INSTALLED"
-msgid "Installed"
-msgstr "Instalados"
-
-msgctxt "UI_MOD_TAB_FIND"
-msgid "Find on GameBanana"
-msgstr "Buscar en GameBanana"
-
-#. Shown above the GameBanana list: the project hosts no mods.
-msgctxt "UI_GB_NOTE"
-msgid ""
-"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
-"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
-"mods. Each mod has its own license."
-msgstr ""
-"Los mods los crean sus autores y se descargan de GameBanana al instalarlos. Este proyecto no está "
-"afiliado a GameBanana ni a los autores de los mods, y no aloja, revisa ni respalda mods. Cada mod "
-"tiene su propia licencia."
-
-msgctxt "UI_GB_SEARCH"
-msgid "Search"
-msgstr "Buscar"
-
-msgctxt "UI_GB_SORT_DOWNLOADS"
-msgid "Most downloaded"
-msgstr "Más descargados"
-
-msgctxt "UI_GB_SORT_NEW"
-msgid "Newest"
-msgstr "Más recientes"
-
-msgctxt "UI_GB_SORT_LIKES"
-msgid "Most liked"
-msgstr "Más populares"
-
-msgctxt "UI_GB_LOADING"
-msgid "Loading..."
-msgstr "Cargando..."
-
-msgctxt "UI_GB_NONE"
-msgid "No mods found"
-msgstr "No se encontraron mods"
-
-#. %s: the mod's author on GameBanana.
-msgctxt "UI_GB_BY"
-msgid "by %s"
-msgstr "por %s"
-
-#. %s: the mod's license, e.g. "CC BY-NC-ND 4.0".
-msgctxt "UI_GB_LICENSE"
-msgid "License: %s"
-msgstr "Licencia: %s"
-
-msgctxt "UI_GB_OPEN"
-msgid "Open its GameBanana page"
-msgstr "Abrir su página de GameBanana"
-
-#. %s: the file's name.
-msgctxt "UI_GB_INSTALL"
-msgid "Install %s"
-msgstr "Instalar %s"
-
-#. First %s: the file's name; second %s: its author.
-msgctxt "UI_GB_CONFIRM"
-msgid "Download %s by %s from GameBanana and install it?"
-msgstr "¿Descargar %s de %s desde GameBanana e instalarlo?"
-
-msgctxt "UI_GB_UNSAFE"
-msgid "Not offered: GameBanana's virus scan has not marked this file clean"
-msgstr "No se ofrece: el análisis antivirus de GameBanana no marcó este archivo como limpio"
-
-#. %d: this page; %d: how many pages.
-msgctxt "UI_GB_PAGE"
-msgid "Page %d of %d"
-msgstr "Página %d de %d"
-
-#. %s: what failed (an English detail from the network).
-msgctxt "UI_GB_ERROR"
-msgid "GameBanana did not answer: %s"
-msgstr "GameBanana no respondió: %s"
-
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
 msgid ""
@@ -2203,9 +1998,10 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_LASTRUN_CRASH"
 msgid ""
-"The last game stopped with an error. Reporting it with logs/orbital.log attached helps to fix it."
+"The last game stopped with an error. Reporting it with logs/orbitals.log attached helps to fix it."
 msgstr ""
-"La última partida se detuvo por un error. Reportarlo adjuntando logs/orbital.log ayuda a corregirlo."
+"La última partida se detuvo por un error. Reportarlo adjuntando logs/orbitals.log ayuda a "
+"corregirlo."
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_LASTRUN_OPEN"
@@ -2321,10 +2117,10 @@ msgctxt "UI_MENU_RPT_WAITING"
 msgid "waiting for Steam"
 msgstr "esperando a Steam"
 
-#. steam_appid and orbital.ini are a setting and a file name: keep them.
+#. steam_appid and orbitals.ini are a setting and a file name: keep them.
 msgctxt "UI_MENU_RPT_NEED_APPID"
-msgid "Needs steam_appid in orbital.ini"
-msgstr "Necesita steam_appid en orbital.ini"
+msgid "Needs steam_appid in orbitals.ini"
+msgstr "Necesita steam_appid en orbitals.ini"
 
 msgctxt "UI_MENU_RPT_AT_START"
 msgid "Starts with the game"
@@ -2400,14 +2196,15 @@ msgstr "ID de app de Steam"
 
 msgctxt "UI_MENU_RPT_APPID_DESC"
 msgid ""
-"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
-"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
-"works. Another number: steam_appid in orbital.ini. Takes effect at the next start."
+"The Steam game orbitals-recomp runs as for Remote Play Together. Automatic: the game whose launch "
+"options start orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" %command%), so any Steam game you "
+"own with Remote Play Together works. Another number: steam_appid in orbitals.ini. Takes effect at "
+"the next start."
 msgstr ""
-"El juego de Steam como el que corre mkw para Remote Play Together. Automático: el juego cuyas "
-"opciones de inicio abren mkw (\"C:\\...\\mkw.exe\" %command%), así que funciona cualquier juego "
-"tuyo de Steam con Remote Play Together. Otro número: steam_appid en orbital.ini. Se aplica en el "
-"próximo inicio."
+"El juego de Steam como el que corre orbitals-recomp para Remote Play Together. Automático: el "
+"juego cuyas opciones de inicio abren orbitals-recomp (\"C:\\...\\orbitals-recomp.exe\" "
+"%command%), así que funciona cualquier juego tuyo de Steam con Remote Play Together. Otro número: "
+"steam_appid en orbitals.ini. Se aplica en el próximo inicio."
 
 msgctxt "UI_MENU_RPT_APPID_OFF"
 msgid "Off"
@@ -2419,8 +2216,8 @@ msgstr "Automático (el juego que abrió Steam)"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_MENU_RPT_APPID_CUSTOM"
-msgid "%s (orbital.ini)"
-msgstr "%s (orbital.ini)"
+msgid "%s (orbitals.ini)"
+msgstr "%s (orbitals.ini)"
 
 msgctxt "UI_MENU_RPT_APPID_ADD"
 msgid "Enter a Steam App ID"
@@ -2430,14 +2227,14 @@ msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
 msgid ""
 "Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
 "keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
-"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
-"it in its list (steam_appids in orbital.ini). Backspace deletes a digit."
+"press Enter or A. orbitals-recomp runs as that game from the next start, and the Steam App ID row "
+"above keeps it in its list (steam_appids in orbitals.ini). Backspace deletes a digit."
 msgstr ""
 "Escribe con las teclas numéricas el ID de app de un juego de Steam que tengas y que tenga Remote "
 "Play Together (es el número de la dirección del juego en la tienda, "
-"store.steampowered.com/app/<number>/) y presiona Enter o A. Desde el próximo inicio mkw corre "
-"como ese juego, y la fila ID de app de Steam de arriba lo guarda en su lista (steam_appids en "
-"orbital.ini). Retroceso borra un dígito."
+"store.steampowered.com/app/<number>/) y presiona Enter o A. Desde el próximo inicio "
+"orbitals-recomp corre como ese juego, y la fila ID de app de Steam de arriba lo guarda en su "
+"lista (steam_appids en orbitals.ini). Retroceso borra un dígito."
 
 msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
 msgid "type the number"

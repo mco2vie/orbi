@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Milliseconds the render thread spent on texture uploads (and on ASTC within them) up to FRAME, summed from the perf
-# lines (MKW_TRACE=perf) of a run: blocked share x 60 frames x mean interval; and the worst frame. Compares two runs
+# lines (ORBITALS_TRACE=perf) of a run: blocked share x 60 frames x mean interval; and the worst frame. Compares two runs
 # of the same inputs. Usage: tools/run/texms.sh build/run/NAME.log [FRAME]
 set -euo pipefail
 log=$1 upto=${2:-1500}

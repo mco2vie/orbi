@@ -424,12 +424,12 @@ static void test_cores(Cpu *c) {
     int now, held_max;
     kern_core_stats(&now, &held_max);
     uint32_t cpus = plat_cpu_count();
-    int gate = !cfg_bool("MKW_FREE_CORES");   // the kernel's own switch
+    int gate = !cfg_bool("ORBITALS_FREE_CORES");   // the kernel's own switch
     int ok = g_run_max <= PROBE_CORES && held_max <= PROBE_CORES && !g_core_clash &&
              (cpus <= PROBE_CORES || CORE_WORKERS < PROBE_CORES || g_run_max == PROBE_CORES);
     printf("virtual cores: %d threads x %d runs on %u host CPUs: at most %d running guest code at once, at most %d "
            "core holders (kernel count), %d core-number clashes: %s\n", CORE_WORKERS, CORE_RUNS, cpus, g_run_max,
-           held_max, g_core_clash, !gate ? "not checked (MKW_FREE_CORES is set)" : ok ? "ok" : "FAIL");
+           held_max, g_core_clash, !gate ? "not checked (ORBITALS_FREE_CORES is set)" : ok ? "ok" : "FAIL");
     CHECK(ok || !gate, "virtual cores");
 }
 

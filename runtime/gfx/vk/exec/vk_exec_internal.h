@@ -17,8 +17,8 @@
 enum { W_LEVEL, W_LAYER, W_VIEW_FORMAT, W_BLOCK_VIEW, W_BLOCK_LAYERS, W_CLEAR_TARGET, W_CLEAR_MASK, W_STENCIL_MASK, W_COUNT };
 void exec_warn_once(int key, const char *fmt, ...);   // vk_exec.c
 
-extern int pt_on EXEC_SHARED;   // MKW_PASS_TIMING (vk_passtime.c)
-typedef struct {   // MKW_DEPTH_CLEAR_ALL (dc_layered); per recording thread (MKW_REPLAY_PAR)
+extern int pt_on EXEC_SHARED;   // ORBITALS_PASS_TIMING (vk_passtime.c)
+typedef struct {   // ORBITALS_DEPTH_CLEAR_ALL (dc_layered); per recording thread (ORBITALS_REPLAY_PAR)
     VkImage img;
     uint32_t pending;   // layers cleared ahead and untouched since; dropped (dc_drop) when something may write them
     float depth;
@@ -27,7 +27,7 @@ typedef struct {   // MKW_DEPTH_CLEAR_ALL (dc_layered); per recording thread (MK
     // outlives submissions, copies and queue switches: a clear of a layer not in it while others are continues the
     // sequence, and clearing every layer there would wipe the layers already drawn (the kart's shadow, 08/11/2026).
     struct { VkImage img; uint32_t done; } seq[4];
-    // A MKW_REPLAY_PAR chunk: the depth images earlier chunks bound (nseen -1: any). Which of their layers an earlier
+    // A ORBITALS_REPLAY_PAR chunk: the depth images earlier chunks bound (nseen -1: any). Which of their layers an earlier
     // chunk cleared ahead or drew into is not known here, and clearing every layer would wipe what it drew (car shadows
     // flickered, 07/11/2026): those clear layer by layer. An image no earlier chunk bound is as in the serial replay.
     const VkImage *seen;
@@ -49,7 +49,7 @@ static inline int dc_seen(VkImage img) {
     return 0;
 }
 
-extern int dc_mode EXEC_SHARED;   // MKW_DEPTH_CLEAR_ALL as read (vk_exec_clear.c dc_layered); -1 not read yet
+extern int dc_mode EXEC_SHARED;   // ORBITALS_DEPTH_CLEAR_ALL as read (vk_exec_clear.c dc_layered); -1 not read yet
 
 // vk_exec_rt.c
 void resolve_rt(VkExec *ex);

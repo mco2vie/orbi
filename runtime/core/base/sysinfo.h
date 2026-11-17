@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 // Plain text, one item per line: OS and build, CPU, RAM, the GPU and its driver as the Vulkan device reports them, and
-// every setting with a value (orbital.ini, the menu, the environment). Technical text for the developers, in English like
+// every setting with a value (orbitals.ini, the menu, the environment). Technical text for the developers, in English like
 // the log. The length written (truncated to n - 1), or 0 on failure.
 int sysinfo_text(char *buf, size_t n);
 // The CPU's brand string ("AMD Ryzen 7 7800X3D 8-Core Processor"); "" when the CPU has none.

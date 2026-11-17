@@ -177,7 +177,7 @@ void mem_freeze_stats(uint64_t *frozen, uint64_t *freezes, uint64_t *fault_thaws
 // and frozen regions never hold one: freeze_locked refuses a region with an inaccessible page. Under frz_lock.
 typedef struct { uint64_t lo, hi; const uint8_t *src; } TrapSrc;
 uint8_t *trapped;                     // one byte per guest page, mapped lazily; frz_lock for writes; 1 a read trap,
-                                      // 2 MKW_EARLY_READ's watch (memory_early.c)
+                                      // 2 ORBITALS_EARLY_READ's watch (memory_early.c)
 static TrapSrc *tsrc;                 // frz_lock: where trapped pages take their bytes from
 static int ntsrc, ctsrc;
 static int64_t ntrapped;              // frz_lock: pages trapped now
@@ -195,7 +195,7 @@ static void fill_locked(uint64_t a, int why) {
     trapped[p / PAGE] = 0;
     ntrapped--;
     plat_inc64(&trap_count[why]);
-    mem_early_filled_locked(a, why == 1);   // MKW_EARLY_READ_DRY: a writer of the page running now
+    mem_early_filled_locked(a, why == 1);   // ORBITALS_EARLY_READ_DRY: a writer of the page running now
 }
 
 static void untrap_range_locked(uint64_t a, uint64_t n) {
@@ -228,7 +228,7 @@ int mem_trap(uint64_t a, uint64_t n, const void *src) {
     // shadow bytes (one live shadow per guest page), and filling them again at each fence copied it all back anyway
     // (rt-a1: 1 727 of 1 739 MiB trapped were filled that way).
     for (uint64_t r = a >> FRZ_SHIFT; r <= (a + n - 1) >> FRZ_SHIFT; r++) thaw_locked(r, 2);
-    // A page MKW_EARLY_READ watches gets its own protection back first: the trap below then takes the GPU's bytes.
+    // A page ORBITALS_EARLY_READ watches gets its own protection back first: the trap below then takes the GPU's bytes.
     // A base-trapped one gives its bytes to its base first: the pokes below write through its protection.
     if (mem_early_pages || mem_base_pages())
         for (uint64_t q = a & ~(PAGE - 1); q < a + n; q += PAGE) {
@@ -313,7 +313,7 @@ void mem_trap_stats(uint64_t *now, uint64_t *trapped_pages, uint64_t *access_fil
 static int thaw_fault(uint64_t a) {
     if (a >= RT_ADDRESS_LIMIT || !watched(a, 1)) return 0;
     if (trapped && __atomic_load_n(&trapped[a / PAGE], __ATOMIC_RELAXED)) {
-        uint64_t wait = 0;   // MKW_EARLY_READ=2: the submit an early read waits for
+        uint64_t wait = 0;   // ORBITALS_EARLY_READ=2: the submit an early read waits for
         plat_mutex_lock(&frz_lock);
         if (trapped[a / PAGE] == 2) wait = mem_early_release_locked(a, 1);   // the byte touched
         else if (trapped[a / PAGE] == 3) mem_base_fill_locked(a);            // a write into a base's page
@@ -350,7 +350,7 @@ static void commit(uint64_t a, uint64_t n, const char *what) {
 // a 16 GB machine refused the next commit. There the heap and the mapped physical pages stay reserved and are
 // committed 2 MiB at a time on their first access (lazy_fault); anything that reaches guest memory outside our CPU
 // threads (a kernel write into a file read's buffer, a driver import) commits its range first (mem_thaw,
-// mem_commit_range). MKW_LAZY_COMMIT=0 commits as before.
+// mem_commit_range). ORBITALS_LAZY_COMMIT=0 commits as before.
 #define LAZY_CHUNK (2ull << 20)
 static int lazy;
 
@@ -438,12 +438,12 @@ static void protect(uint64_t a, uint64_t n, int prot, const char *what) {
 // The process is re-run when a region is taken: Windows places DLLs, heaps and thread stacks at random addresses,
 // and a fresh process gets a fresh layout.
 static void reexec_or_fail(const char *what) {
-    const char *e = cfg_get("MKW_REEXEC");
+    const char *e = cfg_get("ORBITALS_REEXEC");
     int n = e ? atoi(e) : 0;
     if (n >= REEXEC_LIMIT) rt_fatal("memory: %s is not free after %d attempts", what, n);
     char buf[16];
     snprintf(buf, sizeof buf, "%d", n + 1);
-    plat_setenv("MKW_REEXEC", buf);
+    plat_setenv("ORBITALS_REEXEC", buf);
     plat_reexec();
 }
 
@@ -471,10 +471,10 @@ void mem_init(void) {
     plat_mem_fault_hook(thaw_fault);   // before the crash handler
     alias_pages = calloc(ALIAS_PAGES, 1);
     if (!alias_pages) rt_fatal("memory: cannot allocate the alias page map");
-    // orbital.ini is read here, once the address space is claimed and before the first setting: the pool size below
-    // depends on MKW_APP_POOL.
+    // orbitals.ini is read here, once the address space is claimed and before the first setting: the pool size below
+    // depends on ORBITALS_APP_POOL.
     cfg_init();
-    const char *pool = cfg_get("MKW_APP_POOL");
+    const char *pool = cfg_get("ORBITALS_APP_POOL");
     L = (RtGuestLayout){
         .aslr = {low, RT_ADDRESS_LIMIT - low},
         .stack = {low + STACK_OFF, STACK_SIZE},
@@ -484,9 +484,9 @@ void mem_init(void) {
         .hostfn = {RT_HOSTFN_BASE, RT_HOSTFN_SIZE},
         .pool = pool ? strtoull(pool, NULL, 0) : DEFAULT_POOL,
     };
-    if (!L.pool) rt_fatal("memory: MKW_APP_POOL is 0");
+    if (!L.pool) rt_fatal("memory: ORBITALS_APP_POOL is 0");
 #ifdef _WIN32
-    const char *lz = cfg_get("MKW_LAZY_COMMIT");
+    const char *lz = cfg_get("ORBITALS_LAZY_COMMIT");
     lazy = !lz || atoi(lz) != 0;
 #endif
     plat_mem_lazy_hook(lazy_fault);   // a no-op on Linux

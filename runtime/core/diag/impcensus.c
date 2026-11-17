@@ -1,9 +1,9 @@
-// Import census (MKW_IMPORT_CENSUS=<file>): which functions of the SDK modules (sdk, subsdk0) the game's own code
+// Import census (ORBITALS_IMPORT_CENSUS=<file>): which functions of the SDK modules (sdk, subsdk0) the game's own code
 // calls during a run, how often and from which frame on, so the SDK work list follows what MKW really uses rather
 // than its 1 289 imports. Overridden imports never reach guest code and are not
 // listed here: hostfn_report counts those.
 //
-// It rides the function-entry hook of the lifted code (FN_ENTER, g_fnprof), as MKW_SEQ_WATCH does: a call counts when
+// It rides the function-entry hook of the lifted code (FN_ENTER, g_fnprof; fnprof_hit below): a call counts when
 // the callee is outside main and the return address inside it, which takes the PLT calls and the game's calls through
 // SDK function pointers alike. No wrapper sits around the call, so threads and preemption behave as without the
 // census; the cost is a range check per guest call and a hash probe per call from main into the SDK.
@@ -32,11 +32,11 @@ volatile int impcensus_on;
 static uint32_t h(uint64_t a) { return (uint32_t)((a >> 2) * 0x9E3779B1u) & (HSIZE - 1); }
 
 void impcensus_init(void) {
-    const char *p = cfg_get("MKW_IMPORT_CENSUS");
+    const char *p = cfg_get("ORBITALS_IMPORT_CENSUS");
     // Another game (port mode): on without a file, and each SDK function's first call from main is logged when it
     // happens, so a run that stops (Orbitals' Unreal PreInit failed with no file opened) shows what it called last
     live = rt_game_present() && rt_game()->port;
-    // and the host replacements' first calls (MKW_TRACE=host's "host call" lines), which the census does not see:
+    // and the host replacements' first calls (ORBITALS_TRACE=host's "host call" lines), which the census does not see:
     // the two in one order say what the game did up to where it stops
     if (live) rt_trace |= RT_TRACE_HOSTCALL;
     if ((!p || !*p) && !live) return;
@@ -46,6 +46,12 @@ void impcensus_init(void) {
     impcensus_on = 1;
     rt_fnprof_set(1);
     rt_log("impcensus: counting calls from main into the SDK modules (%s)", out_path ? out_path : "port mode, live");
+}
+
+// The function-entry hook of the lifted code (cpu.h FN_ENTER, on while g_fnprof): the census is its only user.
+void fnprof_hit(uint64_t addr, uint64_t lr, uint64_t x0) {
+    (void)x0;
+    if (impcensus_on) impcensus_hit(addr, lr);
 }
 
 void impcensus_hit(uint64_t addr, uint64_t lr) {
@@ -79,7 +85,7 @@ void impcensus_write(void) {
     if (!impcensus_on || !out_path) return;
     FILE *f = fopen(out_path, "w");
     if (!f) { rt_log("impcensus: cannot write %s", out_path); return; }
-    fprintf(f, "# module\toffset\tcalls\tfirst_frame\tsymbol (MKW_IMPORT_CENSUS, runtime/core/diag/impcensus.c)\n");
+    fprintf(f, "# module\toffset\tcalls\tfirst_frame\tsymbol (ORBITALS_IMPORT_CENSUS, runtime/core/diag/impcensus.c)\n");
     int n = 0;
     for (int i = 0; i < HSIZE; i++) {
         uint64_t a = __atomic_load_n(&keys[i], __ATOMIC_ACQUIRE);

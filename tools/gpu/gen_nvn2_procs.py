@@ -27,7 +27,7 @@ OUT = ROOT / "runtime/gfx/nvn/procs/nvn2_procs.inc"
 
 
 def main() -> None:
-    nvn2 = set(procs(Nso(str(Path(os.environ.get("MKW_GAME", "game")) / "exefs/sdk"))))
+    nvn2 = set(procs(Nso(str(Path(os.environ.get("ORBITALS_GAME", "game")) / "exefs/sdk"))))
     nvn1 = {n for n in (Path(__file__).with_name("nvn1_procs.txt")).read_text().split() if n.startswith("nvn")}
     names = sorted(n for n in nvn2 - nvn1 if not n.startswith("nvnProgramBuilder"))
     before = set(OUT.read_text().split("NVN_PROC(")[1:]) if OUT.is_file() else set()

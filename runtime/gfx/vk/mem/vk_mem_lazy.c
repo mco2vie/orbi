@@ -3,7 +3,7 @@
 
 #include "vk_mem_internal.h"
 
-// ---------------------------------------------------------------- lazy merge bases (MKW_LAZY_BASE)
+// ---------------------------------------------------------------- lazy merge bases (ORBITALS_LAZY_BASE)
 // A merge base (vk_mem_merge.c) copied the shadow's bytes of each range a part may write when it was submitted: ~9 MiB
 // a frame of 1-4 MiB ranges neither the CPU nor the GPU changes (wbc2), ~1 ms a frame on the replay thread with the
 // wait for shadow_lock of whoever copies (ebn3-6: whoever copies, the replay waits for it). Guest memory holds those
@@ -12,9 +12,9 @@
 // early-read watches, ends of the range) are copied from the shadow as before. A page in the buffer (copied, or
 // materialized for base_follow and merge_in, which write the base) is the base; one still trapped is guest memory, and
 // stays so while lazy_lock is held: the hook needs it before the page can change.
-// MKW_LAZY_BASE (default 1; 0 copies every base; "ab": lazy in the B blocks). lzab1/lzab2 (pairs with their inverted
+// ORBITALS_LAZY_BASE (default 1; 0 copies every base; "ab": lazy in the B blocks). lzab1/lzab2 (pairs with their inverted
 // twin): the sync's bases ~15 -> ~5 ms and its wait for shadow_lock ~47 -> ~11 ms per 60 frames; the frame with the
-// scene balanced -0.34 ms (means), -0.58 (medians) over 40 s. MKW_LAZY_BASE_CHECK=1 (diagnosis) also copies
+// scene balanced -0.34 ms (means), -0.58 (medians) over 40 s. ORBITALS_LAZY_BASE_CHECK=1 (diagnosis) also copies
 // every lazy base as before, keeps it with base_follow and merge_in, and counts the bytes where the two differ at the
 // write-back: the trap must give the same base (sombra-replay 4).
 #define LAZY_MIN (256u << 10)   // smaller ranges: two protection calls cost about what the copy did
@@ -22,7 +22,7 @@
 
 struct LazyBase {
     uint64_t lo, hi, plo, phi;   // the range, its whole pages
-    uint8_t *buf, *check;        // the base ([lo, hi)); MKW_LAZY_BASE_CHECK's eager copy
+    uint8_t *buf, *check;        // the base ([lo, hi)); ORBITALS_LAZY_BASE_CHECK's eager copy
     uint64_t *inbuf;             // bit per page of [plo, phi): its base is in buf
 };
 
@@ -61,7 +61,7 @@ int lazy_base_on(void) {
         lazy_mode = rt_knob("LAZY_BASE", "1");
         check_on = rt_knob("LAZY_BASE_CHECK", "0") == 1;
         if (lazy_mode) mem_base_hook(lazy_hook);
-        rt_log("mem: lazy merge bases (guest pages read-only until written) %s%s (MKW_LAZY_BASE)",
+        rt_log("mem: lazy merge bases (guest pages read-only until written) %s%s (ORBITALS_LAZY_BASE)",
                lazy_mode == 2 ? "in the B blocks" : lazy_mode ? "on" : "off", check_on ? ", checked" : "");
     }
     return RT_KNOB_ON(lazy_mode);

@@ -5,7 +5,7 @@ Why: v0.1.0-v0.1.2 were written by hand, each with its own shape and the same in
 CHANGELOG.md, the common convention, keeps every version's changes in one file; GitHub's own generated notes list
 merged pull requests, and this repository commits to main without them.
 
-A version's section is "## X.Y.Z": a summary paragraph, "### Changes", "### Tested" and optionally "### Known issues"
+A version's section is "## [X.Y.Z] - YYYY-MM-DD": a summary paragraph, "### Changes", "### Tested" and optionally "### Known issues"
 (lines added under the template's). Each change names its issue (#N) when it has one.
 
 Usage: uv run tools/build/notes.py --version 0.1.3 [--out FILE]   (default: stdout; gh release create --notes-file FILE)
@@ -21,7 +21,8 @@ SECTIONS = {"changes": "Changes", "tested": "Tested", "known": "Known issues"}
 
 
 def version_section(changelog: str, version: str) -> str:
-    parts = re.split(r"^## (\S+)\s*$", changelog, flags=re.M)
+    # "## [X.Y.Z] - YYYY-MM-DD", or "## X.Y.Z" as the first releases wrote it
+    parts = re.split(r"^## \[?([^\]\s]+)\]?(?: - \S+)?\s*$", changelog, flags=re.M)
     for name, body in zip(parts[1::2], parts[2::2], strict=True):
         if name == version:
             return body

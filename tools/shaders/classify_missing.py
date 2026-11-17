@@ -1,4 +1,4 @@
-"""Classify dumped programs (MKW_SPIRV_DUMP) as in the census (index.csv) or not. Usage: classify_missing.py DIR"""
+"""Classify dumped programs (ORBITALS_SPIRV_DUMP) as in the census (index.csv) or not. Usage: classify_missing.py DIR"""
 import csv
 import hashlib
 import sys
