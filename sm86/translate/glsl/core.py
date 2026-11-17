@@ -65,6 +65,8 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.mesh = False  # a mesh program (ISBEWR.SKEW per-vertex writes): set by translate()
         self.zombie = False  # a compute program with BAR: a predicated EXIT keeps the lane going (exited): translate()
         self.images: dict[tuple[int, int], str] = {}
+        self.img_ld: set[str] = set()   # images SULD reads and SUST writes: their imld_/imst_ helpers (head.py)
+        self.img_st: set[str] = set()
         self.ssbos: set[int] = set()  # driver bank 0 offsets of the storage buffer addresses read
         self.ssbos_written: set[int] = set()  # those a STG, ATOMG or RED stores into (reflection flag 1)
         self.ur_ssbo: dict[int, int] = {}  # uniform register -> the c[0] offset its 64-bit value came from
@@ -236,6 +238,8 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             return self.tex(i)
         if op == "TLD":
             return self.tld(i)
+        if op == "TXD":
+            return self.txd(i)
         if op == "TMML":
             return self.tmml(i)
         if op in ("S2R", "S2UR"):

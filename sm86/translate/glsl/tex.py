@@ -93,10 +93,14 @@ class TexOps:
         coords = [f"int({reg(a + k if a != RZ else RZ)})" for k in range(n)]
         vec = coords[0] if n == 1 else f"ivec{n}({', '.join(coords)})"
         key = self.tex_key(i)
-        kind = "uimage" if i.op in ("SURED", "SUATOM") else "image"  # atomics need an integer image with a declared format
-        if self.images.get(key, f"{kind}{name}") != f"{kind}{name}":
-            raise Unsupported(f"{i.op}: image {key} used both as float and for atomics")
-        self.images[key] = f"{kind}{name}"
+        # Atomics need an integer image with a declared format (r32ui). An image also loaded or stored is declared so
+        # too, its loads and stores going through imld_/imst_ (head.py), which take and give the texels' bits as the
+        # registers hold them, whichever the final declaration (32 Orbitals programs, 17/11/2026).
+        cur = self.images.get(key)
+        if cur is not None and cur.removeprefix("u") != f"image{name}":
+            raise Unsupported(f"{i.op}: image {key} used as image{name} and as {cur}")
+        atomic = i.op in ("SURED", "SUATOM") or (cur or "").startswith("uimage")
+        self.images[key] = f"{'uimage' if atomic else 'image'}{name}"
         return f"i{key[0]}_{key[1]}", vec, {"R": 1, "RG": 2, "RGBA": 4}.get(i.sym("rgba"), 0)
 
     def sust(self, i: Insn) -> str:
@@ -104,10 +108,11 @@ class TexOps:
         if not n:
             raise Unsupported(f"SUST.{i.sym('rgba')}")
         b = i.v("Rb")
-        vals = [f"uintBitsToFloat({reg(b + k if b != RZ else RZ)})" for k in range(n)] + ["0.0"] * (4 - n)
+        vals = [reg(b + k if b != RZ else RZ) for k in range(n)] + ["0u"] * (4 - n)
         if b != RZ:
             self.regs.update(range(b, b + n))
-        return f"imageStore({img}, {vec}, vec4({', '.join(vals)}));"
+        self.img_st.add(img)
+        return f"imst_{img}({vec}, uvec4({', '.join(vals)}));"
 
     IMG_ATOM: ClassVar[dict[str, str]] = {"ADD": "imageAtomicAdd", "MIN": "imageAtomicMin", "MAX": "imageAtomicMax",
                                           "AND": "imageAtomicAnd", "OR": "imageAtomicOr", "XOR": "imageAtomicXor"}  # fmt: skip
@@ -145,8 +150,9 @@ class TexOps:
         for k in range(n):
             if d != RZ:
                 self.regs.add(d + k)
-                out.append(f"r{d + k} = floatBitsToUint(iv[{k}]);")
-        return f"{{ vec4 iv = imageLoad({img}, {vec}); {' '.join(out)} }}" if out else ""
+                out.append(f"r{d + k} = iv[{k}];")
+        self.img_ld.add(img)
+        return f"{{ uvec4 iv = imld_{img}({vec}); {' '.join(out)} }}" if out else ""
 
     # ---- textures
     DIMS: ClassVar[dict[str, tuple[str, int, bool]]] = {
@@ -237,6 +243,39 @@ class TexOps:
         if dc and not gather:
             call = f"vec4({call}, 0.0, 0.0, 1.0)"
         outs = self.tex_outs(i)
+        return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
+
+    def txd(self, i: Insn) -> str:
+        """TXD: a sample with explicit derivatives, textureGrad. Sources as Ryujinx's TexD (MIT): Ra..., the array index
+        (u32) then the coordinates; Rb..., the derivatives interleaved, d/dx then d/dy of each coordinate (hypothesis
+        until checked on a picture). 11 Orbitals programs, 17/11/2026 (txd_urc_)."""
+        dim = i.sym("paramA")
+        if dim not in ("1D", "2D", "ARRAY_1D", "ARRAY_2D") or i.sym("aoffi") == "AOFFI":
+            raise Unsupported(f"TXD {dim} {i.sym('aoffi')}")
+        name, ncoord, is_array = self.DIMS[dim]
+        a, b = i.v("Ra"), i.v("Rb")
+        n0 = ncoord + (1 if is_array else 0)
+        self.regs.update(r for r in range(a, a + n0) if a != RZ)
+        self.regs.update(r for r in range(b, b + 2 * ncoord) if b != RZ)
+
+        def fr(r: int) -> str:
+            return f"uintBitsToFloat({reg(r if r != RZ else RZ)})"
+
+        base = a + (1 if is_array else 0)
+        coords = [fr(base + k if a != RZ else RZ) for k in range(ncoord)]
+        if is_array:
+            coords.append(f"float({reg(a)})")
+        dx = [fr(b + 2 * k if b != RZ else RZ) for k in range(ncoord)]
+        dy = [fr(b + 2 * k + 1 if b != RZ else RZ) for k in range(ncoord)]
+
+        def vec(v: list[str]) -> str:
+            return v[0] if len(v) == 1 else f"vec{len(v)}({', '.join(v)})"
+
+        key = self.tex_key(i)
+        t = f"t{key[0]}_{key[1]}"
+        self.textures[key] = f"sampler{name}"
+        outs = self.tex_outs(i)
+        call = f"textureGrad({t}, {vec(coords)}, {vec(dx)}, {vec(dy)})"
         return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
 
     def tex_outs(self, i: Insn) -> list[str]:

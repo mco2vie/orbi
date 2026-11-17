@@ -152,6 +152,13 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
     for (bank, idx), t in sorted(b.images.items()):
         fmt = "r32ui, " if t.startswith("uimage") else ""
         head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx};")
+        # SULD/SUST as the texels' bits (tex.py image): straight on an r32ui image, through the float views otherwise
+        im, u = f"i{bank}_{idx}", t.startswith("uimage")
+        pt = {"1D": "int", "Buffer": "int", "2D": "ivec2", "1DArray": "ivec2"}.get(t.removeprefix("u").removeprefix("image"), "ivec3")
+        if im in b.img_ld:
+            head.append(f"uvec4 imld_{im}({pt} p) {{ return {'imageLoad(' + im + ', p)' if u else 'floatBitsToUint(imageLoad(' + im + ', p))'}; }}")
+        if im in b.img_st:
+            head.append(f"void imst_{im}({pt} p, uvec4 v) {{ imageStore({im}, p, {'v' if u else 'uintBitsToFloat(v)'}); }}")
         refl["images"].append({"binding": nb, "type": sampler_type(t), "format": "R32Uint" if fmt else "Unknown", "cbuf_slot": bank,
                                "handle": idx & 0xFFFF, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
                                "flags": 4})  # fmt: skip
