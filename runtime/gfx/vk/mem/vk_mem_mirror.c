@@ -11,7 +11,6 @@
 #include "vk_exec.h"
 #include "vk_mem_internal.h"
 #include "platform/platform.h"
-#include "wb_merge_spv.h"
 
 // ---------------------------------------------------------------- VRAM mirror of buffer-bound pools
 // An imported pool keeps vertices, indices, constants
@@ -51,14 +50,16 @@ typedef struct { PoolRec *r; uint64_t off, size; } MRange;
 static MRange *pend, *wbl;             // replay: copies for the next prologue; GPU writes into mirrors this submission
 static int npend, cpend, nwbl, cwbl;
 // GPU writes merged by bytes (vk_mem_gpu_wrote_merged): each range's base, the mirror's bytes as the part that writes it
-// began, is copied in that part's prologue; vk_mem_mirror_end records wb_merge.comp, which writes only the bytes that
-// differ from it into the imported buffer. The last part's prologue is made after vk_mem_mirror_end recorded the merges
+// began, is copied in that part's prologue; vk_mem_mirror_end copies them again, and at the fence merge_back writes
+// only the bytes that differ into guest memory. The last part's prologue is made after vk_mem_mirror_end recorded the merges
 // (vk_sync.c records a part, then its prologue): wbm_closed keeps the ranges for it. use_lock, as wbl.
-typedef struct { PoolRec *r; uint64_t lo, hi; VkBuffer base; VmaAllocation alloc; uint8_t based; } WbMerge;
+// buf: host-visible, [0, len) the mirror's bytes as the part that writes the range began (its prologue copies them,
+// based), [wm_stage(len), + len) those at the submission's end; guest: the range's guest address; map: buf mapped
+typedef struct { PoolRec *r; uint64_t lo, hi; VkBuffer buf; VmaAllocation alloc; uint8_t based; uint64_t guest;
+                 uint8_t *map; } WbMerge;
 static WbMerge *wbm;
-static uint64_t wm_stage(uint64_t len);
 static int nwbm, cwbm, nunbased, wbm_closed;
-static volatile int64_t wm_ranges, wm_bytes, wm_fallback;
+static volatile int64_t wm_ranges, wm_bytes, wm_fallback, wm_copied;
 // ORBITALS_MIRROR_REUP=1 (diagnosis, replay only): the GPU writes of the last submission, to count the pages the next sync
 // uploads again although only the GPU wrote them since (NX2navi 6c971b7 saved 57 of 60 MiB a frame that way; here the
 // write-back is a GPU copy that stamps no page, so the count should stay near zero; mir-reup, 14/11/2026).
@@ -353,86 +354,43 @@ void vk_mem_gpu_wrote(const VkMemSpan *sp, uint64_t size) {
     plat_mutex_unlock(&use_lock);
 }
 
-// ---- write-backs merged by bytes (runtime/shaders/wb_merge.comp)
-static VkPipeline wm_pipe;
-static VkPipelineLayout wm_layout;
-static VkDescriptorSetLayout wm_dsl;
-
-static void wm_make(void *arg) {
-    (void)arg;
-    VkCtx *c = vk_ctx();
-    VkDescriptorSetLayoutBinding b[3];
-    for (uint32_t i = 0; i < 3; i++)
-        b[i] = (VkDescriptorSetLayoutBinding){i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL};
-    VkDescriptorSetLayoutCreateInfo di = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-                                          .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
-                                          .bindingCount = 3, .pBindings = b};
-    VkPushConstantRange pr = {VK_SHADER_STAGE_COMPUTE_BIT, 0, 8};
-    VkShaderModuleCreateInfo mi = {.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof wb_merge_spv,
-                                   .pCode = wb_merge_spv};
-    VkShaderModule mod = VK_NULL_HANDLE;
-    if (vkCreateDescriptorSetLayout(c->device, &di, NULL, &wm_dsl) != VK_SUCCESS) goto fail;
-    VkPipelineLayoutCreateInfo li = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1,
-                                     .pSetLayouts = &wm_dsl, .pushConstantRangeCount = 1, .pPushConstantRanges = &pr};
-    if (vkCreatePipelineLayout(c->device, &li, NULL, &wm_layout) != VK_SUCCESS ||
-        vkCreateShaderModule(c->device, &mi, NULL, &mod) != VK_SUCCESS)
-        goto fail;
-    VkComputePipelineCreateInfo pi = {.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, .layout = wm_layout,
-                                      .stage = {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                                                .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = mod, .pName = "main"}};
-    if (vkCreateComputePipelines(c->device, VK_NULL_HANDLE, 1, &pi, NULL, &wm_pipe) != VK_SUCCESS) goto fail;
-    vkDestroyShaderModule(c->device, mod, NULL);
-    rt_log("mem: storage texel buffer write-backs merged by bytes (wb_merge.comp)");
-    return;
-fail:
-    if (mod) vkDestroyShaderModule(c->device, mod, NULL);
-    wm_pipe = VK_NULL_HANDLE;
-    rt_log("mem: the merged write-back pipeline was not made: storage texel buffers are copied back whole");
-}
-
-// A GPU write that may cover only part of [sp.offset, sp.offset + size): a storage texel buffer, whose shader stores
-// some texels of a view over the whole buffer texture. Only the bytes the GPU changes go back to guest memory, as on
-// the console, where the GPU writes the texels it stores and nothing else. Falls back to vk_mem_gpu_wrote when the
-// pipeline or the base is missing or the range exceeds a storage binding.
-// ORBITALS_WB_MERGE: 0 (default) copied back whole, as before bcbae09; 1 merged by bytes (wb_merge.comp); "none" not
-// copied back at all (the GPU's stores stay in the VRAM mirror). The merge lost the device inside its own dispatches in
-// four runs (read invalid at 0x4980000, 0x20003a52b000, 0x20003a585000, 0x600000006000; the last with texel buffers
-// alone, frame 669), while the whole copies played on in every run since the push constant fix (b28ada5, 17/11/2026):
-// until the merge's fault is found it is a test only. With storage texel views on, the RTX 4080 lost the
-// device after ~64 s (instruction pointer fault, read invalid at 0x4980000, 17/11/2026) and ORBITALS_TEXEL_VIEWS=read
-// did not: this tells the merge apart from the shaders' stores.
+// ---- write-backs merged by bytes, on the CPU
+// ORBITALS_WB_MERGE: 1 (default) merged by bytes; 0 copied back whole; "none" not copied back at all (the GPU's stores
+// stay in the VRAM mirror). Copied back whole, a storage texel buffer's view went over the CPU's writes made meanwhile
+// and Orbitals' render graph read a pointer they had reverted (0x104 at main+0x1759b20, after the hero choice once 203
+// of its 211 programs translated, 17/11/2026). A compute shader that merged in VRAM lost the device inside its own
+// dispatches in four runs (read invalid at 0x4980000, 0x20003a52b000, 0x20003a585000, 0x600000006000), so the GPU
+// only copies: the range's mirror bytes when the part that writes it begins (the base) and at the submission's end,
+// both into one host-visible buffer, and at the fence merge_back (vk_mem_merge.c, the shadow's merge) writes the
+// bytes that differ into guest memory.
 static int wb_merge_mode(void) {
     static int m = -1;
     if (m < 0) {
         const char *e = cfg_get("ORBITALS_WB_MERGE");
-        int v = !e || !*e ? 0 : !strcmp(e, "1") ? 1 : !strcmp(e, "none") ? 2 : 0;
+        int v = !e || !*e ? 1 : !strcmp(e, "0") ? 0 : !strcmp(e, "none") ? 2 : 1;
         rt_log("mem: storage texel buffer write-backs %s (ORBITALS_WB_MERGE)",
-               v == 2 ? "dropped (the GPU's stores stay in VRAM)" : v ? "merged by bytes" : "copied back whole");
+               v == 2 ? "dropped (the GPU's stores stay in VRAM)" : v ? "merged by bytes on the CPU" : "copied back whole");
         m = v;
     }
     return m;
 }
 
+// The second half of a range's staging buffer: [0, len) the base, [wm_stage(len), + len) the bytes at the end.
+static uint64_t wm_stage(uint64_t len) { return (len + 255) & ~255ull; }
+
+// A GPU write that may cover only part of [sp.offset, sp.offset + size): a storage texel buffer, whose shader stores
+// some texels of a view over the whole buffer texture. Only the bytes the GPU changes go back to guest memory, as on
+// the console, where the GPU writes the texels it stores and nothing else.
 void vk_mem_gpu_wrote_merged(const VkMemSpan *sp, uint64_t size) {
     PoolRec *r = sp->pool;
     if (!r || r->mstate != MS_ON || sp->buffer != r->mbuf || !size) return;
     int mode = wb_merge_mode();
     if (mode == 2) return;
     if (mode == 0) return vk_mem_gpu_wrote(sp, size);
-    static PlatOnce once = PLAT_ONCE_INIT;
-    plat_once(&once, wm_make, NULL);
     VkCtx *c = vk_ctx();
-    const VkPhysicalDeviceLimits *l = &c->props.limits;
-    uint64_t n = (r->import_hi - r->import_lo) & ~3ull, sa = l->minStorageBufferOffsetAlignment;
-    if (sa < 4) sa = 4;
-    uint64_t lo = sp->offset & ~3ull, hi = (sp->offset + size + 3) & ~3ull;
+    uint64_t n = r->import_hi - r->import_lo, lo = sp->offset, hi = sp->offset + size;
     if (hi > n) hi = n;
     if (hi <= lo) return;
-    if (!wm_pipe || hi - (lo & ~(sa - 1)) > l->maxStorageBufferRange) {
-        plat_inc64(&wm_fallback);
-        vk_mem_gpu_wrote(sp, size);
-        return;
-    }
     plat_mutex_lock(&use_lock);
     for (int i = 0; i < nwbm; i++)
         if (wbm[i].r == r && wbm[i].lo == lo && wbm[i].hi == hi) {
@@ -440,120 +398,87 @@ void vk_mem_gpu_wrote_merged(const VkMemSpan *sp, uint64_t size) {
             return;
         }
     VkBufferCreateInfo bi = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = wm_stage(hi - lo) + (hi - lo),
-                             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT};   // the base, then the staging half
-    VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
-    VkBuffer base = VK_NULL_HANDLE;
+                             .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT};
+    VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+                                  .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
+    VmaAllocationInfo info;
+    VkBuffer buf = VK_NULL_HANDLE;
     VmaAllocation alloc = NULL;
-    if (vmaCreateBuffer(c->vma, &bi, &ai, &base, &alloc, NULL) != VK_SUCCESS) {
-        range_add(&wbl, &nwbl, &cwbl, r, sp->offset, size);   // copied back whole, as before
+    if (vmaCreateBuffer(c->vma, &bi, &ai, &buf, &alloc, &info) != VK_SUCCESS || !info.pMappedData) {
+        if (buf) vmaDestroyBuffer(c->vma, buf, alloc);
+        range_add(&wbl, &nwbl, &cwbl, r, sp->offset, size);   // copied back whole
         plat_mutex_unlock(&use_lock);
         plat_inc64(&wm_fallback);
         return;
     }
     if (nwbm == cwbm) vk_mem_grow((void **)&wbm, &cwbm, sizeof *wbm);
-    wbm[nwbm++] = (WbMerge){r, lo, hi, base, alloc, 0};
+    wbm[nwbm++] = (WbMerge){r, lo, hi, buf, alloc, 0, r->import_lo + lo, info.pMappedData};
     nunbased++;
     plat_mutex_unlock(&use_lock);
 }
 
-typedef struct { int n; VkBuffer *b; VmaAllocation *a; } WmFree;
+typedef struct { uint64_t guest, len; VkBuffer b; VmaAllocation a; const uint8_t *map; uint8_t ok; } WmJob;
+typedef struct { int n; WmJob *j; } WmFree;
 
-static void wm_free(void *arg) {   // completion thread: the submission's merges are done
+static void wm_done(void *arg) {   // completion thread: the submission's copies are in; the GPU's bytes to guest memory
     WmFree *f = arg;
-    for (int i = 0; i < f->n; i++) vmaDestroyBuffer(vk_ctx()->vma, f->b[i], f->a[i]);
-    free(f->b), free(f->a), free(f);
+    VmaAllocator vma = vk_ctx()->vma;
+    uint64_t copied = 0;
+    for (int i = 0; i < f->n; i++) {
+        WmJob *j = &f->j[i];
+        if (j->ok) {
+            vmaInvalidateAllocation(vma, j->a, 0, VK_WHOLE_SIZE);
+            copied += merge_back(j->guest, j->len, j->map + wm_stage(j->len), j->map, NULL);
+        }
+        vmaDestroyBuffer(vma, j->b, j->a);
+    }
+    plat_add64(&wm_copied, (int64_t)copied);
+    free(f->j), free(f);
 }
 
-// The staging half of a range's base allocation: [0, len) the base, [wm_stage(len), + len) the guest bytes.
-static uint64_t wm_stage(uint64_t len) { return (len + 255) & ~255ull; }
-
-// vk_mem_mirror_end: the merges of this submission's ranges, after its last write. Their bases are copied by the
-// prologues of the parts that wrote them, the last one's after this records (wbm_closed). The shader touches VRAM
-// only: the guest range is copied into the staging half, merged there, and copied back. With the shader storing
-// into the imported host buffer itself the RTX 4080 lost the device inside the merge, its last started breadcrumb,
-// with "read invalid" at 0x4980000 and at 0x20003a52b000 (17/11/2026); the copy engine moves host memory as the
-// whole-range write-backs always did. The CPU's stores to the range between the two copies (one submission's end)
-// are reverted; before, the whole submission's were.
+// vk_mem_mirror_end: each range's mirror bytes after the submission's last write into the second half of its staging
+// buffer; wm_done merges them at the fence. Their bases are copied by the prologues of the parts that wrote them, the
+// last one's after this records (wbm_closed).
 static int merge_record(VkCommandBuffer cb, uint64_t fence) {
-    VkCtx *c = vk_ctx();
-    PFN_vkCmdPushDescriptorSetKHR push = vk_pipeline_push_fn();
-    uint64_t sa = c->props.limits.minStorageBufferOffsetAlignment;
-    if (sa < 4) sa = 4;
     plat_mutex_lock(&use_lock);
     WmFree *f = calloc(1, sizeof *f);
-    uint8_t *ok = malloc((size_t)nwbm + 1);
-    if (f) f->b = malloc(sizeof *f->b * (size_t)nwbm), f->a = malloc(sizeof *f->a * (size_t)nwbm);
-    if (!f || !f->b || !f->a || !ok || !push) rt_fatal("vk: merged write-backs: out of memory or no push descriptors");
-    // A breadcrumb of its own: the device lost of 17/11/2026 lay after the last marked command, where these run.
-    uint32_t crumb = vk_crumb_op(cb, "merged write-backs at the submission's end", (uint32_t)nwbm, 0);
+    if (f) f->j = calloc((size_t)nwbm, sizeof *f->j);
+    if (!f || !f->j) rt_fatal("vk: merged write-backs: out of memory");
+    uint32_t crumb = vk_crumb_op(cb, "merged write-back copies at the submission's end", (uint32_t)nwbm, 0);
+    mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
+             VK_ACCESS_2_TRANSFER_READ_BIT);
+    uint64_t bytes = 0;
+    int rec = 0;
     static volatile int32_t odd;
     for (int i = 0; i < nwbm; i++) {
         const WbMerge *m = &wbm[i];
-        f->b[f->n] = m->base, f->a[f->n++] = m->alloc;
-        // The range was checked against the pool when listed; a pool whose mirror went since, or a range never based,
-        // is skipped and said (the base would hold no bytes of the mirror)
-        uint64_t lim = (m->r->import_hi - m->r->import_lo) & ~3ull;
-        ok[i] = !(m->r->mstate != MS_ON || !m->r->mbuf || !m->r->buf || m->hi > lim || (!m->based && !nunbased));
-        if (!ok[i] && plat_inc32(&odd) <= 8)
-            rt_log("mem: merged write-back %#llx..%#llx of pool %#llx skipped: state %d, mirror %d, buffer %d, size %#llx, "
-                   "based %d", (unsigned long long)m->lo, (unsigned long long)m->hi, (unsigned long long)m->r->lo,
-                   (int)m->r->mstate, m->r->mbuf != VK_NULL_HANDLE, m->r->buf != VK_NULL_HANDLE,
-                   (unsigned long long)lim, m->based);
-    }
-    // 1. the guest bytes as they are now into the staging halves
-    mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
-             VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT);
-    for (int i = 0; i < nwbm; i++) {
-        const WbMerge *m = &wbm[i];
-        if (!ok[i]) continue;
-        VkBufferCopy cp = {m->lo, wm_stage(m->hi - m->lo), m->hi - m->lo};
-        vkCmdCopyBuffer(cb, m->r->buf, m->base, 1, &cp);
-    }
-    // 2. the GPU's bytes merged into them
-    mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-             VK_ACCESS_2_TRANSFER_WRITE_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-             VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
-    vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, wm_pipe);
-    uint64_t bytes = 0;
-    int rec = 0;
-    for (int i = 0; i < nwbm; i++) {
-        const WbMerge *m = &wbm[i];
-        if (!ok[i]) continue;
-        uint64_t w0 = m->lo & ~(sa - 1), len = m->hi - m->lo;
-        VkDescriptorBufferInfo bi[3] = {{m->r->mbuf, w0, m->hi - w0}, {m->base, 0, len}, {m->base, wm_stage(len), len}};
-        VkWriteDescriptorSet w[3];
-        for (uint32_t k = 0; k < 3; k++)
-            w[k] = (VkWriteDescriptorSet){.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstBinding = k, .descriptorCount = 1,
-                                          .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &bi[k]};
-        push(cb, VK_PIPELINE_BIND_POINT_COMPUTE, wm_layout, 0, 3, w);
-        uint32_t pc[2] = {(uint32_t)((m->lo - w0) / 4), (uint32_t)(len / 4)};
-        vkCmdPushConstants(cb, wm_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof pc, pc);
-        vkCmdDispatch(cb, (pc[1] + 63) / 64, 1, 1);
+        uint64_t len = m->hi - m->lo;
+        WmJob *j = &f->j[f->n++];
+        *j = (WmJob){m->guest, len, m->buf, m->alloc, m->map, 0};
+        // a pool whose mirror went since, or a range never based, is skipped and said
+        if (m->r->mstate != MS_ON || !m->r->mbuf || m->hi > m->r->import_hi - m->r->import_lo || (!m->based && !nunbased)) {
+            if (plat_inc32(&odd) <= 8)
+                rt_log("mem: merged write-back %#llx..%#llx of pool %#llx skipped: state %d, mirror %d, based %d",
+                       (unsigned long long)m->lo, (unsigned long long)m->hi, (unsigned long long)m->r->lo,
+                       (int)m->r->mstate, m->r->mbuf != VK_NULL_HANDLE, m->based);
+            continue;
+        }
+        VkBufferCopy cp = {m->lo, wm_stage(len), len};
+        vkCmdCopyBuffer(cb, m->r->mbuf, m->buf, 1, &cp);
         m->r->wb_sub = msub;
+        j->ok = 1;
         bytes += len;
-        rec += 6;
+        rec++;
     }
-    // 3. the merged bytes back to guest memory
-    mbarrier(cb, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
-             VK_ACCESS_2_TRANSFER_READ_BIT);
-    for (int i = 0; i < nwbm; i++) {
-        const WbMerge *m = &wbm[i];
-        if (!ok[i]) continue;
-        VkBufferCopy cp = {wm_stage(m->hi - m->lo), m->lo, m->hi - m->lo};
-        vkCmdCopyBuffer(cb, m->base, m->r->buf, 1, &cp);
-    }
-    mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-             VK_PIPELINE_STAGE_2_HOST_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-             VK_ACCESS_2_HOST_READ_BIT | VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT);
+    mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
+             VK_ACCESS_2_HOST_READ_BIT);
     vk_crumb_end(cb, VK_CRUMB_OP, crumb);
-    free(ok);
-    rec += 7;
+    rec += 4;
     plat_add64(&wm_ranges, nwbm), plat_add64(&wm_bytes, (int64_t)bytes);
     if (nunbased) wbm_closed = 1;   // the last part's prologue copies their bases, then drops them
     else nwbm = 0;
     plat_mutex_unlock(&use_lock);
-    vk_completion_add(fence, wm_free, f);
+    vk_completion_add(fence, wm_done, f);
     return rec;
 }
 
@@ -654,7 +579,7 @@ void vk_mem_mirror_prologue(VkCommandBuffer cb) {
             WbMerge *m = &wbm[i];
             if (!m->based) {
                 VkBufferCopy c = {m->lo, 0, m->hi - m->lo};
-                vkCmdCopyBuffer(cb, m->r->mbuf, m->base, 1, &c);
+                vkCmdCopyBuffer(cb, m->r->mbuf, m->buf, 1, &c);
                 m->based = 1;
                 continue;
             }
@@ -664,7 +589,7 @@ void vk_mem_mirror_prologue(VkCommandBuffer cb) {
                 uint64_t e = pend[k].off + pend[k].size < m->hi ? pend[k].off + pend[k].size : m->hi;
                 if (a >= e) continue;
                 VkBufferCopy c = {a, a - m->lo, e - a};
-                vkCmdCopyBuffer(cb, m->r->mbuf, m->base, 1, &c);
+                vkCmdCopyBuffer(cb, m->r->mbuf, m->buf, 1, &c);
             }
         }
         nunbased = 0;
@@ -833,8 +758,9 @@ void mirror_log(uint64_t frame) {
            qpc_ms(a.presnap_t) / f, qpc_ms(a.sync_t) / f, ver, a.gpu_kept_bytes / f / M, reup_diag > 0 ? "; " : "",
            a.reup_bytes / f / M);
     int64_t wr = plat_xchg64(&wm_ranges, 0), wbb = plat_xchg64(&wm_bytes, 0), wf = plat_xchg64(&wm_fallback, 0);
+    int64_t wc = plat_xchg64(&wm_copied, 0);
     if (wr || wf)
-        rt_log("mem: write-backs merged by bytes since the last line: %lld ranges (%.3f MiB compared), %lld copied whole",
-               (long long)wr, wbb / M, (long long)wf);
+        rt_log("mem: write-backs merged by bytes since the last line: %lld ranges (%.3f MiB compared, %.3f MiB the GPU "
+               "changed written to guest memory), %lld copied whole", (long long)wr, wbb / M, wc / M, (long long)wf);
 }
 

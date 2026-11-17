@@ -34,7 +34,7 @@ typedef struct VkCtx {
     PFN_vkSetDebugUtilsObjectNameEXT set_name;   // with the layer: names pipelines by program key in its messages
     int has_custom_border_color, has_eds, has_eds2, has_eds3, has_vertex_input_dynamic_state,
         has_conditional_rendering, has_transform_feedback, has_provoking_vertex, has_device_fault, has_memory_budget,
-        has_robustness2, has_buffer_device_address, has_fragment_shader_interlock, has_storage8,
+        has_robustness2, has_buffer_device_address, has_fragment_shader_interlock,
         has_unused_attachments,             // VK_EXT_dynamic_rendering_unused_attachments
         has_buffer_marker,                  // VK_AMD_buffer_marker: the GPU breadcrumbs (vk_crumbs.c)
         has_nv_checkpoints,                 // VK_NV_device_diagnostic_checkpoints: the same on NVIDIA
@@ -224,7 +224,7 @@ void vk_mem_pick(VkMemSpan *sp);
 #define VK_MEM_PICK(sp) do { if (vk_mirror_on && (sp).pool) vk_mem_pick(&(sp)); } while (0)
 void vk_mem_gpu_wrote(const VkMemSpan *sp, uint64_t size);
 // The same for a write that may cover part of the range only (storage texel buffers): only the bytes the GPU changed go
-// back, merged by runtime/shaders/wb_merge.comp against the mirror's bytes as the writing part began.
+// back, merged on the CPU at the fence against the mirror's bytes as the writing part began (vk_mem_mirror.c).
 void vk_mem_gpu_wrote_merged(const VkMemSpan *sp, uint64_t size);
 // Uniform blocks as of the submit call (vk_usnap.c): vk_exec_record copies the uniform ranges a submission binds before
 // it records, ubo bindings take the copy (0: not copied, bind memory), GPU writes of the replay drop the copies they touch.
