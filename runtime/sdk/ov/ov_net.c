@@ -68,6 +68,18 @@ static void ov_friend_list(Cpu *c) {
     ret_x(c, 0);
 }
 static void ov_friends_unavailable(Cpu *c) { ret_x(c, FRIENDS_R_UNAVAILABLE); }
+// bool TryPopFriendInvitationNotificationInfo(account::Uid *, size_t *size, void *buffer, size_t capacity): no invitation
+// offline. Without an override the SDK's code calls nn::am::GetApplicationFunctions, a console service the runtime does
+// not serve, and the run crashed there (pc sdk+0x1c3f40, from sdk+0x44fef8) about 8 s after the frame-history fix let
+// the game past frame 21. The return type is not in the mangled name: bool is assumed from the Try prefix, as
+// nn::oe::TryPopNotificationMessage; the size is zeroed too, so a caller that reads a Result 0 still finds nothing.
+static void ov_no_invitation(Cpu *c) {
+    uint64_t *size = arg_p(c, 1);
+    if (size) *size = 0;
+    static int logged;
+    if (!logged++) rt_log("friends: TryPopFriendInvitationNotificationInfo: no invitation (offline)");
+    ret_x(c, 0);
+}
 
 HOST_OVERRIDE("_ZN2nn7friends10InitializeEv", ov_nothing);
 HOST_OVERRIDE("_ZN2nn7friends12SetAllocatorEPFPvmEPFvS1_mE", ov_nothing);
@@ -78,6 +90,7 @@ HOST_OVERRIDE("_ZN2nn7friends29GetPlayHistoryRegistrationKeyEPNS0_26PlayHistoryR
               ov_friends_unavailable);
 HOST_OVERRIDE("_ZN2nn7friends14AddPlayHistoryERKNS_7account3UidERKNS0_26PlayHistoryRegistrationKeyERKNS0_15InAppScreenNameESA_",
               ov_ok);
+HOST_OVERRIDE("_ZN2nn7friends38TryPopFriendInvitationNotificationInfoEPNS_7account3UidEPmPvm", ov_no_invitation);
 
 // ---- nn::ldn (local wireless play): disabled, as on a console in airplane mode. Initialize fails, so the game does
 // not use the rest; they fail too in case it does.
