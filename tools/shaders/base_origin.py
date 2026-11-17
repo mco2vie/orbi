@@ -62,7 +62,12 @@ def origin(insns: list, at: int, kind: str, n: int, depth: int) -> list[str]:
             chain.append(f"(no write of {'UR' if kind == 'u' else 'R'} before: an input)")
             break
         w = insns[j]
-        chain.append(f"{w.op} {w.cls} {consts(w)}".strip())
+        extra = f" lut {w.v('imm8'):#x}" if w.has("imm8") else ""
+        if w.has("Rc"):
+            extra += " Rc=RZ" if w.v("Rc") == RZ else " Rc=R"
+        if w.v("Pg", 7) != 7 or w.v("Pg@not", 0):
+            extra += " predicated"
+        chain.append(f"{w.op} {w.cls} {consts(w)}{extra}".strip())
         nxt = next(((("u", w.v(r)) for r in ("URa", "URb", "URc") if w.has(r) and w.v(r) != URZ)), None) or next(
             (("r", w.v(r)) for r in ("Ra", "Rb", "Rc") if w.has(r) and w.v(r) != RZ), None
         )
