@@ -234,3 +234,19 @@ static void create_manager(Cpu *c) {
     ST64(c->x[8], (uint64_t)(uintptr_t)manager);
 }
 HOST_OVERRIDE("_ZN2nn5audio26CreateAudioRendererManagerEb", create_manager);
+
+// nn::audio::detail::GetDefaultVirtualOutputDevice(AudioDeviceName *out): the name of the one output device, the same
+// as IAudioDevice's (put_name). The SDK's code asks a console service over IPC (svc 0x1f at sdk+0x1a44ec, called from
+// main+0x6a45b58), which the runtime does not serve: the run stopped there about 20 s in. AudioDeviceName is 0x100
+// bytes, as in put_name. The return type is not in the mangled name: 0 serves a void and a successful Result alike.
+static void default_virtual_device(Cpu *c) {
+    char *out = arg_p(c, 0);
+    if (out) {
+        memset(out, 0, 0x100);
+        strncpy(out, audio_device_name, 0xff);
+    }
+    static int logged;
+    if (!logged++) rt_log("audio: GetDefaultVirtualOutputDevice -> %s", audio_device_name);
+    ret_x(c, 0);
+}
+HOST_OVERRIDE("_ZN2nn5audio6detail29GetDefaultVirtualOutputDeviceEPNS0_15AudioDeviceNameE", default_virtual_device);
