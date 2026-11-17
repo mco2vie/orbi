@@ -394,17 +394,20 @@ fail:
 // some texels of a view over the whole buffer texture. Only the bytes the GPU changes go back to guest memory, as on
 // the console, where the GPU writes the texels it stores and nothing else. Falls back to vk_mem_gpu_wrote when the
 // pipeline or the base is missing or the range exceeds a storage binding.
-// ORBITALS_WB_MERGE (diagnosis): 1 (default) merged by bytes; 0 copied back whole, as before bcbae09; "none" not
-// copied back at all (the GPU's stores stay in the VRAM mirror). With storage texel views on, the RTX 4080 lost the
+// ORBITALS_WB_MERGE: 0 (default) copied back whole, as before bcbae09; 1 merged by bytes (wb_merge.comp); "none" not
+// copied back at all (the GPU's stores stay in the VRAM mirror). The merge lost the device inside its own dispatches in
+// four runs (read invalid at 0x4980000, 0x20003a52b000, 0x20003a585000, 0x600000006000; the last with texel buffers
+// alone, frame 669), while the whole copies played on in every run since the push constant fix (b28ada5, 17/11/2026):
+// until the merge's fault is found it is a test only. With storage texel views on, the RTX 4080 lost the
 // device after ~64 s (instruction pointer fault, read invalid at 0x4980000, 17/11/2026) and ORBITALS_TEXEL_VIEWS=read
 // did not: this tells the merge apart from the shaders' stores.
 static int wb_merge_mode(void) {
     static int m = -1;
     if (m < 0) {
         const char *e = cfg_get("ORBITALS_WB_MERGE");
-        int v = !e || !*e ? 1 : !strcmp(e, "0") ? 0 : !strcmp(e, "none") ? 2 : 1;
-        if (v != 1) rt_log("mem: ORBITALS_WB_MERGE=%s: storage texel buffer write-backs %s", e,
-                           v ? "dropped (the GPU's stores stay in VRAM)" : "copied back whole");
+        int v = !e || !*e ? 0 : !strcmp(e, "1") ? 1 : !strcmp(e, "none") ? 2 : 0;
+        rt_log("mem: storage texel buffer write-backs %s (ORBITALS_WB_MERGE)",
+               v == 2 ? "dropped (the GPU's stores stay in VRAM)" : v ? "merged by bytes" : "copied back whole");
         m = v;
     }
     return m;
