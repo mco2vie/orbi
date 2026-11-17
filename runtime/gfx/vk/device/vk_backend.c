@@ -336,6 +336,7 @@ static void replay_main(void *arg) {
             replay_core();
             uint64_t frame = __atomic_add_fetch(&gfx_counters.frames, 1, __ATOMIC_RELAXED);
             present_image(it.tex, it.has_crop ? it.crop : NULL, it.at, it.queued, frame, it.value);
+            vi_history_shown(frame);
             vk_tl_present(it.value, frame);
         }
         if (w0) vk_tl_replay_time(it.kind == RI_SUBMIT ? VK_TL_SUBMIT : it.kind == RI_RELEASE ? VK_TL_RELEASE
@@ -453,6 +454,7 @@ void gfx_exit_log(void) {
 }
 
 static void vk_be_present(const tex_t *t, const int crop[4], uint64_t at_ns) {
+    vi_history_queued();   // before anything that can wait: the time the game queued it
     vk_sync_start();
     if (vk_glyphs_due()) {   // the button icons changed: their sheet goes up again, as a WriteTexels would
         replay_drain(DR_WRITE_TEXELS);
@@ -463,6 +465,7 @@ static void vk_be_present(const tex_t *t, const int crop[4], uint64_t at_ns) {
         uint64_t frame = __atomic_add_fetch(&gfx_counters.frames, 1, __ATOMIC_RELAXED);
         perf_present(frame);   // before vk_exec_frame_log, which resets the frame's exec counts the flight recorder reads
         present_image(t, crop, at_ns, kern_now_ns(), frame, 0);
+        vi_history_shown(frame);
         return;
     }
     // Held work goes before the present as it stands (nvn_qorder.c): on the console the present is the main queue's and

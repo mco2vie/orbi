@@ -144,4 +144,6 @@ typedef struct { uint64_t frames, nvn_calls, nvn_distinct, unimplemented, valida
                  draws_skipped; } GfxStats;
 GfxStats gfx_stats(void);
 void rt_frame_presented(const tex_t *t, uint64_t n);       // boot.c: --frames N ends the run after the Nth present
+void vi_history_queued(void);                              // ov_gfx.c: the game queued a present (nn::vi frame history)
+void vi_history_shown(uint64_t frame);                     // ov_gfx.c: present number `frame` reached the screen
                                                            // (saves --shot first through read_texels)
