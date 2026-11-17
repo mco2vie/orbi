@@ -39,8 +39,11 @@ identity and MTE tags as 0 (eden-nx2, row 3).
 
 ## Sources
 
-Every source used, with its license and what is taken from it. From MIT sources code may be taken, citing it; from
-GPL ones and from those without a license, only ideas.
+Every source used, with its license and what is taken from it. The project is GPL-3.0-or-later since 17/11/2026
+(before, MIT; `LICENSE-MIT`): code may be taken from sources whose license is compatible with GPL-3.0 (MIT, BSD,
+Apache-2.0, LGPL, GPL-2.0-or-later, GPL-3.0), keeping their headers and citing them; from GPL-2.0-only sources and
+from those without a license, only ideas. Entries written before that date say "ideas only" for GPL sources: that
+was the rule then, not a limit now.
 
 | Source | License | What is used |
 |---|---|---|

@@ -116,6 +116,7 @@ def check_no_game(root: Path) -> None:
 def licenses(dst: Path) -> None:
     dst.mkdir()
     shutil.copy2(ROOT / "LICENSE", dst / "orbitals-recomp-LICENSE")
+    shutil.copy2(ROOT / "LICENSE-MIT", dst / "orbitals-recomp-LICENSE-MIT")  # the pre-GPL code's notice
     for name, rel in LICENSES.items():
         shutil.copy2(sysroot.SYSROOT / rel, dst / f"{name}-copyright")
 
@@ -171,6 +172,7 @@ def windows(dist: Path, version: str) -> Path:
             if p.is_file():
                 z.write(p, top / p.relative_to(dist))
         z.write(ROOT / "LICENSE", top / "licenses/orbitals-recomp-LICENSE")
+        z.write(ROOT / "LICENSE-MIT", top / "licenses/orbitals-recomp-LICENSE-MIT")
         # the libraries in orbitals-recomp.exe and beside it (tools/build/windeps.py keeps each package's licence files)
         for p in sorted((ROOT / "build/win/deps/share/licenses").rglob("*")):
             if p.is_file():

@@ -8,9 +8,11 @@
 - **Nothing of the game in the repository.** No game code, assets, keys, dumps, or C or SPIR-V generated from them:
   all of that is regenerated in `build/` from each user's own copy. `tools/git/pre-commit` refuses the generated
   code's marker and the game's files; install it with `git config core.hooksPath tools/git`.
-- **Licenses.** Code may be taken from MIT-compatible projects only, naming the source and commit in the code and in
-  the table of [docs/research.md](docs/research.md#sources) in the same pull request. From GPL projects (eden-nx2,
-  oboromi, Eglantine…) and from projects without a license, ideas only, never code.
+- **Licenses.** The project is GPL-3.0-or-later (since 17/11/2026; the earlier code keeps its MIT notice,
+  `LICENSE-MIT`). Code may be taken from projects whose license is compatible with GPL-3.0 (MIT, BSD, Apache-2.0,
+  LGPL, GPL-2.0-or-later, GPL-3.0: eden-nx2, Eglantine, Lichii, Hookshot…), keeping its copyright and license header
+  and naming the source and commit in the code and in the table of [docs/research.md](docs/research.md#sources) in
+  the same pull request. GPL-2.0-only projects (Atmosphere) and projects without a license: ideas only, never code.
 - **The console's behaviour by default.** Anything for weaker hardware (lower resolution, caps, quality presets) is an
   option whose default is what the console does.
 - **Fix, don't switch off.** A feature that causes a bug is fixed where it breaks; turning it off by default needs the
