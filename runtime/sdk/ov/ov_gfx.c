@@ -261,7 +261,9 @@ static uint64_t history_cap(void) {
 // ORBITALS_THREADS_AT=<frame>[,<frame>...] (diagnosis, up to 4): as each of those many frames is presented, every guest
 // thread's wait and call chain go to the log (kern_threads_dump, otherwise written only at a fatal abort), to see what a game
 // that presents frames but draws black waits for; a thread found at the same wait in every dump is stuck there. The flip
-// tracker calls ListFrameHistory each frame, so it is the place that sees the count go by.
+// tracker calls ListFrameHistory each frame, so it is the place that sees the count go by. Each dump also logs the call
+// count of every host function (hostfn_report, otherwise only at the end of --boot): between two dumps, what the game calls
+// once a frame. The import census (ORBITALS_IMPORT_CENSUS) counts the SDK functions that are not replaced.
 static void threads_dump_at(uint64_t presented) {
     static uint64_t at[4];
     static int n, next, state;   // state 0 unread, 1 armed, 2 done or off
@@ -285,6 +287,7 @@ static void threads_dump_at(uint64_t presented) {
         rt_log("threads: dump at frame %llu (ORBITALS_THREADS_AT %llu)", (unsigned long long)presented,
                (unsigned long long)which);
         kern_threads_dump();
+        hostfn_report();
     }
 }
 
