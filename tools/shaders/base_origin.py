@@ -7,7 +7,8 @@ Why: 48 of the 65 programs a run of Orbitals could not translate (17/11/2026) fa
 the title screen, menu and character select lose their backgrounds. The programs are the player's (ORBITALS_SPIRV_DUMP)
 and stay on their machine; only the counts are printed.
 
---all looks at every dumped program (a check of the tool).
+--all looks at every dumped program (a check of the tool); --tex counts instead where the texture handles of the
+programs refused with "texture handle in a register not traced to a constant bank" come from.
 
 Usage (Windows, from the folder that holds orbitals-recomp.exe and setup\\; forward slashes, as a "\\n" in a pasted
 path breaks the line):
@@ -77,6 +78,7 @@ def main() -> int:
     ap.add_argument("--spec", type=Path, default=Path.cwd() / "sm86/instructions.json")
     ap.add_argument("--depth", type=int, default=4)
     ap.add_argument("--all", action="store_true", help="every dumped program, translated or not (a check of the tool)")
+    ap.add_argument("--tex", action="store_true", help="texture handles in a register (tex.py tex_key) instead")
     a = ap.parse_args()
     if not a.spec.is_file():
         print(f"{a.spec} missing: run dumped_shaders.py once (it builds it), or give --spec", file=sys.stderr)
@@ -94,7 +96,8 @@ def main() -> int:
             if not a.all:
                 continue
         except glsl.Unsupported as e:
-            if "not a traced storage buffer" not in str(e) and not a.all:
+            want = "texture handle in a register" if a.tex else "not a traced storage buffer"
+            if want not in str(e) and not a.all:
                 continue
             why[str(e)] += 1
         except Exception:   # noqa: BLE001 (a translator error is not this census's question)
@@ -103,19 +106,27 @@ def main() -> int:
         failing += 1
         seen = set()
         for k, i in enumerate(insns):
-            base = next((i.v(f) for f in BASES if i.has(f)), None)
-            if base is None or base == URZ:
-                continue
-            chain = " <- ".join(origin(insns, k, "u", base, a.depth))
-            shape = f"{i.op} {i.cls}: UR <- {chain}"
+            if a.tex:   # TEX/TLD/TLD4/TMML/TXQ/SU* whose handle is a general register (classes with noConst)
+                if "noConst" not in i.cls or not i.has("Rb") or i.v("Rb") == RZ:
+                    continue
+                chain = " <- ".join(origin(insns, k, "r", i.v("Rb"), a.depth))
+                shape = f"{i.op} {i.cls}: R <- {chain}"
+            else:
+                base = next((i.v(f) for f in BASES if i.has(f)), None)
+                if base is None or base == URZ:
+                    continue
+                chain = " <- ".join(origin(insns, k, "u", base, a.depth))
+                shape = f"{i.op} {i.cls}: UR <- {chain}"
             shapes[shape] += 1
             if shape not in seen:
                 seen.add(shape)
                 progs[shape] += 1
-    print(f"{failing} dumped programs {'looked at' if a.all else 'fail on an untraced base'}")
+    what = "texture handle" if a.tex else "base"
+    print(f"{failing} dumped programs {'looked at' if a.all else f'fail on an untraced {what}'}")
     for w, c in why.most_common():
         print(f"  {c:4} {w}")
-    print("uniform-base accesses in them, by the origin of the base (accesses, programs):")
+    print(f"{'register-handle texture instructions' if a.tex else 'uniform-base accesses'} in them, by the origin "
+          f"of the {what} (instructions, programs):")
     for s, c in shapes.most_common(25):
         print(f"  {c:5} {progs[s]:4}  {s}")
     return 0

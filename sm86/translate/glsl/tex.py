@@ -9,6 +9,8 @@ from glsl.common import PT, RZ, Unsupported, reg
 
 
 class TexOps:
+    TEX_VARIANT = 16   # texture key word index: bits above it number the sampler pairings of one word (tex_key)
+
     def tex_key(self, i: Insn) -> tuple[int, int]:
         """(bank, word index) of the texture or image handle: c[bank5][tsPtrIdx * 4] in the bound forms. The forms with
         the handle in a uniform register (classes ending _urc_, Unreal's programs in Orbitals: 56 of them failed with a
@@ -25,10 +27,14 @@ class TexOps:
                 (b1, y1), (b2, y2) = self.ur_or[i.v(n)]
                 if b1 != b2:
                     raise Unsupported(f"{i.cls}: texture handle OR'ed from banks {b1} and {b2}")
-                key = (b1, y1 // 4)
-                if self.tex_h2.setdefault(key, y2 // 4) != y2 // 4:
-                    raise Unsupported(f"{i.cls}: texture word {key} OR'ed with two different words")
-                return key
+                # One texture word OR'ed with several sampler words (a texture sampled two ways: 8 Orbitals programs,
+                # 17/11/2026): a binding per pair, told apart by a variant number above bit 16 of the word index
+                # (TEX_VARIANT); the reflection gives the word itself (head.py).
+                for k in range(64):
+                    key = (b1, y1 // 4 | k << self.TEX_VARIANT)
+                    if self.tex_h2.setdefault(key, y2 // 4) == y2 // 4:
+                        return key
+                raise Unsupported(f"{i.cls}: texture word {(b1, y1 // 4)} OR'ed with more than 64 words")
         raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
 
     def txq(self, i: Insn) -> str:

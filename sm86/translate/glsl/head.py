@@ -129,7 +129,7 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
     for (bank, idx), t in sorted(b.textures.items()):
         head.append(f"layout(binding = {nb}) uniform {t} t{bank}_{idx};")
         refl["textures"].append({"binding": nb, "type": sampler_type(t), "format": "Unknown", "cbuf_slot": bank,
-                                 "handle": idx, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1,
+                                 "handle": idx & 0xFFFF, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1,
                                  "separate": False, "flags": 0})  # fmt: skip
         nb += 1
     # A 1D texture that TLD reads may be a buffer texture: its twin, a samplerBuffer on the same handle (reflection
@@ -143,7 +143,7 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
             head.append(f"vec4 tld1d_{bank}_{idx}(int x, int l) {{ return texelFetch({t}, x, l); }}")
             continue
         head.append(f"layout(binding = {nb}) uniform samplerBuffer tb{bank}_{idx};")
-        refl["textures"].append({"binding": nb, "type": 2, "format": "Unknown", "cbuf_slot": bank, "handle": idx,
+        refl["textures"].append({"binding": nb, "type": 2, "format": "Unknown", "cbuf_slot": bank, "handle": idx & 0xFFFF,
                                  "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
                                  "flags": 0})  # fmt: skip
         nb += 1
@@ -153,7 +153,7 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         fmt = "r32ui, " if t.startswith("uimage") else ""
         head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx};")
         refl["images"].append({"binding": nb, "type": sampler_type(t), "format": "R32Uint" if fmt else "Unknown", "cbuf_slot": bank,
-                               "handle": idx, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
+                               "handle": idx & 0xFFFF, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
                                "flags": 4})  # fmt: skip
         nb += 1
     for bank, idx in sorted(b.txq_tex):
