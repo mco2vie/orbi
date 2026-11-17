@@ -191,7 +191,10 @@ GENERATOR = [
     *sorted((ROOT / "recomp").glob("patches-*.txt")),
     ROOT / "tools/cpu/spin_waits.py",  # a game without a table: the search that makes it
 ]  # each version's table
-COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name("gamecode.py")]
+# runtime/cpu: the inline helpers the lifted code includes (cpu.h's exclusives and atomics); a change there must
+# compile the game again too
+COMPILER = [*GENERATOR, *sorted((ROOT / "runtime/cpu").glob("*.h")), ROOT / "tools/build/build.py",
+            Path(__file__).with_name("gamecode.py")]
 
 
 def warm(game: Path, work: Path, runtime: Path | None = None) -> None:
