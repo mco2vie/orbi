@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "audren.h"
+#include "gfx.h"
 #include "host.h"
 #include "platform/platform.h"
 
@@ -251,26 +252,162 @@ static void default_virtual_device(Cpu *c) {
 }
 HOST_OVERRIDE("_ZN2nn5audio6detail29GetDefaultVirtualOutputDeviceEPNS0_15AudioDeviceNameE", default_virtual_device);
 
-// nn::audio::OpenOutputStream (both overloads main imports, with and without a SystemEvent): no output stream, as a
-// console where the device cannot be opened. The SDK's code opens a console audio service over IPC (nn::sm::Initialize,
-// svc 0x1f at sdk+0x1a44ec, from main+0x6a45b90 in the game's audio output set-up), which the runtime does not serve:
-// the run stopped there about 20 s in. The runtime has the audio renderer (audren) and no output stream; failing the open
-// lets the caller take its own no-device path instead of the run ending. Whether this game has one is what the run tells:
-// it calls Start/Write/... of the stream afterwards only if it ignores the result. Module 153 is audio; the description
-// is a hypothesis, any failure says "not opened".
-#define AUDIO_R_STREAM_UNAVAILABLE (153u | (1u << 9))
-static void output_stream_unavailable(Cpu *c) {
-    static int logged;
-    if (!logged++) {
-        char lr[96];
-        rt_log("audio: OpenOutputStream -> %#x (no output stream) from %s", AUDIO_R_STREAM_UNAVAILABLE,
-               ldr_describe(c->x[30] - 4, lr, sizeof lr));
-    }
-    ret_x(c, AUDIO_R_STREAM_UNAVAILABLE);
+// ---- nn::audio output streams (OpenOutputStream, WriteOutputStream...): a silent stream played at its sample rate.
+// The SDK's code opens a console audio service over IPC (nn::sm::Initialize, svc 0x1f at sdk+0x1a44ec, from main+0x6a45b90 in
+// the game's audio output set-up), which the runtime does not serve: the run stopped there. Failing the open instead made the
+// game tear its audio renderer down and draw black frames at 30 fps for 10 minutes (no hid, 27 files opened), so the stream
+// is accepted and its frames are consumed in real time: the game keeps its audio path and whatever runs on its clock.
+// Layout read from the SDK (tools/analisis/frame_report.py --func): OutputStreamType holds at +0 the address of its
+// OutputStreamImpl, built at +8; the public functions read that pointer and call the impl. The impl keeps its state at +0x110
+// (GetOutputStreamState accepts 0..2: Start writes 2, Stop 1), its StreamFormat at +0x114 (12 bytes) and its capacity in frames
+// at +0x120. Every function main imports is replaced here, so only +0 is written (the open stream's impl address, as the SDK
+// does) and the rest lives in a host table. The open's first int is taken as the capacity in frames and the format's first word
+// as the sample rate (logged: both are readings, not documented); out-of-range values fall back to 4096 frames and 48 kHz.
+// The SystemEvent of the event overload is created and signalled on every vsync (60 Hz), the rate the game's audio thread
+// gets woken at to write more; it stays bound after a close (gfx_vsync_bind has no unbind; the game opens one stream).
+// Statistics (24 bytes through x8) are zeros: what the SDK returns when the mixer has none.
+#define MAX_STREAMS 8
+typedef struct {
+    uint64_t type;                 // the game's OutputStreamType; 0 for a free slot
+    uint32_t rate, capacity;
+    int started;
+    uint64_t written, consumed;    // frames, since the open
+    uint64_t last_ns;              // when consumed was last brought up to date (game clock)
+} SilentStream;
+static SilentStream streams[MAX_STREAMS];
+static PlatMutex stream_lock = PLAT_MUTEX_INIT;
+
+static uint64_t stream_now_ns(void) { return rt_ticks() * RT_TICK_NS; }
+
+static SilentStream *stream_find(uint64_t type) {
+    for (int i = 0; i < MAX_STREAMS; i++)
+        if (type && streams[i].type == type) return &streams[i];
+    return NULL;
 }
+
+// The frames played since the last call, while started; playing stops at an empty stream (an underrun), as a mixer does.
+static void stream_advance(SilentStream *st) {
+    uint64_t now = stream_now_ns();
+    if (st->started && now > st->last_ns) {
+        uint64_t played = (now - st->last_ns) * st->rate / 1000000000ull;
+        uint64_t filled = st->written - st->consumed;
+        st->consumed += played < filled ? played : filled;
+    }
+    st->last_ns = now;
+}
+
+static uint32_t stream_free(SilentStream *st) {
+    uint64_t filled = st->written - st->consumed;
+    return filled >= st->capacity ? 0 : (uint32_t)(st->capacity - filled);
+}
+
+static void stream_open(Cpu *c, uint64_t type, uint64_t ev, uint64_t format, int frames, int extra) {
+    const uint32_t *f = (const uint32_t *)(uintptr_t)format;
+    uint32_t rate = f && f[0] >= 8000 && f[0] <= 192000 ? f[0] : 48000;
+    uint32_t capacity = frames > 0 && frames <= (1 << 20) ? (uint32_t)frames : 4096;
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(type);
+    for (int i = 0; !st && i < MAX_STREAMS; i++)
+        if (!streams[i].type) st = &streams[i];
+    if (st) *st = (SilentStream){type, rate, capacity, 0, 0, 0, stream_now_ns()};
+    plat_mutex_unlock(&stream_lock);
+    if (!st) rt_fatal("audio: more than %d output streams", MAX_STREAMS);
+    ST64(type, type + 8);
+    if (ev) {
+        kern_bind_system_event(c, ev, 1);
+        gfx_vsync_bind(ev);
+    }
+    char lr[96];
+    rt_log("audio: OpenOutputStream %#llx: silent, %u Hz, %u frames (format %#x %#x %#x, ints %d %d, event %#llx) from %s",
+           (unsigned long long)type, rate, capacity, f ? f[0] : 0, f ? f[1] : 0, f ? f[2] : 0, frames, extra,
+           (unsigned long long)ev, ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    ret_x(c, 0);
+}
+// Result OpenOutputStream(OutputStreamType *, os::SystemEvent *, void *work, size_t, const AudioDeviceName &,
+//                         const StreamFormat &, int, int, BitFlagSet<32, OutputStreamFlag>)
+static void open_stream_event(Cpu *c) {
+    stream_open(c, arg_x(c, 0), arg_x(c, 1), arg_x(c, 5), (int)arg_x(c, 6), (int)arg_x(c, 7));
+}
+// Result OpenOutputStream(OutputStreamType *, void *work, size_t, const AudioDeviceName &, const StreamFormat &, int,
+//                         BitFlagSet<32, OutputStreamFlag>)
+static void open_stream(Cpu *c) { stream_open(c, arg_x(c, 0), 0, arg_x(c, 4), (int)arg_x(c, 5), 0); }
+
+static void close_stream(Cpu *c) {   // void CloseOutputStream(OutputStreamType *)
+    uint64_t type = arg_x(c, 0);
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(type);
+    if (st) st->type = 0;
+    plat_mutex_unlock(&stream_lock);
+    if (type) ST64(type, 0);
+}
+static void stream_set_started(uint64_t type, int on) {
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(type);
+    if (st) {
+        stream_advance(st);
+        st->started = on;
+    }
+    plat_mutex_unlock(&stream_lock);
+}
+static void start_stream(Cpu *c) { stream_set_started(arg_x(c, 0), 1), ret_x(c, 0); }   // Result StartOutputStream
+static void stop_stream(Cpu *c) { stream_set_started(arg_x(c, 0), 0); }                 // void StopOutputStream
+static void purge_stream(Cpu *c) {   // PurgeOutputStream: the frames not played yet are dropped
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(arg_x(c, 0));
+    if (st) st->consumed = st->written;
+    plat_mutex_unlock(&stream_lock);
+    ret_x(c, 0);
+}
+static void write_stream(Cpu *c) {   // int WriteOutputStream(OutputStreamType *, const void *, int frames): frames taken
+    int frames = (int)arg_x(c, 2);
+    uint32_t took = 0;
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(arg_x(c, 0));
+    if (st && frames > 0) {
+        stream_advance(st);
+        uint32_t room = stream_free(st);
+        took = (uint32_t)frames < room ? (uint32_t)frames : room;
+        st->written += took;
+    }
+    plat_mutex_unlock(&stream_lock);
+    ret_x(c, took);
+}
+static void free_frames(Cpu *c) {   // int GetOutputStreamFreeFrameCount(const OutputStreamType *)
+    uint32_t n = 0;
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(arg_x(c, 0));
+    if (st) {
+        stream_advance(st);
+        n = stream_free(st);
+    }
+    plat_mutex_unlock(&stream_lock);
+    ret_x(c, n);
+}
+static void stream_state(Cpu *c) {   // OutputStreamState GetOutputStreamState(const OutputStreamType *): 1 stopped, 2 started
+    plat_mutex_lock(&stream_lock);
+    SilentStream *st = stream_find(arg_x(c, 0));
+    uint64_t state = st ? (st->started ? 2 : 1) : 0;
+    plat_mutex_unlock(&stream_lock);
+    ret_x(c, state);
+}
+static void stream_statistics(Cpu *c) {   // StreamStatistics GetOutputStreamStatistics(OutputStreamType *, bool): 24 bytes at x8
+    uint64_t *out = (uint64_t *)(uintptr_t)c->x[8];
+    if (out) out[0] = out[1] = out[2] = 0;
+}
+static void stream_gain(Cpu *c) { (void)c; }   // void SetOutputStreamGain(OutputStreamType *, float, TimeSpan): silent anyway
+
 HOST_OVERRIDE("_ZN2nn5audio16OpenOutputStreamEPNS0_16OutputStreamTypeEPNS_2os11SystemEventEPvmRKNS0_15AudioDeviceNameERKNS0_"
               "12StreamFormatEiiNS_4util10BitFlagSetILi32ENS0_16OutputStreamFlagEEE",
-              output_stream_unavailable);
+              open_stream_event);
 HOST_OVERRIDE("_ZN2nn5audio16OpenOutputStreamEPNS0_16OutputStreamTypeEPvmRKNS0_15AudioDeviceNameERKNS0_12StreamFormatEiNS_"
               "4util10BitFlagSetILi32ENS0_16OutputStreamFlagEEE",
-              output_stream_unavailable);
+              open_stream);
+HOST_OVERRIDE("_ZN2nn5audio17CloseOutputStreamEPNS0_16OutputStreamTypeE", close_stream);
+HOST_OVERRIDE("_ZN2nn5audio17StartOutputStreamEPNS0_16OutputStreamTypeE", start_stream);
+HOST_OVERRIDE("_ZN2nn5audio16StopOutputStreamEPNS0_16OutputStreamTypeE", stop_stream);
+HOST_OVERRIDE("_ZN2nn5audio17PurgeOutputStreamEPNS0_16OutputStreamTypeE", purge_stream);
+HOST_OVERRIDE("_ZN2nn5audio17WriteOutputStreamEPNS0_16OutputStreamTypeEPKvi", write_stream);
+HOST_OVERRIDE("_ZN2nn5audio29GetOutputStreamFreeFrameCountEPKNS0_16OutputStreamTypeE", free_frames);
+HOST_OVERRIDE("_ZN2nn5audio20GetOutputStreamStateEPKNS0_16OutputStreamTypeE", stream_state);
+HOST_OVERRIDE("_ZN2nn5audio25GetOutputStreamStatisticsEPNS0_16OutputStreamTypeEb", stream_statistics);
+HOST_OVERRIDE("_ZN2nn5audio19SetOutputStreamGainEPNS0_16OutputStreamTypeEfNS_8TimeSpanE", stream_gain);
