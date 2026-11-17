@@ -378,11 +378,14 @@ def main() -> None:
                     nup.extract("romfs", romfs, lambda d, t: emit("progress", d, t))
                     remove_stale(romfs, romfs_src, set(nup.files("romfs")), version.name)
                     ini_set(game / "orbitals.ini", "romfs", "romfs")
+                    nup.extract_addons(game, lambda d, t: emit("progress", d, t))  # DLC: game/aoc/<index>
                 elif args.romfs == "copy":
                     copy_tree(romfs_src, romfs, version.romfs_files, version.name)
                     ini_set(game / "orbitals.ini", "romfs", "romfs")
                 else:
                     ini_set(game / "orbitals.ini", "romfs", str(romfs_src))
+                    if romfs_src.is_file() and not is_nx(romfs_src):  # a .nup read in place; its DLC unpacked
+                        Nup(romfs_src).extract_addons(game, lambda d, t: emit("progress", d, t))
             elif step == "generate":
                 generate(game / "exefs", work, gen_jobs, version, image)
             elif step == "compile":

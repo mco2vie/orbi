@@ -38,7 +38,8 @@
 #define NMOUNTS 16
 #define PATH_CAP 1100
 
-enum { M_FREE, M_SAVE, M_TEMP, M_CACHE, M_SAVE_RO };   // M_SAVE: the working copy; M_SAVE_RO: the committed save
+// M_SAVE: the working copy; M_SAVE_RO: the committed save; M_AOC: an add-on's RomFS (read-only, fs_aoc_dir)
+enum { M_FREE, M_SAVE, M_TEMP, M_CACHE, M_SAVE_RO, M_AOC };
 
 typedef struct { int kind; char name[32]; char root[1024]; } Mount;
 typedef struct { PlatFile *h; int mode, save; } File;   // h NULL = free; save: on a save-data mount
@@ -639,6 +640,60 @@ void fs_host_set_profile(const char *dir) {
     need(dir && snprintf(profile, sizeof profile, "%s", dir) < (int)sizeof profile, "profile path");
 }
 
+// ---- add-on content: <game dir>/aoc/<index>/, one folder per add-on with its RomFS (tools/prepare/nup.py)
+static int aoc_idx[64], aoc_n;
+
+static int aoc_listed(const char *name, int kind, uint64_t size, void *ctx) {
+    (void)size, (void)ctx;
+    char *end;
+    long v = strtol(name, &end, 10);
+    if (kind == PLAT_FS_DIR && *name && !*end && v > 0 && v < 0x800 && aoc_n < 64) {
+        int at = aoc_n++;
+        while (at > 0 && aoc_idx[at - 1] > v) aoc_idx[at] = aoc_idx[at - 1], at--;
+        aoc_idx[at] = (int)v;
+    }
+    return 1;
+}
+
+static void aoc_scan(void *param) {
+    (void)param;
+    char p[PATH_CAP];
+    snprintf(p, sizeof p, "%s/aoc", cfg_game_dir());
+    if (plat_fs_kind(p) == PLAT_FS_DIR) plat_fs_list(p, aoc_listed, NULL);
+    char line[256] = "";
+    for (int i = 0, k = 0; i < aoc_n && k < (int)sizeof line - 8; i++)
+        k += snprintf(line + k, sizeof line - (size_t)k, " %d", aoc_idx[i]);
+    if (aoc_n) rt_log("aoc: %d add-on(s) under %s, index%s", aoc_n, p, line);
+    else rt_log("aoc: no add-on content (%s has no add-on folder; the setup unpacks a .nup's)", p);
+}
+
+static void aoc_ready(void) {
+    static PlatOnce once = PLAT_ONCE_INIT;
+    plat_once(&once, aoc_scan, NULL);
+}
+
+int fs_aoc_count(void) {
+    aoc_ready();
+    return aoc_n;
+}
+
+int fs_aoc_list(int *out, int offset, int count) {
+    aoc_ready();
+    int n = 0;
+    for (int i = offset; out && offset >= 0 && i < aoc_n && n < count; i++) out[n++] = aoc_idx[i];
+    return n;
+}
+
+int fs_aoc_dir(int index, char *out, size_t cap) {
+    aoc_ready();
+    for (int i = 0; i < aoc_n; i++)
+        if (aoc_idx[i] == index) {
+            if (out) snprintf(out, cap, "%s/aoc/%d", cfg_game_dir(), index);
+            return 1;
+        }
+    return 0;
+}
+
 // ---- mounts and paths
 static uint32_t mount_add(const char *name, int kind, const char *root) {
     if (!name || !*name || strlen(name) >= 32 || strchr(name, ':') || strchr(name, '/')) return FS_R_INVALID_ARGUMENT;
@@ -710,7 +765,7 @@ static uint32_t host_path(const char *path, char *out, size_t cap) { return host
 static uint32_t save_change_path(const char *path, char *out, size_t cap) {
     int kind = M_FREE;
     uint32_t r = host_path_kind(path, out, cap, &kind);
-    if (!r && kind == M_SAVE_RO) return FS_R_UNSUPPORTED_OPEN;
+    if (!r && (kind == M_SAVE_RO || kind == M_AOC)) return FS_R_UNSUPPORTED_OPEN;
     if (!r && kind == M_SAVE) save_touched();
     return r;
 }
@@ -893,7 +948,7 @@ static uint32_t open_file(uint64_t *out, const char *path, int mode) {
     uint32_t r = host_path_kind(path, p, sizeof p, &kind);
     if (r) return r;
     if (plat_fs_kind(p) != PLAT_FS_FILE) return FS_R_PATH_NOT_FOUND;
-    if (kind == M_SAVE_RO && (mode & FS_OPEN_WRITE)) return FS_R_UNSUPPORTED_OPEN;
+    if ((kind == M_SAVE_RO || kind == M_AOC) && (mode & FS_OPEN_WRITE)) return FS_R_UNSUPPORTED_OPEN;
     int save_writer = kind == M_SAVE && (mode & FS_OPEN_WRITE);
     int err = 0;
     PlatFile *f = plat_fs_open(p, (mode & FS_OPEN_WRITE) != 0, &err);
@@ -1234,14 +1289,24 @@ static void ov_save_size(Cpu *c) {
     ret_x(c, data ? 0 : FS_R_INVALID);
 }
 static void ov_extend_save(Cpu *c) { ret_x(c, 0); }
-// Result QueryMountAddOnContentCacheSize(size_t *out, int index) / MountAddOnContent(name, index, cache, size):
-// no add-on is installed on the host (ov_system.c's aoc count is 0)
+// Result QueryMountAddOnContentCacheSize(size_t *out, int index) / MountAddOnContent(name, index, cache, size): an
+// add-on the setup unpacked into <game dir>/aoc/<index> (tools/prepare/nup.py addons) is mounted read-only from
+// there; the cache the game reserves goes unused (4 KiB asked).
 static void ov_aoc_cache_size(Cpu *c) {
     uint64_t *out = arg_p(c, 0);
-    if (out) *out = 0;
-    ret_x(c, FS_R_TARGET_NOT_FOUND);
+    int found = fs_aoc_dir(I32(1), NULL, 0);
+    if (out) *out = found ? 0x1000 : 0;
+    ret_x(c, found ? 0 : FS_R_TARGET_NOT_FOUND);
 }
-static void ov_mount_aoc(Cpu *c) { ret_x(c, FS_R_TARGET_NOT_FOUND); }
+static void ov_mount_aoc(Cpu *c) {
+    const char *name = arg_p(c, 0);
+    char dir[PATH_CAP];
+    if (!fs_aoc_dir(I32(1), dir, sizeof dir)) {
+        ret_x(c, fs_answer("mount aoc", name, FS_R_TARGET_NOT_FOUND));
+        return;
+    }
+    ret_x(c, fs_answer("mount aoc", name, mount_add(name, M_AOC, dir)));
+}
 #undef I32
 #undef I64
 
