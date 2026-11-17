@@ -15,7 +15,7 @@ submit's copies of constant blocks.
 | `vk_mem_capture.c` | Measurement `ORBITALS_SHADOW_SUBMIT`: what the CPU writes, snapshotted at each submit and applied to the shadow when that submit syncs (discarded) |
 | `vk_mem_lazy.c` | Lazy merge bases (`ORBITALS_LAZY_BASE`): instead of copying the shadow of a large range, its game pages stay read-only and are copied only if written; `ORBITALS_LAZY_BASE_CHECK=1` compares with the usual copy |
 | `vk_mem_lost.c` | Diagnostic `ORBITALS_SHADOW_LOST`: CPU bytes the shadow loses per frame and indirect arguments the GPU does not see as the CPU wrote them |
-| `vk_mem_mirror.c` | VRAM mirror of the pools used as buffers (dedicated GPU) and its `verify` mode; `ORBITALS_MIRROR_CPU_GEN` (default 1) syncs by the CPU stamps only, `ORBITALS_MIRROR_REUP=1` counts the pages uploaded again after only the GPU wrote them |
+| `vk_mem_mirror.c` | VRAM mirror of the pools used as buffers (dedicated GPU) and its `verify` mode; storage texel buffers' write-backs merged by bytes (`wb_merge.comp`); `ORBITALS_MIRROR_CPU_GEN` (default 1) syncs by the CPU stamps only, `ORBITALS_MIRROR_REUP=1` counts the pages uploaded again after only the GPU wrote them |
 | `vk_mem_race.c` | Shadow diagnostics: `ORBITALS_SHADOW_RACE` (copies over bytes an in-flight submit reads) and `ORBITALS_SHADOW_WATCH=lo-hi[,...]` (every change, skip and write-back over those ranges); with `ORBITALS_FENCE_EARLY`, those copies wait for the submit's GPU work (`race_wait`) |
 | `vk_mem_dirty.c` | Dirty page census (`ORBITALS_DIRTY_CENSUS` with `ORBITALS_TRACE=perf`) |
 | `vk_mem_cap.c` | For captures (`../cap/`): the chunks of physical pools, which only the GPU writes, read when capturing and written when replaying |

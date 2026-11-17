@@ -103,7 +103,8 @@ static void count_use(int cls, int use, uint64_t n) {
 
 // A buffer descriptor for [addr, addr+size) of guest memory: its backing (a pool's VRAM mirror when it has one) when
 // aligned, a copy in transient memory when the backing is host memory with an unaligned offset. 0 when neither works.
-// written: the shader stores into it (a mirror's range goes back to guest memory at the end of the submission).
+// written: the shader stores into it (a mirror's range goes back to guest memory at the end of the submission); 2: it
+// may store into part of it only, so only the bytes it changes go back (vk_mem_gpu_wrote_merged).
 static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, uint64_t max, int use, int written,
                       VkDescriptorBufferInfo *out) {
     VkMemSpan sp;
@@ -114,7 +115,9 @@ static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, 
     if (sp.offset % align == 0) {
         VK_MEM_USE(sp);
         *out = (VkDescriptorBufferInfo){sp.buffer, sp.offset, n};
-        if (written) vk_mem_gpu_wrote(&sp, n), vk_usnap_drop(addr, n);
+        if (written == 2) vk_mem_gpu_wrote_merged(&sp, n);
+        else if (written) vk_mem_gpu_wrote(&sp, n);
+        if (written) vk_usnap_drop(addr, n);
         if (written && ru_cap) ru_note_bad(RUB_WRITTEN);
         count_use(sp.cls, use, n);
         VK_MEM_BOUND(sp);
@@ -431,7 +434,9 @@ static VkBufferView texel_view(VkExec *ex, uint64_t h, int storage) {
     uint64_t n = (uint64_t)texels < max_texels ? texels : max_texels;
     VkDescriptorBufferInfo bi;
     uint64_t align = l->minTexelBufferOffsetAlignment ? l->minTexelBufferOffsetAlignment : 1;
-    if (!bind_range(ex, addr, n * (uint64_t)bpb, align, n * (uint64_t)bpb, VK_MUSE_SSBO, storage, &bi) || !bi.buffer) {
+    // A storage view spans the whole buffer texture and the shader stores some of its texels: copied back whole, the view
+    // reverted the CPU's writes made meanwhile and Orbitals' render graph freed a corrupted pointer (17/11/2026).
+    if (!bind_range(ex, addr, n * (uint64_t)bpb, align, n * (uint64_t)bpb, VK_MUSE_SSBO, storage ? 2 : 0, &bi) || !bi.buffer) {
         warn_once(W_TEXEL_ADDR, "buffer texture %#llx is not backed or not aligned: the zero view is bound",
                   (unsigned long long)addr);
         return Z.zview;

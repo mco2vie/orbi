@@ -1,0 +1,23 @@
+#version 460
+// Mirror write-back merged by bytes (vk_mem_mirror.c, vk_mem_gpu_wrote_merged): the bytes of a range the GPU changed
+// in a pool's VRAM mirror during the submission go to guest memory (the imported buffer), the others are left as the
+// CPU has them. base holds the mirror's bytes as the part that writes the range began (copied in its prologue). A
+// storage texel buffer's whole view was copied back before, over CPU writes made meanwhile: Orbitals' render graph then
+// freed a pointer the copy had reverted (FMallocBinned3 "Attempt to free an unrecognized pointer", 17/11/2026).
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Mirror { uint m[]; };
+layout(std430, binding = 1) readonly buffer Base { uint b[]; };
+layout(std430, binding = 2) buffer Guest { uint g[]; };
+// first: the range's first word in the mirror and guest bindings (both bound from the same aligned offset); words: its
+// length, which base holds from word 0
+layout(push_constant) uniform Merge { uint first, words; } p;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= p.words) return;
+    uint x = m[p.first + i], d = x ^ b[i];
+    if (d == 0u) return;
+    uint mask = ((d & 0xffu) != 0u ? 0xffu : 0u) | ((d & 0xff00u) != 0u ? 0xff00u : 0u) |
+                ((d & 0xff0000u) != 0u ? 0xff0000u : 0u) | ((d & 0xff000000u) != 0u ? 0xff000000u : 0u);
+    g[p.first + i] = (g[p.first + i] & ~mask) | (x & mask);
+}
