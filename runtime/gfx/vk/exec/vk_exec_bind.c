@@ -105,6 +105,7 @@ static void count_use(int cls, int use, uint64_t n) {
 // aligned, a copy in transient memory when the backing is host memory with an unaligned offset. 0 when neither works.
 // written: the shader stores into it (a mirror's range goes back to guest memory at the end of the submission); 2: it
 // may store into part of it only, so only the bytes it changes go back (vk_mem_gpu_wrote_merged).
+#define WB_UNSIZED (16ull << 20)
 static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, uint64_t max, int use, int written,
                       VkDescriptorBufferInfo *out) {
     VkMemSpan sp;
@@ -115,7 +116,9 @@ static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, 
     if (sp.offset % align == 0) {
         VK_MEM_USE(sp);
         *out = (VkDescriptorBufferInfo){sp.buffer, sp.offset, n};
-        if (written == 2) vk_mem_gpu_wrote_merged(&sp, n);
+        // A store into a buffer of unknown size (an address read from a uniform block, ubo_ptr) binds to the end of
+        // the backing; its merge covers WB_UNSIZED from the address: past it the GPU's stores stay in VRAM.
+        if (written == 2) vk_mem_gpu_wrote_merged(&sp, !size && n > WB_UNSIZED ? WB_UNSIZED : n);
         else if (written) vk_mem_gpu_wrote(&sp, n);
         if (written) vk_usnap_drop(addr, n);
         if (written && ru_cap) ru_note_bad(RUB_WRITTEN);
@@ -291,8 +294,13 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
         // to the size in c0 (the HUD's text VS reads 64-byte glyph records, one per instance, from a binding of 0x100
         // bytes: past the fourth they read zero).
         uint64_t size = written && b->size ? b->size + lead : 0;
+        // Written with no size (an address from a uniform block, ubo_ptr, or a push without one): the binding runs to
+        // the end of the backing, and copied back whole it reverted the CPU's writes over the rest of the pool: with
+        // the c[3] bases translated (933e676) Orbitals' render graph read 0x104 after the logos (17/11/2026). Only the
+        // bytes the GPU changes go back (vk_mem_gpu_wrote_merged).
+        int wmode = written && !size ? 2 : written;
         if (bind_range(ex, b->addr - lead, size, align, max, ubo ? VK_MUSE_UBO : VK_MUSE_SSBO,
-                       written, &bi)) {
+                       wmode, &bi)) {
             if (written && bi.buffer != VK_NULL_HANDLE) note_written(ex, b->addr - lead, bi.range);
             return bi;
         }
