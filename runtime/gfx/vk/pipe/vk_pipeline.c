@@ -457,7 +457,7 @@ void vk_pipeline_answers(const VkPipeState *s, int stage, GfxShaderAnswers *a) {
             if (s->color_fmt[i]) a->out_type[i] = (uint8_t)vk_format_numeric(target_format(s->color_fmt[i], NULL, NULL));
         return;
     }
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 32; i++) {
         va_st va;
         memcpy(&va, &s->vattr[i], sizeof va);
         int type = GFX_TYPE_FLOAT;
@@ -498,7 +498,7 @@ void vertex_input(const VkPipeState *s, VtxInput *v) {
         *a = (VkVertexInputAttributeDescription2EXT){.sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                                                      .location = (uint32_t)l};
         va_st va = {0};
-        if (l < 16) memcpy(&va, &s->vattr[l], sizeof va);
+        memcpy(&va, &s->vattr[l], sizeof va);
         VkFormat f = va.fmt ? vk_vertex_format((int)va.fmt, NULL) : VK_FORMAT_UNDEFINED;
         if (f != VK_FORMAT_UNDEFINED && va.stream < 16) {
             a->binding = va.stream, a->format = f, a->offset = va.offset;

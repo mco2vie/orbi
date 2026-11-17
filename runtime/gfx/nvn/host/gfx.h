@@ -31,7 +31,7 @@ enum { GFX_STAGE_VS, GFX_STAGE_TCS, GFX_STAGE_TES, GFX_STAGE_GS, GFX_STAGE_FS, G
 enum { GFX_MESH_NONE, GFX_MESH_TASK, GFX_MESH_MESH };      // gfx_shader_mesh_kind
 enum { GFX_TYPE_FLOAT, GFX_TYPE_SINT, GFX_TYPE_UINT };
 typedef struct {                                           // what a draw's state says of its program
-    uint8_t attr_type[16];                                 // GFX_TYPE_* of each vertex attribute's format: integer
+    uint8_t attr_type[32];                                 // GFX_TYPE_* of each vertex attribute's format: integer
                                                            // ones get an integer-input variant (int_input_variant)
     uint8_t out_type[8];                                   // fragment: GFX_TYPE_* of each colour target's format,
                                                            // integer ones an integer-output variant (int_output_variant)

@@ -578,7 +578,7 @@ int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload) {
     }
     case OP_BIND_VATTR: {
         const p_bind_vattr *b = payload;
-        if (b->first < 0 || b->n < 0 || b->first + b->n > 16) break;
+        if (b->first < 0 || b->n < 0 || b->first + b->n > 32) break;
         memset(ex->pipe.vattr, 0, sizeof ex->pipe.vattr);   // MNG: the new list replaces the old one
         memcpy(&ex->pipe.vattr[b->first], b->st, sizeof(uint32_t) * (size_t)b->n);
         break;

@@ -230,7 +230,7 @@ static const GfxShader *int_io_variant(GfxShader *s, uint32_t um, uint32_t sm, i
 static const GfxShader *int_input_variant(GfxShader *s, const GfxShaderAnswers *a) {
     if (!s || !a || s->stage != GFX_STAGE_VS || s->mesh_kind != GFX_MESH_NONE) return s;
     uint32_t um = 0, sm = 0;
-    for (int l = 0; l < 16; l++)
+    for (int l = 0; l < 32; l++)
         if (s->in_mask >> l & 1) {
             if (a->attr_type[l] == GFX_TYPE_UINT) um |= 1u << l;
             else if (a->attr_type[l] == GFX_TYPE_SINT) sm |= 1u << l;

@@ -264,7 +264,7 @@ void record_fixed(VkExec *ex) {
 uint32_t vk_exec_streams(const VkExec *ex, const VkPipeInfo *info) {
     if (!info) return 0xffff;
     uint32_t m = 0;
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 32; i++)
         if (info->vs_inputs >> i & 1) {
             va_st a;
             memcpy(&a, &ex->pipe.vattr[i], sizeof a);

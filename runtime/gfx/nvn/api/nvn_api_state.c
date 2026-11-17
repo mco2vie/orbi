@@ -157,12 +157,16 @@ NVN_API(nvnCommandBufferSetPointSize) {
 NVN_API(nvnCommandBufferBindVertexAttribState) {
     cmd_t *o = cmd_of(c);
     int n = (int)arg_x(c, 1);
-    if (n < 0 || n > 16) { rt_log("nvn: BindVertexAttribState n %d", n); return; }
+    // NVN2 takes up to 32 attributes, the Ampere register count: Orbitals' Unreal binds 17 (MaxVertexElementCount) for
+    // its 3D draws; a limit of 16 dropped every one of them (1.5 million in a run, 17/11/2026).
+    if (n < 0 || n > 32) { rt_log("nvn: BindVertexAttribState n %d", n); return; }
     p_bind_vattr *r = RECN(o, OP_BIND_VATTR, p_bind_vattr, st, n);
     r->first = 0;
     r->n = n;
     memcpy(r->st, arg_p(c, 2), 4 * (size_t)n);
-    cmd_hw_fix(o, 68);   // the driver always writes all 16 attribute formats: 17 words
+    // NVN1's driver always writes all 16 attribute formats: 17 words. Past 16 (NVN2) assumed one word per attribute,
+    // not measured.
+    cmd_hw_fix(o, n <= 16 ? 68 : 4 * (1 + (size_t)n));
 }
 // void nvnCommandBufferBindVertexStreamState(NVNcommandBuffer *cmd, int n, const NVNvertexStreamState *states)
 NVN_API(nvnCommandBufferBindVertexStreamState) {

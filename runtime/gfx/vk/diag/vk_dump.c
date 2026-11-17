@@ -404,7 +404,7 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
        (int)s->raster_discard, ex->vp[0][0], ex->vp[0][1], ex->vp[0][2], ex->vp[0][3], ex->vp[0][4], ex->vp[0][5],
        ex->depth_range[0], ex->depth_range[1], ex->scissor.x, ex->scissor.y, ex->scissor.w, ex->scissor.h,
        ex->has_scissor, ex->pass_samples);
-    for (int k = 0; k < 16; k++) {   // the vertex input: attributes with a format, their streams and buffers
+    for (int k = 0; k < 32; k++) {   // the vertex input: attributes with a format, their streams and buffers
         uint32_t w = ex->pipe.vattr[k];
         va_st a;
         memcpy(&a, &w, sizeof a);

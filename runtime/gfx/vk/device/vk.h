@@ -612,7 +612,7 @@ typedef struct VkPipeState {
     ms_st ms;
     poly_st poly;
     ds_st ds;
-    uint32_t vattr[16];                    // OP_BIND_VATTR: va_st words; attribute i feeds vertex shader Location i
+    uint32_t vattr[32];                    // OP_BIND_VATTR: va_st words; attribute i feeds vertex shader Location i
     vs_st vstream[16];                     // OP_BIND_VSTREAM
     const GfxShader *mesh;                 // a task/mesh draw whose vs is the task program: its mesh program; NULL
                                            // otherwise (a mesh program alone sits in vs)
