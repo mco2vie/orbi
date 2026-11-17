@@ -6,7 +6,9 @@
 //   nn::vi::*    display, layer and native window identities; the vsync event is bound here; HDR status (gfx_hdr.c)
 //   nvnBootstrapLoader   the end of --boot (rt_boot_event "nvn"); otherwise the synthetic address of an NVN proc (nvn_procs.c)
 #include <stdint.h>
+#include <stdlib.h>
 
+#include "cfg.h"
 #include "gfx.h"
 #include "host.h"
 #include "ov.h"
@@ -198,14 +200,49 @@ HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrAdjustableBezierMetadataEPNS0_5LayerEff
 HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrToSdrToneMappingMetadataEPNS0_5LayerENS0_14HdrToneMappingE", ov_vi_nothing);
 
 // ---- frame history (Orbitals' Unreal reads it each frame, main+0x153f994; the import was unresolved, a call to 0).
+// Diagnostic for the stall at frame 21 (presents 21, acquires 22, every fence done, vsync alive): GetLatestFrameNumber is
+// called from main+0x153f994 and ListFrameHistory from main+0x1540460, 44 bytes after the Viewport Thread's wait
+// (main+0x1540434). hostfn.c logs only the first call of a symbol, so these two log their calls here: the first 5, then
+// each power of two, with the value returned and the caller. ORBITALS_FRAME_BIAS=<n> adds n to the frame number returned,
+// to test whether Unreal expects a count that includes the frame it has acquired but not yet presented.
+static uint64_t g_latest_calls, g_history_calls;
+
+static uint64_t frame_bias(void) {
+    static uint64_t bias;
+    static int done;
+    if (!__atomic_load_n(&done, __ATOMIC_ACQUIRE)) {
+        const char *b = cfg_get("ORBITALS_FRAME_BIAS");
+        bias = b && *b ? strtoull(b, NULL, 10) : 0;
+        __atomic_store_n(&done, 1, __ATOMIC_RELEASE);
+    }
+    return bias;
+}
+
 // Result GetLatestFrameNumber(uint64_t *out, const Layer *): the frames presented so far
 static void ov_latest_frame(Cpu *c) {
     uint64_t *out = arg_p(c, 0);
-    if (out) *out = gfx_stats().frames;
+    uint64_t n = gfx_stats().frames + frame_bias();
+    uint64_t k = __atomic_add_fetch(&g_latest_calls, 1, __ATOMIC_RELAXED);
+    if (k <= 5 || !(k & (k - 1))) {
+        char lr[96];
+        rt_log("vi: GetLatestFrameNumber #%llu -> %llu (presented %llu, bias %llu) from %s", (unsigned long long)k,
+               (unsigned long long)n, (unsigned long long)gfx_stats().frames, (unsigned long long)frame_bias(),
+               ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    }
+    if (out) *out = n;
     ret_x(c, out ? 0 : 1);
 }
 // int ListFrameHistory(FrameInfo *out, int count, const Layer *): no per-frame timing records kept
-static void ov_frame_history(Cpu *c) { ret_x(c, 0); }
+static void ov_frame_history(Cpu *c) {
+    uint64_t k = __atomic_add_fetch(&g_history_calls, 1, __ATOMIC_RELAXED);
+    if (k <= 5 || !(k & (k - 1))) {
+        char lr[96];
+        rt_log("vi: ListFrameHistory #%llu count=%d out=%#llx (presented %llu) from %s", (unsigned long long)k,
+               (int)arg_x(c, 1), (unsigned long long)arg_x(c, 0), (unsigned long long)gfx_stats().frames,
+               ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    }
+    ret_x(c, 0);
+}
 HOST_OVERRIDE("_ZN2nn2vi20GetLatestFrameNumberEPmPKNS0_5LayerE", ov_latest_frame);
 HOST_OVERRIDE("_ZN2nn2vi16ListFrameHistoryEPNS0_9FrameInfoEiPKNS0_5LayerE", ov_frame_history);
 HOST_OVERRIDE("_ZN2nn2vi36SetDisplay120HzRefreshRateCapabilityEPNS0_7DisplayEb", ov_vi_nothing);
