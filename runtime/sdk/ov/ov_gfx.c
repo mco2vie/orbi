@@ -258,20 +258,32 @@ static uint64_t history_cap(void) {
     return cap;
 }
 
-// ORBITALS_THREADS_AT=<frame> (diagnosis): once that many frames are presented, every guest thread's wait and call chain go
-// to the log (kern_threads_dump, otherwise written only at a fatal abort), to see what a game that presents frames but draws
-// black waits for. The flip tracker calls ListFrameHistory each frame, so it is the place that sees the count go by.
+// ORBITALS_THREADS_AT=<frame>[,<frame>...] (diagnosis, up to 4): as each of those many frames is presented, every guest
+// thread's wait and call chain go to the log (kern_threads_dump, otherwise written only at a fatal abort), to see what a game
+// that presents frames but draws black waits for; a thread found at the same wait in every dump is stuck there. The flip
+// tracker calls ListFrameHistory each frame, so it is the place that sees the count go by.
 static void threads_dump_at(uint64_t presented) {
-    static uint64_t at;
-    static int state;   // 0 unread, 1 armed, 2 done or off
+    static uint64_t at[4];
+    static int n, next, state;   // state 0 unread, 1 armed, 2 done or off
+    if (__atomic_load_n(&state, __ATOMIC_ACQUIRE) == 2) return;
     if (state == 0) {
         const char *v = cfg_get("ORBITALS_THREADS_AT");
-        at = v && *v ? strtoull(v, NULL, 10) : 0;
-        state = at ? 1 : 2;
+        for (char *e; v && *v && n < 4; v = *e == ',' ? e + 1 : e) {
+            uint64_t f = strtoull(v, &e, 10);
+            if (e == v) break;
+            if (f) at[n++] = f;
+        }
+        __atomic_store_n(&state, n ? 1 : 2, __ATOMIC_RELEASE);
+        if (!n) return;
     }
-    if (state == 1 && presented >= at && __atomic_exchange_n(&state, 2, __ATOMIC_ACQ_REL) == 1) {
-        rt_log("threads: dump at frame %llu (ORBITALS_THREADS_AT=%llu)", (unsigned long long)presented,
-               (unsigned long long)at);
+    plat_mutex_lock(&lock);
+    int due = next < n && presented >= at[next];
+    uint64_t which = due ? at[next] : 0;
+    if (due && ++next == n) __atomic_store_n(&state, 2, __ATOMIC_RELEASE);
+    plat_mutex_unlock(&lock);
+    if (due) {
+        rt_log("threads: dump at frame %llu (ORBITALS_THREADS_AT %llu)", (unsigned long long)presented,
+               (unsigned long long)which);
         kern_threads_dump();
     }
 }
