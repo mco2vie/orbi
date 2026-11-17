@@ -11,7 +11,7 @@ from glsl.common import PT, RZ, Unsupported, reg
 class TexOps:
     TEX_VARIANT = 16   # texture key word index: bits above it number the sampler pairings of one word (tex_key)
 
-    def tex_key(self, i: Insn) -> tuple[int, int]:
+    def tex_key(self, i: Insn, hreg: int | None = None) -> tuple[int, int]:
         """(bank, word index) of the texture or image handle: c[bank5][tsPtrIdx * 4] in the bound forms. The forms with
         the handle in a uniform register (classes ending _urc_, Unreal's programs in Orbitals: 56 of them failed with a
         KeyError on bank5, 17/11/2026) take it from a ULDC of a constant word (mem.py uldc, ur_const), which names the
@@ -27,11 +27,12 @@ class TexOps:
         # tex_scr_b_noConst_: the handle in a general register, written under the guard this instruction runs under
         # (or unguarded): another guard may have left another texture's handle there (mem.py track_handle)
         g = self.pred_of(i)
-        if i.has("Rb") and i.v("Rb") in self.r_const and self.r_const[i.v("Rb")][1] in (None, g):
-            bank, byte = self.r_const[i.v("Rb")][0]
+        h = hreg if hreg is not None else i.v("Rb") if i.has("Rb") else None   # the bindless forms: tex() says where
+        if h is not None and h in self.r_const and self.r_const[h][1] in (None, g):
+            bank, byte = self.r_const[h][0]
             return bank, byte // 4
-        if i.has("Rb") and i.v("Rb") in self.r_or and self.r_or[i.v("Rb")][1] in (None, g):
-            return self.or_key(i, self.r_or[i.v("Rb")][0])
+        if h is not None and h in self.r_or and self.r_or[h][1] in (None, g):
+            return self.or_key(i, self.r_or[h][0])
         raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
 
     def or_key(self, i: Insn, pair: tuple[tuple[int, int], tuple[int, int]]) -> tuple[int, int]:
@@ -181,6 +182,12 @@ class TexOps:
         # the second group: lod or bias, the packed offsets (AOFFI), the depth reference (Ryujinx's TEX order)
         g1 = (["lod"] if lod in ("LL", "LB") else []) + (["off"] if aoffi else []) + (["p0", "p1"] if ptp else [])
         g1 += ["ref"] if dc else []
+        # Bindless (classes _b_): the handle is a source, the first of the second group, after the coordinates. Left
+        # out, the .SCR forms took a coordinate for the handle (an array's y: 84 Orbitals programs, 17/11/2026) and
+        # the next sources from one register early.
+        bindless = "_b_" in i.cls
+        if bindless:
+            g1 = ["h"] + g1
         regs: dict[str, str] = {}
         a, b = i.v("Ra"), i.v("Rb")
         if i.sym("scr") == "SCR":
@@ -199,7 +206,7 @@ class TexOps:
             return f"uintBitsToFloat({reg(regs[n])})"
 
         coords = [f(f"c{k}") for k in range(ncoord)]
-        key = self.tex_key(i)
+        key = self.tex_key(i, regs["h"] if bindless else None)
         t = f"t{key[0]}_{key[1]}"
         if aoffi:  # 4-bit signed texel offsets per axis; GLSL wants them constant, so they move the coordinates
             lvl = f"int({f('lod')})" if lod == "LL" else "0"
