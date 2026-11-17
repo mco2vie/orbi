@@ -24,8 +24,8 @@ the log.
   every thread is waiting on an event and none is running, so it is a missing signal, not a loop. The log also shows
   `no prepared SPIR-V` and draws skipped for it. Whether the two are linked is **not known**; no run of the first
   game exists as a baseline for Orbitals. The way forward, in this order:
-  1. **Which event is never signalled.** Read the log without the noise (`Select-String -NotMatch` on `AllocateMemoryPages`,
-     `nn::codec: queued`, `sdk call`, `fs entry`), count the presents, and find the fence, vsync or
+  1. **Which event is never signalled.** Read the log with `shader_analyzer.exe` ([log-analyzer.md](log-analyzer.md)) to
+     drop the allocation noise and count the presents, then find the fence, vsync or
      frame-history wait the RenderThread and the Viewport thread sit on (`main+0x4a6d4`, `main+0x1540434`).
      `nn::vi::ListFrameHistory` answers 0 today. A second run with draws without a shader made non-blocking would
      tell whether the shaders are the cause; no such switch exists yet (`ORBITALS_PIPE_SKIP` is about draws whose
