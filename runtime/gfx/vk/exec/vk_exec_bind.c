@@ -370,9 +370,13 @@ static void tex_lock_once(int *locked) {
 // before it destroys a buffer: the binding resolves the address the way storage buffers are (bind_range: the mirror, the
 // census and the written-range bookkeeping), so the view sees what the GPU and the CPU wrote there.
 #define TEXEL_VIEWS 4096
-typedef struct { VkBuffer buf; VkDeviceSize off, range; VkFormat fmt; VkBufferView view; } TexelView;
+// used: tvw_clock at the view's last bind. Full, the least recently bound eighth goes (texel_evict): Orbitals' gameplay
+// filled the 4096 within a minute and every later buffer texture read the zero view, the colony's world black
+// (17/11/2026).
+typedef struct { VkBuffer buf; VkDeviceSize off, range; VkFormat fmt; VkBufferView view; uint64_t used; } TexelView;
 static TexelView TVW[TEXEL_VIEWS];
 static int tvw_n;
+static uint64_t tvw_clock, tvw_evicted;
 static PlatMutex tvw_lock = PLAT_MUTEX_INIT;
 
 void vk_texel_views_drop(VkBuffer b) {
@@ -388,19 +392,50 @@ void vk_texel_views_drop(VkBuffer b) {
     plat_mutex_unlock(&tvw_lock);
 }
 
+static void texel_view_destroy(void *arg) { vkDestroyBufferView(vk_ctx()->device, (VkBufferView)(uintptr_t)arg, NULL); }
+
+static int u64_order(const void *a, const void *b) {
+    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
+    return (x > y) - (x < y);
+}
+
+// tvw_lock held, the table full: the least recently bound eighth out. Their views may be named by the submission being
+// recorded, so they are destroyed once it is done (vk_defer_call, on the recording thread).
+static void texel_evict(void) {
+    static uint64_t used[TEXEL_VIEWS];
+    for (int i = 0; i < tvw_n; i++) used[i] = TVW[i].used;
+    qsort(used, (size_t)tvw_n, sizeof *used, u64_order);
+    uint64_t cut = used[tvw_n / 8];
+    for (int i = 0; i < tvw_n;)
+        if (TVW[i].used < cut) {
+            vk_defer_call(texel_view_destroy, (void *)(uintptr_t)TVW[i].view);
+            TVW[i] = TVW[--tvw_n];
+            tvw_evicted++;
+        } else {
+            i++;
+        }
+    static volatile int32_t said;
+    if (plat_inc32(&said) <= 4 || !(said & (said - 1)))
+        rt_log("vk: texel buffer views: the table was full, %llu least recently bound let go so far, %d kept",
+               (unsigned long long)tvw_evicted, tvw_n);
+}
+
 static VkBufferView texel_view_make(VkBuffer buf, VkDeviceSize off, VkDeviceSize range, VkFormat fmt) {
     VkBufferView v = VK_NULL_HANDLE;
     plat_mutex_lock(&tvw_lock);
+    tvw_clock++;
     for (int i = 0; i < tvw_n; i++)
         if (TVW[i].buf == buf && TVW[i].off == off && TVW[i].range == range && TVW[i].fmt == fmt) {
             v = TVW[i].view;
+            TVW[i].used = tvw_clock;
             break;
         }
+    if (!v && tvw_n >= TEXEL_VIEWS) texel_evict();
     if (!v && tvw_n < TEXEL_VIEWS) {
         VkBufferViewCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO, .buffer = buf, .format = fmt,
                                      .offset = off, .range = range};
         if (vkCreateBufferView(vk_ctx()->device, &ci, NULL, &v) == VK_SUCCESS)
-            TVW[tvw_n++] = (TexelView){buf, off, range, fmt, v};
+            TVW[tvw_n++] = (TexelView){buf, off, range, fmt, v, tvw_clock};
         else
             v = VK_NULL_HANDLE;
     }
