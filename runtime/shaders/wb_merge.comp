@@ -1,19 +1,17 @@
 #version 460
-// Mirror write-back merged by bytes (vk_mem_mirror.c, vk_mem_gpu_wrote_merged): the bytes of a range the GPU changed
-// in a pool's VRAM mirror during the submission go to guest memory (the imported buffer), the others are left as the
-// CPU has them. base holds the mirror's bytes as the part that writes the range began (copied in its prologue), and
-// takes the CPU's bytes each later prologue syncs into the mirror, so only the GPU's own stores differ from it. A
-// storage texel buffer's whole view was copied back before, over CPU writes made meanwhile: Orbitals' render graph then
-// freed a pointer the copy had reverted (FMallocBinned3 "Attempt to free an unrecognized pointer", 17/11/2026).
-// Guest memory is written byte by byte (storageBuffer8BitAccess): a word's read-modify-write would undo a CPU store
-// to a neighbouring byte made while the merge ran.
-#extension GL_EXT_shader_8bit_storage : require
+// Mirror write-back merged by bytes (vk_mem_mirror.c, vk_mem_gpu_wrote_merged, merge_record): the bytes of a range the
+// GPU changed in a pool's VRAM mirror during the submission go to guest memory, the others are left as the CPU has
+// them. base holds the mirror's bytes as the part that writes the range began (copied in its prologue) and takes the
+// CPU's bytes each later prologue syncs into the mirror, so only the GPU's own stores differ from it. guest is a VRAM
+// copy of the range's guest bytes, made just before; merge_record copies it back after. A storage texel buffer's
+// whole view was copied back before, over CPU writes made meanwhile: Orbitals' render graph then freed a pointer the
+// copy had reverted (FMallocBinned3 "Attempt to free an unrecognized pointer", 17/11/2026).
 layout(local_size_x = 64) in;
 layout(std430, binding = 0) readonly buffer Mirror { uint m[]; };
 layout(std430, binding = 1) readonly buffer Base { uint b[]; };
-layout(std430, binding = 2) writeonly buffer Guest { uint8_t g[]; };
-// first: the range's first word in the mirror and guest bindings (both bound from the same aligned offset); words: its
-// length, which base holds from word 0
+layout(std430, binding = 2) buffer Guest { uint g[]; };
+// first: the range's first word in the mirror binding (bound from an aligned offset); words: its length, which base
+// and guest hold from word 0
 layout(push_constant) uniform Merge { uint first, words; } p;
 
 void main() {
@@ -21,7 +19,7 @@ void main() {
     if (i >= p.words) return;
     uint x = m[p.first + i], d = x ^ b[i];
     if (d == 0u) return;
-    uint at = (p.first + i) * 4u;
-    for (uint k = 0u; k < 4u; k++)
-        if (((d >> (8u * k)) & 0xffu) != 0u) g[at + k] = uint8_t((x >> (8u * k)) & 0xffu);
+    uint mask = ((d & 0xffu) != 0u ? 0xffu : 0u) | ((d & 0xff00u) != 0u ? 0xff00u : 0u) |
+                ((d & 0xff0000u) != 0u ? 0xff0000u : 0u) | ((d & 0xff000000u) != 0u ? 0xff000000u : 0u);
+    g[i] = (g[i] & ~mask) | (x & mask);
 }
