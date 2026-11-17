@@ -2,6 +2,7 @@
 // nvn_api_cmd.c (its header says where the code comes from).
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -120,6 +121,17 @@ NVN_API(nvnCommandBufferSetRenderEnableConditional) {
 // void nvnCommandBufferBindProgram(NVNcommandBuffer *cmd, const NVNprogram *program, int stages)
 NVN_API(nvnCommandBufferBindProgram) {
     *REC(cmd_of(c), OP_BIND_PROGRAM, p_bind_program) = (p_bind_program){arg_p(c, 1), (int)arg_x(c, 2)};
+    static volatile int32_t seen;   // the stage masks the game binds with (vk_exec_ops.c bind_program)
+    if (plat_inc32(&seen) <= 24) {
+        const prog_t *p = arg_p(c, 1);
+        char st[40] = "";
+        int o = 0;
+        for (uint32_t i = 0; p && i < p->nstage && i < 6; i++)
+            if (p->sd[i].control && p->sd[i].data)
+                o += snprintf(st + o, sizeof st - (size_t)o, " %d",
+                              nvn2_program_stage(p->sd[i].control, (const uint8_t *)(uintptr_t)p->sd[i].data));
+        rt_log("nvn: BindProgram %p stages %#x, its shaders' stages:%s", (const void *)p, (unsigned)arg_x(c, 2), p ? st : " (none)");
+    }
 }
 // void nvnCommandBufferBind{Blend,Color,ChannelMask,Multisample,Polygon,DepthStencil}State(NVNcommandBuffer *cmd,
 // const NVN*State *state): the state object's bytes are copied (p_bind_state.kind order)
