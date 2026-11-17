@@ -543,6 +543,7 @@ static const RsList *rs_list(const VkExec *ex, const VkPipeInfo *info) {
             } else if ((b->kind == GFX_RES_TEX || b->kind == GFX_RES_IMG) && b->type != VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER &&
                        b->type != VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
                 int img = b->kind == GFX_RES_IMG, cap = img ? 32 : 128;
+                if (r->cbuf_slot >= 3) { ok = 0; break; }   // its handle is read from a uniform block at each bind
                 for (uint32_t k = 0; k < cnt; k++) {
                     int slot = r->slot + (int)k;
                     if (slot >= 0 && slot < cap) rs_add(tmp, &n, ex, img ? &ex->img[st][slot] : &ex->tex[st][slot], 8);
@@ -906,7 +907,10 @@ void bind_resources(VkExec *ex, const VkPipeInfo *info) {
                 for (uint32_t k = 0; k < cnt; k++) {
                     int slot = r->slot + (int)k;
                     uint64_t h = 0;
-                    if (img) h = slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
+                    if (r->cbuf_slot >= 3)   // the handle is in a user uniform block (ubo_word), OR'ed with handle2
+                        h = ubo_word(ex, st, r->cbuf_slot, r->handle + k) |
+                            (r->handle2 >= 0 ? ubo_word(ex, st, r->cbuf_slot, (uint32_t)r->handle2 + k) : 0);
+                    else if (img) h = slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
                     else h = slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
                     tex_info(ex, r, h, img, r->separate, &o[k].image, &locked);
                     if (ru_cap && !img && slot >= 0 && slot < 128) ru_note_slot(0, st, slot);   // others read 0

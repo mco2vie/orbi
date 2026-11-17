@@ -20,6 +20,15 @@ class TexOps:
             if i.has(n) and i.v(n) in self.ur_const:
                 bank, byte = self.ur_const[i.v(n)]
                 return bank, byte // 4
+            if i.has(n) and i.v(n) in self.ur_or:
+                # the OR of two words of one bank: the runtime reads both and ORs them (reflection "handle2")
+                (b1, y1), (b2, y2) = self.ur_or[i.v(n)]
+                if b1 != b2:
+                    raise Unsupported(f"{i.cls}: texture handle OR'ed from banks {b1} and {b2}")
+                key = (b1, y1 // 4)
+                if self.tex_h2.setdefault(key, y2 // 4) != y2 // 4:
+                    raise Unsupported(f"{i.cls}: texture word {key} OR'ed with two different words")
+                return key
         raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
 
     def txq(self, i: Insn) -> str:

@@ -114,6 +114,7 @@ class MemOps:
         out = []
         for k in range(size):   # a new value: no longer what was traced (track_ssbo leaves ULDC to this)
             self.ur_ssbo.pop(n + k, None), self.ur_derived.pop(n + k, None), self.ur_const.pop(n + k, None)
+            self.ur_or.pop(n + k, None)
         if i.has("URa") and i.v("URa") != URZ:
             # ULDC URd, c[bank][URa + offset]: a dynamic address. The index was dropped and every read took word
             # `offset`: the race's colour-grading LUT read the same table entry for all 32 slices (no blue, 31/10/2026).
@@ -292,7 +293,16 @@ class MemOps:
             # Any other write ends both: a base kept after `UIADD3 UR4, UR4, 0x100` lost the offset of the accesses
             # through it (115 programs, among them the cacti's draw arguments; tools/shaders/track_audit.py).
             n = i.v("URd")
-            self.ur_const.pop(n, None)
+            # ULOP3 URd, URa, URb, URZ with the table of a | b over two ULDC words: Orbitals' combined handles,
+            # c[3][texture word] | c[3][sampler word] (tools/shaders/handle_trace.py, 56 programs, 17/11/2026)
+            combo = None
+            if i.op == "ULOP3" and i.v("imm8", 0) == 0xFC and i.v("URc", URZ) == URZ:
+                a, b = i.v("URa", URZ), i.v("URb", URZ)
+                if a in self.ur_const and b in self.ur_const:
+                    combo = (self.ur_const[a], self.ur_const[b])
+            self.ur_const.pop(n, None), self.ur_or.pop(n, None)
+            if combo is not None and n != URZ:
+                self.ur_or[n] = combo
             src = None
             if i.op in ("UIADD3", "ULEA", "UMOV", "UIMAD"):
                 src = next((self.ur_ssbo.get(i.v(r), self.ur_derived.get(i.v(r))) for r in ("URa", "URb", "URc")

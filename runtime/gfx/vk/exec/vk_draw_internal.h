@@ -219,6 +219,7 @@ void spec_census(VkExec *ex, const GfxShader *s, int st);
 int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh);
 // vk_exec_ubuf.c
 uint64_t ubo_ptr(const VkExec *ex, int st, const GfxShaderRes *r);
+uint32_t ubo_word(const VkExec *ex, int st, int cbuf_slot, uint32_t word);   // a user uniform block's word (handles)
 // ORBITALS_BIND_XF (vk_exec_xbind.c, a measurement): descriptors kept across frames by the draw's inputs
 int xb_mode(void);
 const VkDescSlot *xb_get(uint64_t key, const VkPipeInfo *info, uint32_t nd);

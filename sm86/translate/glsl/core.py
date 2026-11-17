@@ -68,6 +68,9 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.ssbos_written: set[int] = set()  # those a STG, ATOMG or RED stores into (reflection flag 1)
         self.ur_ssbo: dict[int, int] = {}  # uniform register -> the c[0] offset its 64-bit value came from
         self.ur_const: dict[int, tuple[int, int]] = {}  # uniform register -> (bank, byte) its ULDC word came from
+        # uniform register -> the two constant words a ULOP3 OR made it from (Unreal's texture | sampler handle words)
+        self.ur_or: dict[int, tuple[tuple[int, int], tuple[int, int]]] = {}
+        self.tex_h2: dict[tuple[int, int], int] = {}  # texture key -> the word index OR'ed into its handle
         self.reg_ssbo: dict[int, int] = {}
         self.ur_derived: dict[
             int, int

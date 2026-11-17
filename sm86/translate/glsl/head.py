@@ -126,13 +126,15 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
     for (bank, idx), t in sorted(b.textures.items()):
         head.append(f"layout(binding = {nb}) uniform {t} t{bank}_{idx};")
         refl["textures"].append({"binding": nb, "type": sampler_type(t), "format": "Unknown", "cbuf_slot": bank,
-                                 "handle": idx, "array": 1, "separate": False, "flags": 0})  # fmt: skip
+                                 "handle": idx, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1,
+                                 "separate": False, "flags": 0})  # fmt: skip
         nb += 1
     for (bank, idx), t in sorted(b.images.items()):
         fmt = "r32ui, " if t.startswith("uimage") else ""
         head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx};")
         refl["images"].append({"binding": nb, "type": sampler_type(t), "format": "R32Uint" if fmt else "Unknown", "cbuf_slot": bank,
-                               "handle": idx, "array": 1, "separate": False, "flags": 4})  # fmt: skip
+                               "handle": idx, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
+                               "flags": 4})  # fmt: skip
         nb += 1
     for bank, idx in sorted(b.txq_tex):
         n = {"sampler1D": 1, "sampler2D": 2, "sampler3D": 3, "samplerCube": 2, "sampler2DArray": 3,
