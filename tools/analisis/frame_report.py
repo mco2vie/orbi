@@ -10,6 +10,8 @@ Usage: orbitals-frame-report.exe [EXEFS_DIR] [--out frame_report.txt] [--sym TEX
        uv run tools/analisis/frame_report.py [EXEFS_DIR] [--out frame_report.txt] [--sym TEXT ...]
 --sym TEXT lists only the symbols whose name contains TEXT (full mangled names, every module, imports too):
 no disassembly. Used to find the exact name of an SDK function to replace.
+--func TEXT disassembles every function whose symbol name contains TEXT (the first FUNCTION_CAP instructions of each),
+with calls named: how an SDK function reads and writes the objects it is given, before a host override replaces it.
 EXEFS_DIR holds main, sdk and subsdk0 (default: ORBITALS_GAME/exefs, ./exefs, or exefs next to the executable).
 Builds the binary database in a temporary folder (about a minute), then writes the report. Nothing of the game is kept.
 """
@@ -35,7 +37,7 @@ from nso import Nso  # noqa: E402
 
 CALLER_SITES = ("main+0x1540460", "main+0x15404c0")
 CODE_WINDOW = ("main", 0x1540400, 0x1540700)  # module, start, end: around the Viewport thread's wait and both calls
-FUNCTION_CAP = 400  # instructions printed for a whole function
+FUNCTION_CAP = 160  # instructions printed for a whole function
 NAMES = ("ListFrameHistory", "GetLatestFrameNumber")
 
 
@@ -130,6 +132,24 @@ class Report:
                 self.out("  (none)")
             self.out()
 
+    def functions(self, patterns: list[str]) -> None:
+        seen = set()
+        for pat in patterns:
+            rows = self.db.execute(
+                "SELECT addr, name FROM sym WHERE kind='func' AND addr IS NOT NULL AND name LIKE ? ORDER BY addr",
+                (f"%{pat}%",),
+            ).fetchall()
+            if not rows:
+                self.out(f"== No function contains {pat!r}\n")
+            for addr, name in rows:
+                f = self.function_at(addr)
+                if not f or f[0] in seen:
+                    continue
+                seen.add(f[0])
+                self.out(f"== {name} at {self.rel(f[0])} ({(f[1] - f[0]) // 4} instructions)")
+                self.disasm(f[0], f[1], FUNCTION_CAP)
+                self.out()
+
     def run(self) -> None:
         self.out("== Symbols (module, address, kind, name)")
         wanted = []
@@ -173,6 +193,7 @@ def main() -> None:
     ap.add_argument("exefs", nargs="?")
     ap.add_argument("--out", type=Path, default=Path("frame_report.txt"))
     ap.add_argument("--sym", action="append", default=[], help="list the symbols whose name contains this text")
+    ap.add_argument("--func", action="append", default=[], help="disassemble the functions whose name contains this text")
     args = ap.parse_args()
     exefs = find_exefs(args.exefs)
     print(f"ExeFS: {exefs.resolve()}\nBuilding the binary database (about a minute)...")
@@ -185,7 +206,9 @@ def main() -> None:
         print("\n----- report -----")
         if args.sym:
             rep.symbols(args.sym)
-        else:
+        if args.func:
+            rep.functions(args.func)
+        if not args.sym and not args.func:
             rep.run()
         args.out.write_text("\n".join(rep.lines) + "\n", encoding="utf-8")
         db.close()
