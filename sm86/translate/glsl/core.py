@@ -57,6 +57,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.uses_subgroup = self.uses_shfl = self.uses_shared = self.uses_prmt = self.uses_arith = False
         self.uses_nminmax = False
         self.txq_tex: set[tuple[int, int]] = set()  # textures TXQ reads the size of (txqsz_* functions)
+        self.tld1d: set[tuple[int, int]] = set()  # 1D textures TLD fetches from: they may be buffer textures (head.py)
         self.uses_shadow_lod = False
         self.uses_demote = False
         self.lmem_bytes = 0  # local memory (LDL/STL): the furthest constant extent, 0 = none

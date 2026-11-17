@@ -283,6 +283,12 @@ class TexOps:
         self.textures.setdefault(key, f"sampler{name}")
         lv = f"int({reg(regs['ms' if ms else 'lod'])})" if ms or lod == "LL" else "0"
         call = f"texelFetch(t{key[0]}_{key[1]}, {vec}, {lv})"
+        if name == "1D":
+            # The handle may name a buffer texture (NVN_TEXTURE_TARGET_BUFFER): the console's TLD reads either from the
+            # descriptor, and Unreal reads its typed buffers so (Orbitals: 32 slots of target 10 sampled through 1D
+            # bindings, all zero stand-ins, 17/11/2026). head.py declares a samplerBuffer twin of the binding.
+            self.tld1d.add(key)
+            call = f"tld1d_{key[0]}_{key[1]}({vec}, {lv})"
         outs = self.tex_outs(i)
         return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
 

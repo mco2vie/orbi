@@ -131,6 +131,23 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
                                  "handle": idx, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1,
                                  "separate": False, "flags": 0})  # fmt: skip
         nb += 1
+    # A 1D texture that TLD reads may be a buffer texture: its twin, a samplerBuffer on the same handle (reflection
+    # type 2, a uniform texel buffer the back end binds as a view of the buffer's memory, vk_exec_bind.c texel_view).
+    # For a buffer slot the 1D binding gets the 1x1 stand-in and the twin the buffer; for a 1D texture the twin gets
+    # the zero view. A width of at most 1 picks the twin (a real 1D texture one texel wide reads 0: none seen).
+    twins = {k for k in b.tld1d if b.textures.get(k) == "sampler1D"}
+    for bank, idx in sorted(b.tld1d):
+        t = f"t{bank}_{idx}"
+        if (bank, idx) not in twins:
+            head.append(f"vec4 tld1d_{bank}_{idx}(int x, int l) {{ return texelFetch({t}, x, l); }}")
+            continue
+        head.append(f"layout(binding = {nb}) uniform samplerBuffer tb{bank}_{idx};")
+        refl["textures"].append({"binding": nb, "type": 2, "format": "Unknown", "cbuf_slot": bank, "handle": idx,
+                                 "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
+                                 "flags": 0})  # fmt: skip
+        nb += 1
+        head.append(f"vec4 tld1d_{bank}_{idx}(int x, int l) {{ return textureSize({t}, 0) <= 1 ? "
+                    f"texelFetch(tb{bank}_{idx}, x) : texelFetch({t}, x, l); }}")
     for (bank, idx), t in sorted(b.images.items()):
         fmt = "r32ui, " if t.startswith("uimage") else ""
         head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx};")
@@ -142,6 +159,8 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         n = {"sampler1D": 1, "sampler2D": 2, "sampler3D": 3, "samplerCube": 2, "sampler2DArray": 3,
              "samplerCubeArray": 3, "sampler1DArray": 2}.get(b.textures[(bank, idx)].replace("Shadow", ""), 2)  # fmt: skip
         sz = f"textureSize(t{bank}_{idx}, l)"
+        if (bank, idx) in twins:   # a buffer texture's size is its twin's
+            sz = f"(textureSize(t{bank}_{idx}, 0) <= 1 ? textureSize(tb{bank}_{idx}) : {sz})"
         v = sz if n == 3 else f"ivec3({sz}, 1)" if n == 2 else f"ivec3({sz}, 1, 1)"
         head.append(f"ivec3 txqsz_{bank}_{idx}(int l) {{ return {v}; }}")
     # Specialization constants of the fixed-address constant words (Builder.const); "spec" lists each k's [bank, byte].
