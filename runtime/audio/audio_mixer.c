@@ -872,4 +872,9 @@ const char audio_device_name[] = "AudioTvOutput";
 
 float audio_device_volume(void) { return atomic_load(&device_volume); }
 
+// The player's gain over the game's mix (ORBITALS_VOLUME, ORBITALS_BACKGROUND_MUTE), for the output streams
+// (audren_sf.c), which do not go through the render thread. Both caches hold one value and a version: a race between
+// the render thread and a stream writer reads the value just set or the one before.
+float audio_output_gain(void) { return host_volume() * background_gain(); }
+
 void audio_device_set_volume(float v) { atomic_store(&device_volume, isfinite(v) ? v : 0.0f); }
