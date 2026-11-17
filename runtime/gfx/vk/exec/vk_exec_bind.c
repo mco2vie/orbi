@@ -268,6 +268,19 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
         up.addr = ubo_ptr(ex, st, r), b = &up;
         if (ru_cap) ru_note_bad(RUB_UBO_PTR);   // read from the block's bytes, which change without a bind
     }
+    // A compute shader that loads its buffer's address from the push constants (c0 from 0x10, ahead of the packed table):
+    // Orbitals pushes {u64 address, u32 size} entries there, 16 bytes each (48-byte pushes such as {0xf174b0000, 0x20},
+    // run of 17/11/2026), the same form as the table's. The dispatch's bytes say which buffer (c0_push, op_dispatch).
+    else if (st == NVN_STAGE_CS && r->cbuf_slot == 0 && c0_push && r->handle * 4 >= 0x10 &&
+             (uint32_t)(r->handle * 4 - 0x10) + 12 <= c0_push_n) {
+        uint32_t at = (uint32_t)(r->handle * 4 - 0x10), n;
+        memcpy(&up.addr, c0_push + at, 8), memcpy(&n, c0_push + at + 8, 4);
+        up.size = n, b = &up;
+        static volatile int32_t seen;
+        if (plat_inc32(&seen) <= 8)
+            rt_log("vk: compute storage buffer from the push constants at c0+%#x: %#llx+%u", r->handle * 4,
+                   (unsigned long long)up.addr, n);
+    }
     if (b) {
         // vk_caps.c: shaders translated for sbuf_align address the buffer from its address rounded down to it.
         uint64_t lead = vk_caps.sbuf_align ? b->addr & (vk_caps.sbuf_align - 1) : 0;
@@ -523,6 +536,9 @@ static const RsList *rs_list(const VkExec *ex, const VkPipeInfo *info) {
                     if (np == RS_PTRS) { ok = 0; break; }
                     rs_add(tmp, &n, ex, &ex->ubo[st][r->cbuf_slot - 3], sizeof(p_bind_buf));
                     ptr[np++] = (RsPtr){st, r};
+                } else if (st == NVN_STAGE_CS && r->cbuf_slot == 0 && r->handle * 4 >= 0x10) {
+                    ok = 0;   // its address comes with each dispatch (the push constants, ssbo_info): no kept set
+                    break;
                 }
             } else if ((b->kind == GFX_RES_TEX || b->kind == GFX_RES_IMG) && b->type != VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER &&
                        b->type != VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
