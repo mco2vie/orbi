@@ -385,10 +385,26 @@ static VkBufferView texel_view_make(VkBuffer buf, VkDeviceSize off, VkDeviceSize
 
 // The view of the buffer texture with handle h (its slot id in the low 20 bits), or the zero view: an unregistered slot,
 // a slot that is not a buffer texture, a format without the texel buffer feature, or memory that is not backed.
+// ORBITALS_TEXEL_VIEWS (diagnosis): 0 binds the zero view everywhere (as before 17/11/2026), "read" only for the
+// storage ones (shaders write nothing there); default 1. To tell whether these views take part in the render thread's
+// corrupted pointers in main+0x1750b88's callees (17/11/2026).
+static int texel_mode(void) {
+    static int m = -1;
+    if (m < 0) {
+        const char *e = cfg_get("ORBITALS_TEXEL_VIEWS");
+        int v = !e || !*e ? 1 : !strcmp(e, "0") ? 0 : !strcmp(e, "read") ? 2 : 1;
+        if (v != 1) rt_log("vk: ORBITALS_TEXEL_VIEWS=%s: %s", e, v ? "storage texel buffers get the zero view" : "every texel buffer gets the zero view");
+        m = v;
+    }
+    return m;
+}
+
 static VkBufferView texel_view(VkExec *ex, uint64_t h, int storage) {
     uint64_t addr;
     int fmt;
     uint32_t texels;
+    int mode = texel_mode();
+    if (!mode || (mode == 2 && storage)) return Z.zview;
     if (!h || !vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels) || !addr || !texels) return Z.zview;
     TexVkFormat f;
     int bpb = nvn_fmt_bpb(fmt, NULL, NULL);

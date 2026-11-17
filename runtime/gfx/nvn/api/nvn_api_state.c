@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cfg.h"
 #include "gfx.h"
 #include "host.h"
 #include "nvn_api.h"
@@ -159,7 +160,19 @@ NVN_API(nvnCommandBufferBindVertexAttribState) {
     int n = (int)arg_x(c, 1);
     // NVN2 takes up to 32 attributes, the Ampere register count: Orbitals' Unreal binds 17 (MaxVertexElementCount) for
     // its 3D draws; a limit of 16 dropped every one of them (1.5 million in a run, 17/11/2026).
-    if (n < 0 || n > 32) { rt_log("nvn: BindVertexAttribState n %d", n); return; }
+    // ORBITALS_VATTR_MAX (diagnosis, 16 to 32, default 32): lists longer than it are dropped, as all past 16 were before.
+    static int vmax = -1;
+    if (vmax < 0) {
+        const char *e = cfg_get("ORBITALS_VATTR_MAX");
+        int v = e && *e ? atoi(e) : 32;
+        vmax = v < 16 ? 16 : v > 32 ? 32 : v;
+        if (vmax != 32) rt_log("nvn: ORBITALS_VATTR_MAX=%d: longer vertex attribute lists are dropped", vmax);
+    }
+    if (n < 0 || n > vmax) {
+        static volatile int32_t drops;   // logged 8 times: every 3D draw of Orbitals filled the log with them
+        if (plat_inc32(&drops) <= 8) rt_log("nvn: BindVertexAttribState n %d dropped", n);
+        return;
+    }
     p_bind_vattr *r = RECN(o, OP_BIND_VATTR, p_bind_vattr, st, n);
     r->first = 0;
     r->n = n;
