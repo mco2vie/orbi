@@ -119,7 +119,7 @@ static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, 
         // A store into a buffer of unknown size (an address read from a uniform block, ubo_ptr) binds to the end of
         // the backing; its merge covers WB_UNSIZED from the address: past it the GPU's stores stay in VRAM.
         if (written == 2) vk_mem_gpu_wrote_merged(&sp, !size && n > WB_UNSIZED ? WB_UNSIZED : n);
-        else if (written) vk_mem_gpu_wrote(&sp, n);
+        else if (written == 1) vk_mem_gpu_wrote(&sp, n);   // 3: the stores stay in the VRAM mirror (unsized_mode)
         if (written) vk_usnap_drop(addr, n);
         if (written && ru_cap) ru_note_bad(RUB_WRITTEN);
         count_use(sp.cls, use, n);
@@ -255,6 +255,22 @@ static int ssbo_slot(const GfxShaderRes *r, int st, int *ubo) {
 // cbuf_slot - 3, byte offset handle * 4). The Depths terrain reads its vertices through one, about 500 draws a frame;
 // with a zero buffer they collapse and the ground is missing. MacNativeGames resolves these the same way (NVN_RB_SBUFU,
 // games/totk/third_party/d2r_gfx/gfx/nvn/nvn_mtl.m @ b75be8cf).
+// ORBITALS_WB_UNSIZED (stores into a storage buffer of unknown size, an address from a uniform block): "vram"
+// (default) leaves them in the pool's VRAM mirror, where later GPU work reads them; "merge" merges them back to guest
+// memory by bytes; "whole" copies the binding back whole. With merge the RTX 4080 lost the device inside the merge
+// after the logos (read invalid at 0x20003a52b000 and 0x20003a585000), with whole the render graph read 0x104; with
+// no write-back at all (WB_MERGE=none) and with texel views alone merged, both runs played on (17/11/2026).
+static int unsized_mode(void) {
+    static int m = -1;
+    if (m < 0) {
+        const char *e = cfg_get("ORBITALS_WB_UNSIZED");
+        m = e && !strcmp(e, "merge") ? 2 : e && !strcmp(e, "whole") ? 1 : 3;
+        rt_log("vk: stores into storage buffers of unknown size: %s (ORBITALS_WB_UNSIZED)",
+               m == 2 ? "merged back by bytes" : m == 1 ? "copied back whole" : "kept in VRAM");
+    }
+    return m;
+}
+
 static int ubo_ptr_res(const GfxShaderRes *r) {
     return r->cbuf_slot >= 3 && r->cbuf_slot - 3 < 18;
 }
@@ -298,7 +314,7 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
         // the end of the backing, and copied back whole it reverted the CPU's writes over the rest of the pool: with
         // the c[3] bases translated (933e676) Orbitals' render graph read 0x104 after the logos (17/11/2026). Only the
         // bytes the GPU changes go back (vk_mem_gpu_wrote_merged).
-        int wmode = written && !size ? 2 : written;
+        int wmode = written && !size ? unsized_mode() : written;
         if (bind_range(ex, b->addr - lead, size, align, max, ubo ? VK_MUSE_UBO : VK_MUSE_SSBO,
                        wmode, &bi)) {
             if (written && bi.buffer != VK_NULL_HANDLE) note_written(ex, b->addr - lead, bi.range);
