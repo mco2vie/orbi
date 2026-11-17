@@ -1,10 +1,14 @@
 # orbitals-frame-report.exe: tools/analisis/frame_report.py as one Windows executable (PyInstaller), to read the layout of
-# nn::vi::FrameInfo from the game's own ExeFS without installing git, uv or Python. By hand only; the exe is an artifact of
-# the run (14 days), not a release. Nothing of the game goes in: the user runs it on their own exefs folder.
+# nn::vi::FrameInfo from the game's own ExeFS without installing git, uv or Python. The exe is an artifact of the run
+# (14 days), not a release. It builds on a push of the diagnostic branch (a new workflow cannot be started by hand until it
+# is on the default branch) and by hand once it is. Nothing of the game goes in: the user runs it on their own exefs folder.
 name: frame_report.exe
 
 on:
   workflow_dispatch:
+  push:
+    branches: [diag/frame-history-trace]
+    paths: [tools/analisis/frame_report.py, .github/workflows/frame_report.yml]
 
 permissions:
   contents: read
