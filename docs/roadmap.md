@@ -27,7 +27,9 @@ the log.
   1. **Which event is never signalled.** Read the log without the noise (`Select-String -NotMatch` on `AllocateMemoryPages`,
      `nn::codec: queued`, `sdk call`, `fs entry`), count the presents, and find the fence, vsync or
      frame-history wait the RenderThread and the Viewport thread sit on (`main+0x4a6d4`, `main+0x1540434`).
-     `nn::vi::ListFrameHistory` answers 0 today. A second run with draws without a shader made non-blocking would
+     `nn::vi::ListFrameHistory` answered 0, then one entry. Measured on 17/11/2026 on Lichii (Orbitals' own SDK,
+     lichii-probe): the size query answers 8 always, the array holds every frame shown, newest first, each with its
+     queue and show ticks; `ov_gfx.c` now answers the same (the measurements are in its comment). A second run with draws without a shader made non-blocking would
      tell whether the shaders are the cause; no such switch exists yet (`ORBITALS_PIPE_SKIP` is about draws whose
      pipeline is still building).
   2. **Fix what step 1 finds.** Shader work only if step 1 points at it.
