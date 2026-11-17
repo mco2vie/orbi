@@ -6,8 +6,10 @@ layout of nn::vi::FrameInfo is unknown. This report holds what is needed to read
 the second call (which offsets of the buffer it reads) and the SDK's own ListFrameHistory (which offsets it writes). It is
 built as a Windows executable by .github/workflows/frame-report.yml so it runs without git, uv or Python.
 
-Usage: orbitals-frame-report.exe [EXEFS_DIR] [--out frame_report.txt]
-       uv run tools/analisis/frame_report.py [EXEFS_DIR] [--out frame_report.txt]
+Usage: orbitals-frame-report.exe [EXEFS_DIR] [--out frame_report.txt] [--sym TEXT ...]
+       uv run tools/analisis/frame_report.py [EXEFS_DIR] [--out frame_report.txt] [--sym TEXT ...]
+--sym TEXT lists only the symbols whose name contains TEXT (full mangled names, every module, imports too):
+no disassembly. Used to find the exact name of an SDK function to replace.
 EXEFS_DIR holds main, sdk and subsdk0 (default: ORBITALS_GAME/exefs, ./exefs, or exefs next to the executable).
 Builds the binary database in a temporary folder (about a minute), then writes the report. Nothing of the game is kept.
 """
@@ -115,6 +117,19 @@ class Report:
             "SELECT addr, end, name FROM func WHERE addr<=? AND end>? ORDER BY addr DESC LIMIT 1", (addr, addr)
         ).fetchone()
 
+    def symbols(self, patterns: list[str]) -> None:
+        for pat in patterns:
+            self.out(f"== Symbols containing {pat!r} (module, address, kind, name)")
+            rows = self.db.execute(
+                "SELECT module, addr, kind, name FROM sym WHERE name LIKE ? ORDER BY name, module", (f"%{pat}%",)
+            ).fetchall()
+            for mod, addr, kind, name in rows:
+                where = self.rel(addr) if addr is not None else "(import)"
+                self.out(f"  {mod:8} {where:20} {kind:7} {name}")
+            if not rows:
+                self.out("  (none)")
+            self.out()
+
     def run(self) -> None:
         self.out("== Symbols (module, address, kind, name)")
         wanted = []
@@ -157,6 +172,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("exefs", nargs="?")
     ap.add_argument("--out", type=Path, default=Path("frame_report.txt"))
+    ap.add_argument("--sym", action="append", default=[], help="list the symbols whose name contains this text")
     args = ap.parse_args()
     exefs = find_exefs(args.exefs)
     print(f"ExeFS: {exefs.resolve()}\nBuilding the binary database (about a minute)...")
@@ -167,7 +183,10 @@ def main() -> None:
         db = sqlite3.connect(dbpath)
         rep = Report(db, exefs)
         print("\n----- report -----")
-        rep.run()
+        if args.sym:
+            rep.symbols(args.sym)
+        else:
+            rep.run()
         args.out.write_text("\n".join(rep.lines) + "\n", encoding="utf-8")
         db.close()
     print(f"\nReport written to {args.out.resolve()} ({len(rep.lines)} lines)")
