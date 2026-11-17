@@ -111,12 +111,14 @@ def main() -> int:
         failing += 1
         seen = set()
         for k, i in enumerate(insns):
-            if a.tex:   # TEX/TLD/TLD4/TMML/TXQ/SU* whose handle is a general register (classes with noConst)
-                if "noConst" not in i.cls or not i.has("Rb") or i.v("Rb") == RZ:
+            if a.tex:   # texture instructions whose handle is a register: general (noConst) or uniform (_urc_)
+                ur = next((f for f in ("URc", "URb") if "urc" in i.cls and i.has(f) and i.v(f) != URZ), None)
+                if ur is None and ("noConst" not in i.cls or not i.has("Rb") or i.v("Rb") == RZ):
                     continue
-                chain = " <- ".join(origin(insns, k, "r", i.v("Rb"), a.depth))
+                kind, reg = ("u", i.v(ur)) if ur else ("r", i.v("Rb"))
+                chain = " <- ".join(origin(insns, k, kind, reg, a.depth))
                 guard = " predicated" if i.v("Pg", 7) != 7 or i.v("Pg@not", 0) else ""
-                shape = f"{i.op} {i.cls}{guard}: R <- {chain}"
+                shape = f"{i.op} {i.cls}{guard}: {'UR' if ur else 'R'} <- {chain}"
             else:
                 base = next((i.v(f) for f in BASES if i.has(f)), None)
                 if base is None or base == URZ:
