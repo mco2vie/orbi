@@ -149,6 +149,9 @@ class AluOps:
     def ubrev(self, i: Insn) -> str:
         return self.dst(i, f"bitfieldReverse({self.src_u(i, 'b')})")
 
+    def brev(self, i: Insn) -> str:   # BREV Rd, Rb: as UBREV on a general register (an Orbitals program, 17/11/2026)
+        return self.ubrev(i)
+
     def popc(self, i: Insn) -> str:
         return self.dst(i, f"uint(bitCount({self.neg_u(i, 'b')}))")
 

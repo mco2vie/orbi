@@ -216,7 +216,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             return self.dst_f(i, f"({pred(i.v('Pp'), i.v('Pp@not'))} ? {self.src_f(i, 'a')} : {self.src_f(i, 'b')})")
         if op in ("FSETP", "ISETP", "UISETP"):
             return self.setp(i)
-        if op in ("F2FP", "R2UR", "I2F", "UP2UR", "P2R", "TXQ", "FLO", "SGXT", "IABS", "UBREV", "PRMT", "UFLO",
+        if op in ("F2FP", "R2UR", "I2F", "UP2UR", "P2R", "TXQ", "FLO", "SGXT", "IABS", "UBREV", "BREV", "PRMT", "UFLO",
                   "R2P", "ULEA", "USEL", "UPLOP3", "SUST", "SULD", "SURED", "SUATOM"):  # fmt: skip
             return getattr(self, op.lower())(i)
         if op == "IPA":

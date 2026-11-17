@@ -47,6 +47,11 @@ class MemOps:
                 v = f"({v} * gl_FragCoord.w)"
         elif addr in (0x2E0, 0x2E4):  # PointCoord (Ryujinx AttributeMap.cs)
             v = f"gl_PointCoord[{(addr - 0x2E0) >> 2}]"
+        elif addr in (0x60, 0x64, 0x68):
+            # PrimitiveId, Layer, ViewportIndex (Ryujinx AttributeConsts): fragment inputs of the built-ins. Layer was
+            # refused in 3 Orbitals programs (17/11/2026).
+            v = {0x60: "gl_PrimitiveID", 0x64: "gl_Layer", 0x68: "gl_ViewportIndex"}[addr]
+            v = f"intBitsToFloat({v})"
         elif addr == 0x3FC:  # FrontFacing, a bool: all ones when true, as Ryujinx stores booleans
             v = "uintBitsToFloat(gl_FrontFacing ? 0xffffffffu : 0u)"
         else:
