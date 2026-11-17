@@ -160,15 +160,16 @@ def main() -> None:
     args = ap.parse_args()
     exefs = find_exefs(args.exefs)
     print(f"ExeFS: {exefs.resolve()}\nBuilding the binary database (about a minute)...")
-    with tempfile.TemporaryDirectory() as tmp:
+    # The database file stays open under Windows until the process ends, so the temporary folder cannot always be removed.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         dbpath = Path(tmp) / "bindb.sqlite"
         bindb.build(exefs, dbpath)
         db = sqlite3.connect(dbpath)
         rep = Report(db, exefs)
         print("\n----- report -----")
         rep.run()
+        args.out.write_text("\n".join(rep.lines) + "\n", encoding="utf-8")
         db.close()
-    args.out.write_text("\n".join(rep.lines) + "\n", encoding="utf-8")
     print(f"\nReport written to {args.out.resolve()} ({len(rep.lines)} lines)")
 
 

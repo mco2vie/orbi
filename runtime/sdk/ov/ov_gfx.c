@@ -232,20 +232,26 @@ static void ov_latest_frame(Cpu *c) {
     if (out) *out = n;
     ret_x(c, out ? 0 : 1);
 }
-// int ListFrameHistory(FrameInfo *out, int count, const Layer *): no per-frame timing records kept.
-// Measured (run of 118 s): Unreal calls it from main+0x1540460 and main+0x15404c0 with out=0 and count=0, over 8192 times,
-// and gets 0 each time; GetLatestFrameNumber is called only 3 times. out=0 with count=0 reads as a size query ("how many
-// entries"). ORBITALS_FRAME_HISTORY=<cap> answers that query with min(frames presented, cap) instead of 0, to see whether the
-// game then asks for the entries (a call with out != 0 or count != 0 is logged, the first 20). Nothing is stored in a
-// buffer: the layout of FrameInfo is not known yet, so a call with a buffer still answers 0.
-static uint64_t g_history_real;
+// int ListFrameHistory(FrameInfo *out, int count, const Layer *): the frames presented so far, newest last.
+// Unreal's flip tracker (main+0x15403c0, found by tools/analisis/frame_report.py) loops: nn::os::WaitSystemEvent on the vsync
+// event (the wait at main+0x1540434), then ListFrameHistory(NULL, 0, layer) for how many entries there are, an array of that
+// many 40-byte entries zeroed by the caller, and ListFrameHistory(array, n, layer) to fill it. Of the entries it takes the
+// first whose u64 at +0x00 is 2 and whose frame number at +0x08 is above the last one it handled; it then reads two signed
+// 64-bit times at +0x18 and +0x20 (converted to seconds, probably the flip and the vblank times), queues a record and wakes
+// the thread that waits for frames to be shown. Orbitals answered 0 entries, so no frame was ever reported as flipped and
+// the render thread waited on the flip for ever (the stall at frame 21; Lichii's note above nx2:vi2 command 53 records the
+// same freeze with an empty reply). Fields not read by that code (+0x10 and what follows +0x20) stay as the caller zeroed them.
+// The frame number is the one GetLatestFrameNumber reports (frames presented). Its time is the tick at which this code first
+// saw the frame, at most one vsync after the present. ORBITALS_FRAME_HISTORY=<n> sets how many entries are kept (default 1;
+// 0 answers "none" as before); one is enough for a reader that takes the newest.
+static uint64_t g_history_real, g_history_frame, g_history_tick;
 
 static uint64_t history_cap(void) {
     static uint64_t cap;
     static int done;
     if (!__atomic_load_n(&done, __ATOMIC_ACQUIRE)) {
         const char *v = cfg_get("ORBITALS_FRAME_HISTORY");
-        cap = v && *v ? strtoull(v, NULL, 10) : 0;
+        cap = v && *v ? strtoull(v, NULL, 10) : 1;
         __atomic_store_n(&done, 1, __ATOMIC_RELEASE);
     }
     return cap;
@@ -255,15 +261,36 @@ static void ov_frame_history(Cpu *c) {
     uint64_t out = arg_x(c, 0);
     int count = (int)arg_x(c, 1);
     uint64_t presented = gfx_stats().frames, cap = history_cap();
-    uint64_t ret = (!out && count == 0) ? (presented < cap ? presented : cap) : 0;
+    uint64_t have = presented < cap ? presented : cap;
+    uint64_t ret = 0, frame = 0, tick = 0;
+    if (!out && count == 0) {
+        ret = have;                                    // the size query
+    } else if (out && count > 0 && have > 0) {
+        plat_mutex_lock(&lock);
+        if (presented != g_history_frame) {            // the first time this frame is seen
+            g_history_frame = presented;
+            g_history_tick = rt_ticks();               // the game's clock, as GetSystemTick
+        }
+        frame = g_history_frame;
+        tick = g_history_tick;
+        plat_mutex_unlock(&lock);
+        uint64_t *e = arg_p(c, 0);                     // one FrameInfo, 40 bytes
+        e[0] = 2;
+        e[1] = frame;
+        e[2] = 0;
+        e[3] = tick;
+        e[4] = tick;
+        ret = 1;
+    }
     uint64_t k = __atomic_add_fetch(&g_history_calls, 1, __ATOMIC_RELAXED);
     int with_buffer = out || count;
     uint64_t j = with_buffer ? __atomic_add_fetch(&g_history_real, 1, __ATOMIC_RELAXED) : 0;
     if (k <= 5 || !(k & (k - 1)) || (with_buffer && j <= 20)) {
         char lr[96];
-        rt_log("vi: ListFrameHistory #%llu count=%d out=%#llx -> %llu (presented %llu, cap %llu) from %s",
-               (unsigned long long)k, count, (unsigned long long)out, (unsigned long long)ret,
-               (unsigned long long)presented, (unsigned long long)cap, ldr_describe(c->x[30] - 4, lr, sizeof lr));
+        rt_log("vi: ListFrameHistory #%llu count=%d out=%#llx -> %llu (frame %llu, tick %llu, presented %llu, cap %llu) from %s",
+               (unsigned long long)k, count, (unsigned long long)out, (unsigned long long)ret, (unsigned long long)frame,
+               (unsigned long long)tick, (unsigned long long)presented, (unsigned long long)cap,
+               ldr_describe(c->x[30] - 4, lr, sizeof lr));
     }
     ret_x(c, ret);
 }
