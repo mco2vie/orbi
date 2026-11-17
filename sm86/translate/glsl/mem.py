@@ -337,6 +337,7 @@ class MemOps:
         n = i.v("Rd")
         if n == RZ:
             return
+        self.track_handle(i, n)
         slot = None
         for k, iv in i.f.items():
             if k.startswith("ConstBankAddress"):
@@ -354,6 +355,33 @@ class MemOps:
             self.reg_ssbo.pop(n + k, None)
         if slot is not None:
             self.reg_ssbo[n] = slot
+
+    @staticmethod
+    def const_operand(i: Insn) -> tuple[int, int] | None:
+        """(bank, byte) of the instruction's constant bank operand; 14-bit address slots count words, 16-bit ones bytes."""
+        for k, iv in i.f.items():
+            if k.startswith("ConstBankAddress"):
+                (_, bank), (slot, addr) = iv.slot_values
+                return bank, addr * 4 if slot.width == 14 else addr
+        return None
+
+    def track_handle(self, i: Insn, n: int) -> None:
+        """r_const / r_or after i writes Rd = n: `MOV Rn, c[b][x]` then `LOP3.LUT Rm, Rn, c[b][y], RZ, 0xfc` (a | b), the
+        texture | sampler handle words in a general register (tex_scr_b_noConst_; tools/shaders/base_origin.py --tex on
+        Orbitals' dump: 8 programs, 17/11/2026). Any other write ends what n held."""
+        combo = None
+        if i.op == "LOP3" and i.v("imm8", 0) == 0xFC and i.v("Rc", RZ) == RZ and i.v("Ra", RZ) in self.r_const:
+            c = self.const_operand(i)
+            if c is not None and not self.predicated:
+                combo = (self.r_const[i.v("Ra")], c)
+        konst = self.const_operand(i) if i.op == "MOV" and not self.predicated else None
+        wide = {i.sym(k) for k in ("sz", "wide", "fmt")} & {"64", "128", "WIDE", "U64", "S64"}
+        for k in range(4 if "128" in wide else 2 if wide else 1):
+            self.r_const.pop(n + k, None), self.r_or.pop(n + k, None)
+        if konst is not None:
+            self.r_const[n] = konst
+        if combo is not None:
+            self.r_or[n] = combo
 
     def ldc(self, i: Insn) -> str:
         """LDC c[bank][Ra + offset]: a constant read at a dynamic address; .U8/.S8/.U16/.S16 take the byte or halfword

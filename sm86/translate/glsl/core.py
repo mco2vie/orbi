@@ -72,6 +72,10 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         # uniform register -> the two constant words a ULOP3 OR made it from (Unreal's texture | sampler handle words)
         self.ur_or: dict[int, tuple[tuple[int, int], tuple[int, int]]] = {}
         self.tex_h2: dict[tuple[int, int], int] = {}  # texture key -> the word index OR'ed into its handle
+        # general registers, as ur_const and ur_or: (bank, byte) a MOV of a constant word gave, and the two words a LOP3
+        # OR of such a register with a constant word made (Unreal's handles in a register: 8 Orbitals programs)
+        self.r_const: dict[int, tuple[int, int]] = {}
+        self.r_or: dict[int, tuple[tuple[int, int], tuple[int, int]]] = {}
         self.reg_ssbo: dict[int, int] = {}
         self.ur_derived: dict[
             int, int

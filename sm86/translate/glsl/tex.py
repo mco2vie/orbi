@@ -23,19 +23,27 @@ class TexOps:
                 bank, byte = self.ur_const[i.v(n)]
                 return bank, byte // 4
             if i.has(n) and i.v(n) in self.ur_or:
-                # the OR of two words of one bank: the runtime reads both and ORs them (reflection "handle2")
-                (b1, y1), (b2, y2) = self.ur_or[i.v(n)]
-                if b1 != b2:
-                    raise Unsupported(f"{i.cls}: texture handle OR'ed from banks {b1} and {b2}")
-                # One texture word OR'ed with several sampler words (a texture sampled two ways: 8 Orbitals programs,
-                # 17/11/2026): a binding per pair, told apart by a variant number above bit 16 of the word index
-                # (TEX_VARIANT); the reflection gives the word itself (head.py).
-                for k in range(64):
-                    key = (b1, y1 // 4 | k << self.TEX_VARIANT)
-                    if self.tex_h2.setdefault(key, y2 // 4) == y2 // 4:
-                        return key
-                raise Unsupported(f"{i.cls}: texture word {(b1, y1 // 4)} OR'ed with more than 64 words")
+                return self.or_key(i, self.ur_or[i.v(n)])
+        if i.has("Rb") and i.v("Rb") in self.r_const:   # tex_scr_b_noConst_: the handle in a general register
+            bank, byte = self.r_const[i.v("Rb")]
+            return bank, byte // 4
+        if i.has("Rb") and i.v("Rb") in self.r_or:
+            return self.or_key(i, self.r_or[i.v("Rb")])
         raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
+
+    def or_key(self, i: Insn, pair: tuple[tuple[int, int], tuple[int, int]]) -> tuple[int, int]:
+        """The texture key of a handle OR'ed from two words of one bank: the runtime reads both and ORs them (reflection
+        "handle2"). One texture word OR'ed with several sampler words (a texture sampled two ways: 8 Orbitals programs,
+        17/11/2026) gets a binding per pair, told apart by a variant number above bit TEX_VARIANT of the word index; the
+        reflection gives the word itself (head.py)."""
+        (b1, y1), (b2, y2) = pair
+        if b1 != b2:
+            raise Unsupported(f"{i.cls}: texture handle OR'ed from banks {b1} and {b2}")
+        for k in range(64):
+            key = (b1, y1 // 4 | k << self.TEX_VARIANT)
+            if self.tex_h2.setdefault(key, y2 // 4) == y2 // 4:
+                return key
+        raise Unsupported(f"{i.cls}: texture word {(b1, y1 // 4)} OR'ed with more than 64 words")
 
     def txq(self, i: Insn) -> str:
         """TXQ TEX_HEADER_DIMENSION: width, height, depth/layers, levels of the texture at lod Ra."""
