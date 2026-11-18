@@ -22,20 +22,66 @@ sys.path.insert(0, str(ROOT / "tools/shaders"))
 from extract import sph_stage, trim  # noqa: E402
 from program import Decoder  # noqa: E402
 
-MODS = ("sz", "fmt", "dstfmt", "srcfmt", "paramA", "lodlc", "dc", "toff", "aoffi", "op", "mode", "rnd", "ftz", "sat",
-        "cmp", "bop", "sem", "ipaop", "query", "comp", "scr", "f16rm", "ndv", "redop", "mufuop", "swz", "shfl", "fmz",
-        "scale")
+MODS = (
+    "sz",
+    "fmt",
+    "dstfmt",
+    "srcfmt",
+    "paramA",
+    "lodlc",
+    "dc",
+    "toff",
+    "aoffi",
+    "op",
+    "mode",
+    "rnd",
+    "ftz",
+    "sat",
+    "cmp",
+    "bop",
+    "sem",
+    "ipaop",
+    "query",
+    "comp",
+    "scr",
+    "f16rm",
+    "ndv",
+    "redop",
+    "mufuop",
+    "swz",
+    "shfl",
+    "fmz",
+    "scale",
+)
 
 
-def forms(dec: Decoder, code: Path) -> Counter:
+def header(sph) -> str:
+    """The program header's summary: render targets written (RGBA bits per target), depth output, generic inputs used
+    (attribute: components) and which are perspective-interpolated. No code, only the interface."""
+    if sph is None or sph.stage != "ps":
+        return "no pixel header"
+    outs = " ".join(
+        f"rt{t}={(sph.omap_targets >> (4 * t)) & 15:04b}" for t in range(8) if (sph.omap_targets >> (4 * t)) & 15
+    )
+    ins = []
+    for a in range(32):
+        comps = "".join(str(c) for c in range(4) if sph.imap_used(a, c))
+        if comps:
+            byte = (sph.words[6 + (a >> 2)] >> ((a & 3) * 8)) & 0xFF
+            kinds = {(byte >> (2 * c)) & 3 for c in range(4) if sph.imap_used(a, c)}
+            ins.append(f"a{a}:{comps}/{''.join(str(k) for k in sorted(kinds))}")
+    return f"targets [{outs}] depth={int(sph.omap_depth)} inputs [{' '.join(ins)}]"
+
+
+def forms(dec: Decoder, code: Path) -> tuple[Counter, str]:
     raw = code.read_bytes()
     stage = sph_stage(raw) or "cs"
-    _, insns = dec.program(trim(raw, stage), stage)
+    sph, insns = dec.program(trim(raw, stage), stage)
     out = Counter()
     for i in insns:
         mods = ".".join(f"{m}={i.sym(m)}" for m in MODS if i.sym(m) and i.sym(m).lower() not in ("", "no" + m))
         out[f"{i.op} {i.cls}{' ' + mods if mods else ''}"] += 1
-    return out
+    return out, header(sph)
 
 
 def main() -> int:
@@ -55,9 +101,12 @@ def main() -> int:
         if code is None:
             print(f"no dumped program {k}* in {a.dumped}", file=sys.stderr)
             return 1
-        found.append((k, forms(dec, code)))
-    (ka, fa), (kb, fb) = found
-    print(f"{ka}: {sum(fa.values())} instructions, {len(fa)} forms; {kb}: {sum(fb.values())} instructions, {len(fb)} forms")
+        found.append((k, *forms(dec, code)))
+    (ka, fa, ha), (kb, fb, hb) = found
+    print(f"{ka}: {ha}\n{kb}: {hb}")
+    print(
+        f"{ka}: {sum(fa.values())} instructions, {len(fa)} forms; {kb}: {sum(fb.values())} instructions, {len(fb)} forms"
+    )
     print(f"forms whose counts differ ({ka} vs {kb}):")
     for f in sorted(set(fa) | set(fb), key=lambda f: (-(fa[f] - fb[f]), f)):
         if fa[f] != fb[f]:

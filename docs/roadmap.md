@@ -36,11 +36,12 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
 - Since `d1807eb` translates it, pixel program `238181b409956cac` turns the whole level black again:
   `ORBITALS_SKIP_PROGRAMS=238181b409956cac` alone brings the characters back, skipping its near twin `9255edc18c6332c0`
   does not. `class_diff.py --keys 238181b409956cac,9255edc18c6332c0` finds no form unique to it.
-- Suspect (unconfirmed): `.FMZ` on FMUL/FFMA (a zero factor gives 0, also against inf or NaN) was read as an IEEE
-  multiply, so 0 × inf from an overflowing reciprocal gave NaN. The translator now emits `fmzmul` / `fmzfma`
-  (encoding checked against nvdisasm: bit 76). **Next:** rerun `dumped_shaders.py`, run the level without
-  `SKIP_PROGRAMS`. If still black, look at other NaN sources in that program (MUFU RCP/RSQ, FMUL scale), then compare
-  its draw on Lichii.
+- `.FMZ` is not the cause: the dump shows `fmz=FTZ` (flush denormals) on every FMUL/FFMA of both programs, never
+  `.FMZ`. The translator handles `.FMZ` anyway (`fmzmul` / `fmzfma`, `9f9ea7a`; encoding bit 76 checked with nvdisasm).
+- The two programs differ by a few instructions only (592 vs 600): 2 vs 4 `IPA.PASS`, 14 vs 15 `MUFU.RCP`. So the
+  difference is the interface or the data: `class_diff.py` now prints the render targets written, depth output and
+  inputs of each. **Next:** compare those lines; then the constants the draw binds (`ORBITALS_TRACE_UBO=<FS hash>`),
+  `glsl_cpu.py` on one pixel, and the same draw on Lichii.
 
 ### 1.2 A crash after the logos in about one run in three
 
