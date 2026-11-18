@@ -369,14 +369,28 @@ class MemOps:
             n = i.v("URd")
             # ULOP3 URd, URa, URb, URZ with the table of a | b over two ULDC words: Orbitals' combined handles,
             # c[3][texture word] | c[3][sampler word] (tools/shaders/handle_trace.py, 56 programs, 17/11/2026)
-            combo = None
-            if i.op == "ULOP3" and i.v("imm8", 0) == 0xFC and i.v("URc", URZ) == URZ:
+            # The table is a | b whatever URc is (0xfc), or with URc = URZ any table whose c = 0 half reads a | b: the
+            # 6 programs still refused on 18/11/2026 had ULOP3 URd, URa, URb, URc with a non-zero URc (base_origin.py
+            # --tex). UMOV copies a word or a combination (3 of them moved the ULDC word first).
+            combo = copied = None
+            lut, c = i.v("imm8", 0), i.v("URc", URZ)
+            if i.op == "ULOP3" and (lut == 0xFC or (c == URZ and lut & 0x55 == 0x54)) and not i.v("UPg@not", 0) \
+                    and i.v("UPg", PT) == PT:
                 a, b = i.v("URa", URZ), i.v("URb", URZ)
                 if a in self.ur_const and b in self.ur_const:
                     combo = (self.ur_const[a], self.ur_const[b])
+            if i.op == "UMOV" and i.v("UPg", PT) == PT and not i.v("UPg@not", 0):
+                src = next((i.v(r) for r in ("URb", "URa") if i.has(r) and i.v(r) != URZ), None)
+                if src is not None and (src in self.ur_const or src in self.ur_or):
+                    copied = (self.ur_const.get(src), self.ur_or.get(src))
             self.ur_const.pop(n, None), self.ur_or.pop(n, None)
             if combo is not None and n != URZ:
                 self.ur_or[n] = combo
+            if copied is not None and n != URZ:
+                if copied[0] is not None:
+                    self.ur_const[n] = copied[0]
+                if copied[1] is not None:
+                    self.ur_or[n] = copied[1]
             src = None
             if i.op in ("UIADD3", "ULEA", "UMOV", "UIMAD"):
                 src = next((self.ur_ssbo.get(i.v(r), self.ur_derived.get(i.v(r))) for r in ("URa", "URb", "URc")
