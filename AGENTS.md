@@ -17,9 +17,10 @@ folder has a README that names each file: read it before opening the code. The o
   services). If a fix seems to need one, it is the wrong fix.
 - **Nothing of the game in git.** No game code, assets, keys or anything generated from them (C, SPIR-V, dumps,
   screenshots of the game). Generated output lives in `build/`. Install the hook: `git config core.hooksPath tools/git`.
-- **Licenses.** Copy code only from MIT-compatible projects, citing source and commit in the code and in
-  [docs/research.md](docs/research.md#sources). From GPL projects (eden-nx2, oboromi, Eglantine) and unlicensed ones,
-  ideas only.
+- **Licenses.** The project is GPL-3.0-or-later. Copy code only from GPL-3.0-compatible projects (MIT, BSD,
+  Apache-2.0, LGPL, GPL-2.0-or-later, GPL-3.0, among them eden-nx2, Eglantine and Lichii), keeping their headers and
+  citing source and commit in the code and in [docs/research.md](docs/research.md#sources). From GPL-2.0-only
+  (Atmosphere) and unlicensed projects, ideas only.
 - **Console defaults.** Settings for weaker hardware are options; the default is what the console does.
 - **Fix, don't disable.** A feature that causes a bug is fixed where it breaks, not switched off.
 - **Nothing serial that can run elsewhere.** Do not add work to the game thread, or to the replay thread that records
