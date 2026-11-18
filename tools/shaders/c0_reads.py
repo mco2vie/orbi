@@ -29,12 +29,14 @@ def main() -> int:
     ap.add_argument("--dumped", type=Path, required=True, help="the ORBITALS_SPIRV_DUMP folder of a run")
     ap.add_argument("--spec", type=Path, default=Path.cwd() / "sm86/instructions.json")
     ap.add_argument("--hi", type=lambda s: int(s, 0), default=0x110, help="count c0 words below this byte offset")
+    ap.add_argument("--banks", action="store_true", help="instead: per stage and bank, programs and offset range read")
     a = ap.parse_args()
     if not a.spec.is_file():
         print(f"{a.spec} missing: run dumped_shaders.py once (it builds it), or give --spec", file=sys.stderr)
         return 1
     dec = Decoder(a.spec)
     words, progs, total = Counter(), Counter(), Counter()
+    banks, lo, hi = Counter(), {}, {}   # --banks: (stage, bank) -> programs; offset range
     for code in sorted(a.dumped.glob("*.code")):
         raw = code.read_bytes()
         stage = sph_stage(raw) or "cs"
@@ -47,13 +49,26 @@ def main() -> int:
                     continue
                 (_, bank), (slot, addr) = iv.slot_values
                 byte = addr * 4 if slot.width == 14 else addr
-                if bank == 0 and byte < a.hi:
+                if a.banks:
+                    seen.add((bank, byte))
+                elif bank == 0 and byte < a.hi:
                     seen.add(byte)
+        if a.banks:
+            for bank in {b for b, _ in seen}:
+                banks[(stage, bank)] += 1
+            for bank, byte in seen:
+                lo[(stage, bank)] = min(lo.get((stage, bank), byte), byte)
+                hi[(stage, bank)] = max(hi.get((stage, bank), byte), byte)
+            continue
         for byte in seen:
             words[(stage, byte)] += 1
         if seen:
             progs[stage] += 1
     print("programs by stage:", dict(total))
+    if a.banks:
+        for (st, bank), n in sorted(banks.items()):
+            print(f"  {st:4} c[{bank:#x}]  {n} programs, offsets {lo[(st, bank)]:#x}..{hi[(st, bank)]:#x}")
+        return 0
     print(f"programs reading c0 below {a.hi:#x} at fixed addresses:", dict(progs))
     for (st, byte), n in sorted(words.items()):
         print(f"  {st:4} c0[{byte:#06x}]  {n} programs")
