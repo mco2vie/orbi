@@ -172,15 +172,19 @@ class TexOps:
         aoffi = i.sym("aoffi") == "AOFFI"
         gather = i.op == "TLD4"
         ptp = gather and i.sym("toff") == "PTP"
-        if dim not in self.DIMS or i.sym("toff") not in ("notoff", "", "PTP" if gather else "") or (
-            (aoffi or ptp) and dim.startswith("CUBE")
+        # TLD4.AOFFI: one offset for the whole gather, x and y as 6-bit signed fields at bits 0 and 8 of a source
+        # register (Ryujinx's Tld4; TEX packs 4 bits per axis). 2 Orbitals pixel programs, sampled each frame in the
+        # level (18/11/2026).
+        goff = gather and i.sym("toff") == "AOFFI"
+        if dim not in self.DIMS or i.sym("toff") not in ("notoff", "", *(("PTP", "AOFFI") if gather else ())) or (
+            (aoffi or ptp or goff) and dim.startswith("CUBE")
         ):
             raise Unsupported(f"{i.op} {dim} {i.sym('aoffi')}{i.sym('toff')}")
         name, ncoord, is_array = self.DIMS[dim]
         lod, dc = i.sym("lodlc"), i.sym("dc") == "DC"
         g0 = (["idx"] if is_array else []) + [f"c{k}" for k in range(ncoord)]
         # the second group: lod or bias, the packed offsets (AOFFI), the depth reference (Ryujinx's TEX order)
-        g1 = (["lod"] if lod in ("LL", "LB") else []) + (["off"] if aoffi else []) + (["p0", "p1"] if ptp else [])
+        g1 = (["lod"] if lod in ("LL", "LB") else []) + (["off"] if aoffi or goff else []) + (["p0", "p1"] if ptp else [])
         g1 += ["ref"] if dc else []
         # Bindless (classes _b_): the handle is a source, the first of the second group, after the coordinates. Left
         # out, the .SCR forms took a coordinate for the handle (an array's y: 84 Orbitals programs, 17/11/2026) and
@@ -234,6 +238,12 @@ class TexOps:
                 for k in range(4)
             ]
             call = f"vec4({', '.join(f'textureGatherOffset({t}, {args}, {o}{ch}).w' for o in offs)})"
+        elif gather and goff:
+            ch = {"R": 0, "G": 1, "B": 2, "A": 3}[i.sym("comp") or "R"]
+            o = (f"ivec2(bitfieldExtract(int({reg(regs['off'])}), 0, 6), "
+                 f"bitfieldExtract(int({reg(regs['off'])}), 8, 6))")  # fmt: skip
+            call = (f"textureGatherOffset({t}, {vec}, {o}, {ch})" if not dc
+                    else f"textureGatherOffset({t}, {self.split_ref(coords)}, {o})")  # fmt: skip
         elif gather:
             ch = {"R": 0, "G": 1, "B": 2, "A": 3}[i.sym("comp") or "R"]
             call = f"textureGather({t}, {vec}, {ch})" if not dc else f"textureGather({t}, {self.split_ref(coords)})"
