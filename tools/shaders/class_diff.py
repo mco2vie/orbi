@@ -73,7 +73,20 @@ def header(sph) -> str:
     return f"targets [{outs}] depth={int(sph.omap_depth)} inputs [{' '.join(ins)}]"
 
 
-def forms(dec: Decoder, code: Path) -> tuple[Counter, str]:
+def reads(insns) -> set[str]:
+    """Where the program reads from outside its registers: IPA attribute addresses and constant bank words."""
+    out = set()
+    for i in insns:
+        if i.op == "IPA" and i.has("attr"):
+            out.add(f"a[{i.v('attr') * 4:#x}].{i.sym('ipaop') or 'PASS'}")
+        for k, iv in i.f.items():
+            if k.startswith("ConstBankAddress"):
+                (_, bank), (slot, addr) = iv.slot_values
+                out.add(f"c[{bank}][{(addr * 4 if slot.width == 14 else addr):#x}]")
+    return out
+
+
+def forms(dec: Decoder, code: Path) -> tuple[Counter, str, set[str]]:
     raw = code.read_bytes()
     stage = sph_stage(raw) or "cs"
     sph, insns = dec.program(trim(raw, stage), stage)
@@ -81,7 +94,7 @@ def forms(dec: Decoder, code: Path) -> tuple[Counter, str]:
     for i in insns:
         mods = ".".join(f"{m}={i.sym(m)}" for m in MODS if i.sym(m) and i.sym(m).lower() not in ("", "no" + m))
         out[f"{i.op} {i.cls}{' ' + mods if mods else ''}"] += 1
-    return out, header(sph)
+    return out, header(sph), reads(insns)
 
 
 def main() -> int:
@@ -102,7 +115,7 @@ def main() -> int:
             print(f"no dumped program {k}* in {a.dumped}", file=sys.stderr)
             return 1
         found.append((k, *forms(dec, code)))
-    (ka, fa, ha), (kb, fb, hb) = found
+    (ka, fa, ha, ra), (kb, fb, hb, rb) = found
     print(f"{ka}: {ha}\n{kb}: {hb}")
     print(
         f"{ka}: {sum(fa.values())} instructions, {len(fa)} forms; {kb}: {sum(fb.values())} instructions, {len(fb)} forms"
@@ -111,6 +124,9 @@ def main() -> int:
     for f in sorted(set(fa) | set(fb), key=lambda f: (-(fa[f] - fb[f]), f)):
         if fa[f] != fb[f]:
             print(f"  {fa[f]:4} {fb[f]:4}  {f}")
+    print(f"reads only {ka}: {' '.join(sorted(ra - rb)) or '-'}")
+    print(f"reads only {kb}: {' '.join(sorted(rb - ra)) or '-'}")
+    print(f"reads both: {len(ra & rb)} words; IPA in {ka}: {' '.join(sorted(r for r in ra if r.startswith('a[')))}")
     return 0
 
 
