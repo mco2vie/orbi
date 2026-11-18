@@ -71,7 +71,8 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
 - Geometry stages are now translated (`sm86/translate/glsl/geom.py`, Ryujinx semantics: `ISBERD` passes the vertex
   index, `S2R SR_INVOCATION_INFO` is input vertices << 16) and run on triangle draws (`VkPipeState.gs`, monolithic
   pipelines, no libraries; a stage with resources is refused). Checked offline: the listing rebuilt as instructions
-  translates, compiles and passes spirv-val. **Next:** rerun `dumped_shaders.py`, then the colony: the log line
+  translates, compiles and passes spirv-val. recomp44: translated on the player's machine (751/753), but the runtime
+  refused its `.res.json` (`reflection_valid` did not know `"gs"`): "no prepared SPIR-V", fixed. **Next:** rerun `dumped_shaders.py`, then the colony: the log line
   `has a geometry stage ...: run on its triangle draws`, and the LUT (`ORBITALS_DUMP_FS=3196324f4cfd42ac`) with all
   32 slices.
 - Skipping 238181b4 hid this: the tonemapper then read stale data. The dark environment in the lighting output is a

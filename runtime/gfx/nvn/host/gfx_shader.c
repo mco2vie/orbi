@@ -106,8 +106,11 @@ static int reflection_valid(const char *res, uint64_t size) {
     const char *st = strstr(b, "\"stage\"");
     if (!st) return 0;
     st = strchr(st + 7, '"');
+    // gs: geometry programs (sm86 glsl/geom.py). Missing here, their prepared files were refused as invalid and the
+    // runtime logged "no prepared SPIR-V" for a translated program (Orbitals colony, 18/11/2026)
     return st && (!strncmp(st, "\"vs\"", 4) || !strncmp(st, "\"ps\"", 4) || !strncmp(st, "\"cs\"", 4) ||
-                  !strncmp(st, "\"task\"", 6) || !strncmp(st, "\"mesh\"", 6));   // task/mesh: reflect() mesh_kind
+                  !strncmp(st, "\"gs\"", 4) || !strncmp(st, "\"task\"", 6) ||
+                  !strncmp(st, "\"mesh\"", 6));   // task/mesh: reflect() mesh_kind
 }
 
 // Every instruction after the header has a word count and the last one ends at the module's end: a module with
