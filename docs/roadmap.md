@@ -19,7 +19,13 @@ the same dump on [Lichii](https://github.com/sinedgiveaways/Lichii-tool) (an Ede
 
 ## 1. Open problems, most blocking first
 
-### 1.1 The level's world draws black
+### 1.1 The level's world draws black (fixed 18/11/2026; the lighting is still too dark)
+
+recomp45 (`92f4c8c`): the colony draws, both split-screen halves: characters, the environment, lights, HUD. The cause
+was the geometry stage the pipelines left out (below). Left: the environment is much darker than on Lichii, some
+noisy or flat patches remain (a translucent panel drawn as a flat grey quad, grainy surfaces). **Next:** that is 1.1b.
+
+How it was found, for the record:
 
 Only the HUD, emissive glows and a few edges show in the first level; Lichii shows the colony lit.
 
@@ -77,6 +83,13 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   32 slices.
 - Skipping 238181b4 hid this: the tonemapper then read stale data. The dark environment in the lighting output is a
   separate fault.
+
+### 1.1b The environment is too dark
+
+The clustered deferred lighting `d18042401d56bbea` (light grid r32ui 20x20x100) already outputs a dark environment
+while the characters are lit (recomp41). Candidates: the light grid (built by compute) or the lights' data, the
+G-buffer of the environment's materials, shadows. **Next:** a dump of that pass with `ORBITALS_DUMP_UBO=1`, its light
+grid volume, and the same pass on Lichii.
 
 ### 1.2 A crash after the logos in about one run in three
 
