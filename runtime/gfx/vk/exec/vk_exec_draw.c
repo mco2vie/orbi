@@ -124,6 +124,32 @@ int find_stage(const prog_t *p, int nvn_stage, const uint8_t **ctl, const uint8_
     return 1;
 }
 
+// Programs with a geometry or tessellation stage (NVN 2, 3, 4): the pipelines are built from the vertex and fragment
+// stages only (vk_pipeline.c), so those stages are not run. Logged once per program, up to 32, with the stage's
+// program key: Orbitals' colour-grading LUT (32x32x32, drawn as 32 instances into 32 layers) came out with only
+// layer 0 written and its vertex stage writes no layer (18/11/2026); the layer would come from a geometry stage.
+static void note_extra_stages(const VkExec *ex) {
+    static PlatMutex lock = PLAT_MUTEX_INIT;
+    static uint64_t seen[32];
+    static int nseen;
+    static const char *const names[] = {"geometry", "tessellation control", "tessellation evaluation"};
+    for (int st = 2; st <= 4; st++) {
+        const uint8_t *ctl, *code;
+        uint32_t len;
+        if (!find_stage(ex->prog, st, &ctl, &code, &len)) continue;
+        plat_mutex_lock(&lock);
+        int k = 0;
+        while (k < nseen && seen[k] != ex->prog->serial) k++;
+        int fresh = k == nseen && nseen < 32;
+        if (fresh) seen[nseen++] = ex->prog->serial;
+        plat_mutex_unlock(&lock);
+        if (fresh)
+            rt_log("vk: program %llu has a %s stage (%u bytes of code), not run: pipelines take the vertex and fragment "
+                   "stages only", (unsigned long long)ex->prog->serial, names[st - 2], len);
+        return;
+    }
+}
+
 // Which TEX/IMG bindings of a compute program have an integer-format view bound: the translator reads them as float
 // and takes the bits (floatBitsToUint), as SM86 does; in Vulkan a float image over an integer view is undefined
 // (format-07753): AMD and NVIDIA return the bits, Intel Arc drew the race black (issue #64). Array and buffer
@@ -518,6 +544,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         SM.valid = 0;
         vs = shader_for(ex, NVN_STAGE_VS, &has_vs);
         fs = shader_for(ex, NVN_STAGE_FS, &has_fs);
+        note_extra_stages(ex);
         if (memo && vs && (!has_fs || fs))
             memo_key(ex, &SM.k), SM.vs = vs, SM.fs = fs, SM.has_fs = has_fs, SM.valid = 1;
     }

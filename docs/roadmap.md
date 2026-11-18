@@ -57,8 +57,19 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   black somewhere after the composite: bloom (`03b151f849cc3f6f`, the 960x540 to 15x17 chain), the 1x1 computes
   `b1c0ee32fec29921` / `88cbd364b84c0669` (eye adaptation?), `3196324f4cfd42ac` (TAA?), `899b938acbed2d8a`, tonemap.
   Skipping 238181b4 leaves `0xf6d6f0000`/`0xf6e800000` stale, and that changes what this chain computes.
-- **Next:** `ORBITALS_DUMP_FS=69b9eb2009c11c75` with `ORBITALS_DUMP_FS_AFTER=80`: the composite and every pass after
-  it, so the first black image names the faulty pass.
+- With `ORBITALS_DUMP_FS=69b9eb2009c11c75` and `ORBITALS_DUMP_FS_AFTER=80` (recomp42): bloom and exposure are
+  right (the 1x1 exposure is 1.0667, no NaN). The frame goes black at the tonemapper `3196324f4cfd42ac` (pass 600:
+  input max 6.94, output all 0). It grades through a 32x32x32 rgb10a2 LUT (tex 699, then 3789 for the other half),
+  drawn just before by `vs b05e3b1c71c467e5` / `fs 31a8a47efac993e5` as one instanced draw into 32 layers. Only
+  slice 0 holds data (a red/green ramp); slices 1-31 are 0 (blue max 0). So most colours grade to black.
+- That vertex shader uses `gl_InstanceIndex` and writes no layer (no `a[0x64]` AST; the translator would refuse it).
+  The layer must come from a stage the runtime does not run: the pipelines take VS and FS only (`vk_pipeline.c`).
+  `vk_exec_draw.c` now logs programs with a geometry or tessellation stage (`program N has a geometry stage`).
+  **Next:** a run to the colony and that log line. If a GS shows up: translate SM86 GS (`OUT`, the SPH's output
+  topology and vertex count) and add it to the pipeline. If none does, look at how NVN2 picks the layer (VS SPH
+  system-value bits, `nvnCommandBufferSetGeometryProcessingMode`).
+- Skipping 238181b4 hid this: the tonemapper then read stale data. The dark environment in the lighting output is a
+  separate fault.
 
 ### 1.2 A crash after the logos in about one run in three
 
