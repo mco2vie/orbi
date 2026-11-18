@@ -41,6 +41,7 @@
 #include "vk_exec.h"
 #include "platform/platform.h"
 #include "vk_dump_internal.h"
+#include "vk_draw_internal.h"
 
 
 // The host buffers come from an allocator of their own: the runtime's has ORBITALS_GPU_MEM_LIMIT's heap limits, which a
@@ -213,7 +214,14 @@ static const char *wrap_name(int w) {
     return w >= 0 && w < 8 ? n[w] : "?";
 }
 
-static uint64_t handle_of(const VkExec *ex, int st, int slot, int img) {
+// The handle a binding resolves as vk_exec_bind.c does: from a user uniform block (cbuf_slot 3 and up, OR'ed with handle2:
+// Unreal's texture | sampler words), else the stage's bound slot. With the block form left out, every Orbitals texture
+// was listed "no handle (dummy)" while the draw had its handle (17/11/2026).
+static uint64_t handle_of(const VkExec *ex, int st, const GfxShaderRes *r, uint32_t k, int img) {
+    if (r->cbuf_slot >= 3)
+        return ubo_word(ex, st, r->cbuf_slot, r->handle + k) |
+               (r->handle2 >= 0 ? ubo_word(ex, st, r->cbuf_slot, (uint32_t)r->handle2 + k) : 0);
+    int slot = r->slot + (int)k;
     if (img) return slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
     return slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
 }
@@ -265,14 +273,28 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
         int st = nvn_stage(bd->stage), img = bd->kind == GFX_RES_IMG;
         char dt[24], fn[16];
         if (bd->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER || bd->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-            sp(b, "    %s %s slot %d: buffer texture (zero view bound)\n", stn[st], img ? "img" : "tex", r->slot);
+            for (uint32_t k = 0; k < (bd->count ? bd->count : 1u); k++) {
+                uint64_t h = handle_of(ex, st, r, k, img), addr = 0;
+                int fmt = 0;
+                uint32_t texels = 0;
+                int ok = h && vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels);
+                sp(b, "    %s %s c%d+%#x: buffer texture handle %#llx", stn[st], img ? "img" : "tex", r->cbuf_slot,
+                   r->handle * 4, (unsigned long long)h);
+                if (ok) sp(b, " slot %d addr %#llx fmt %#x %u texels\n", (int)(h & 0xfffff), (unsigned long long)addr, fmt, texels);
+                else sp(b, h ? " not a buffer texture slot (zero view)\n" : " (zero view)\n");
+            }
             continue;
         }
         for (uint32_t k = 0; k < (bd->count ? bd->count : 1u); k++) {
             int slot = r->slot + (int)k;
-            uint64_t h = handle_of(ex, st, slot, img);
-            sp(b, "    %s %s slot %d decl %s%s: ", stn[st], img ? "img" : "tex", slot, decl_type(r->type, dt),
-               img && (r->flags & 4) ? " store" : "");
+            uint64_t h = handle_of(ex, st, r, k, img);
+            if (r->cbuf_slot >= 3)
+                sp(b, "    %s %s c%d+%#x|%#x decl %s%s: handle %#llx, ", stn[st], img ? "img" : "tex", r->cbuf_slot,
+                   r->handle * 4, r->handle2 >= 0 ? (unsigned)r->handle2 * 4 : 0u, decl_type(r->type, dt),
+                   img && (r->flags & 4) ? " store" : "", (unsigned long long)h);
+            else
+                sp(b, "    %s %s slot %d decl %s%s: ", stn[st], img ? "img" : "tex", slot, decl_type(r->type, dt),
+                   img && (r->flags & 4) ? " store" : "");
             if (!h) { sp(b, "no handle (dummy)\n"); continue; }
             view_t v;
             int hv = 0;
@@ -339,7 +361,7 @@ static uint64_t bindings_hash(const VkExec *ex, const VkPipeInfo *info) {
         }
         if (!bd->res || (bd->kind != GFX_RES_TEX && bd->kind != GFX_RES_IMG)) continue;
         for (uint32_t k = 0; k < (bd->count ? bd->count : 1u); k++)
-            h = (h ^ handle_of(ex, nvn_stage(bd->stage), bd->res->slot + (int)k, bd->kind == GFX_RES_IMG)) * 0x100000001b3ull;
+            h = (h ^ handle_of(ex, nvn_stage(bd->stage), bd->res, k, bd->kind == GFX_RES_IMG)) * 0x100000001b3ull;
     }
     return h;
 }
@@ -568,7 +590,7 @@ void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info,
         const VkPipeBinding *bd = &info->bindings[i];
         if (!bd->res || bd->kind != GFX_RES_IMG || !(bd->res->flags & 4) || bd->type != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
             continue;
-        uint64_t h = handle_of(ex, 5, bd->res->slot, 1);
+        uint64_t h = handle_of(ex, 5, bd->res, 0, 1);
         view_t v;
         int hv = 0;
         const VkTexImage *t = h ? vk_texture_by_id(NVN_HANDLE_TEX(h), &v, &hv) : NULL;
@@ -604,7 +626,7 @@ void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPip
         const VkPipeBinding *bd = &info->bindings[i];
         if (!bd->res || bd->kind != GFX_RES_IMG || !(bd->res->flags & 4) || bd->type != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
             continue;
-        uint64_t h = handle_of(ex, 5, bd->res->slot, 1);
+        uint64_t h = handle_of(ex, 5, bd->res, 0, 1);
         view_t v;
         int hv = 0;
         const VkTexImage *t = h ? vk_texture_by_id(NVN_HANDLE_TEX(h), &v, &hv) : NULL;
