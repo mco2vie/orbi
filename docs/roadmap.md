@@ -131,9 +131,15 @@ the lighting would see no light anywhere.
 
 The dump did not copy the volumes: a texture first sampled in a skipped pass was marked done and never copied again;
 fixed (`drop_luts`). The pass line now also gives a 3D texture's guest memory as words (all ones, zero, other).
-**Next:** the same dump (`ORBITALS_DUMP_FS=d18042401d56bbea`): the grid's image (`lut<id>` in `images.txt`) against
-its guest words. Image all ones and guest memory with other values: the upload misses the CPU's writes. Both all
-ones: the writer is on the GPU or elsewhere (then `ORBITALS_WB_UNSIZED=merge` as an A/B).
+recomp47 (that dump with the fix): there are two grids, one per half (`0xfe7bd3000`, `0xfe7c95000`). Their images
+are all `0xffffffff`; their guest memory is all zero. The lighting shader (`sh_d18042401d56bbea.spv` through
+spirv-cross) fetches a cell with `texelFetch` and skips it when it reads `0xffffffff`, so it finds no light anywhere.
+Its lights come from a read-only storage buffer (binding 4) indexed through the grid. The image's ones did not come
+from guest memory (that would be zeros), and nothing writes the grids in the dumped frame: no copy, clear, storage
+image or buffer range. `nvnTextureWriteTexels` is never called; `ClearTexture` and `CopyBufferToTexture` are.
+**Next:** `ORBITALS_TRACE_3D=1` now logs every upload, clear and copy into a 3D texture with its frame (at most 512
+lines): who set the ones, and whether a fill (a copy from a buffer the CPU writes, most likely) runs and where it
+goes.
 
 ### 1.2 A crash after the logos in about one run in three
 

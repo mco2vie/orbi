@@ -576,6 +576,11 @@ static void copy_buffer_image(VkExec *ex, const p_copy_b2t *p, int to_image) {
     VkMemSpan m;
     if (!buffer_side(ex, &s, p->src, &size, &c, &m)) return;
     vk_mem_count(m.cls, to_image ? VK_MUSE_COPY_SRC : VK_MUSE_GPU_WRITE, size);
+    if (s.img->type == VK_IMAGE_TYPE_3D && vk_trace_3d_on())
+        rt_log("vk: frame %llu: copy %s 3D %#llx %ux%ux%u fmt %#x, buffer %#llx, %llu bytes, region %d,%d,%d %ux%ux%u",
+               (unsigned long long)__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED), to_image ? "into" : "out of",
+               (unsigned long long)(uintptr_t)p->tex->mem, p->tex->d.width, p->tex->d.height, p->tex->d.depth,
+               p->tex->d.format, (unsigned long long)p->src, (unsigned long long)size, s.x, s.y, s.z, s.w, s.h, s.nz);
     vk_exec_pass_end(ex);
     vk_exec_barrier(ex);
     uint32_t crumb = vk_crumb_op(ex->cb, to_image ? "buffer to image copy" : "image to buffer copy", s.w, s.h);
@@ -632,6 +637,12 @@ static void copy_t2t(VkExec *ex, const p_copy_t2t *p) {
     if (astc_into_sparse(p)) return;
     if (!sub_resolve(p->src, &p->sv, p->has_sv, &p->sr, 1, &s, 1)) return;
     if (!sub_resolve(p->dst, &p->dv, p->has_dv, &p->dr, 1, &d, 1)) return;
+    if (d.img->type == VK_IMAGE_TYPE_3D && vk_trace_3d_on())
+        rt_log("vk: frame %llu: copy into 3D %#llx %ux%ux%u fmt %#x from texture %#llx %ux%ux%u fmt %#x",
+               (unsigned long long)__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED),
+               (unsigned long long)(uintptr_t)p->dst->mem, p->dst->d.width, p->dst->d.height, p->dst->d.depth,
+               p->dst->d.format, (unsigned long long)(uintptr_t)p->src->mem, p->src->d.width, p->src->d.height,
+               p->src->d.depth, p->src->d.format);
     // ASTC decoded on upload (MKW fills its sparse ASTC arrays from 8192x8192 ASTC textures, run-sp1): a copy of the
     // decoded texels when both sides are the same ASTC block in the same Vulkan format (BC7 or RGBA8).
     int to_bc7 = d.img->format == VK_FORMAT_BC7_SRGB_BLOCK || d.img->format == VK_FORMAT_BC7_UNORM_BLOCK;
@@ -786,6 +797,11 @@ static void clear_tex(VkExec *ex, const p_clear_tex *p) {
                   s.x, s.y, s.w, s.h, p->mask, lw, lh, reformat);
         return;
     }
+    if (is3d && vk_trace_3d_on())
+        rt_log("vk: frame %llu: clear 3D %#llx %ux%ux%u fmt %#x to %#x %#x %#x %#x (uint %d)",
+               (unsigned long long)__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED),
+               (unsigned long long)(uintptr_t)t->mem, t->d.width, t->d.height, t->d.depth, t->d.format, p->c.u[0],
+               p->c.u[1], p->c.u[2], p->c.u[3], p->is_uint);
     VkImageSubresourceRange rng = {img->aspect, s.level, 1, is3d ? 0 : s.layer0 + (uint32_t)s.z, is3d ? 1 : s.nz};
     if (img->aspect & VK_IMAGE_ASPECT_COLOR_BIT) {
         rng.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
