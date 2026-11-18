@@ -1,29 +1,48 @@
 # Roadmap
 
 What is being worked on, in order of priority: Orbitals playable from boot (no crash, a picture as on the console),
-then nothing hanging the GPU, then the frame rate. Updated 17/11/2026 (branch `diag/frame-history-trace`; how the
+then nothing hanging the GPU, then the frame rate. Updated 18/11/2026 (branch `diag/frame-history-trace`; how the
 work is done with a player's machine: [workflow.md](workflow.md)).
 
 All measurements below are from one machine: Windows 11, RTX 4080, NVIDIA 616.92, Orbitals Deluxe Edition 1.0.5
 (program `040032B023CA4000`, main build `d6efcc0a51c1c792`) with its add-on, from a `.nup` package. The reference is
-the same dump on [Lichii](https://github.com/sinedgiveaways/Lichii-tool) (an Eden fork, used as a measuring tool only).
+the same dump on [Lichii](https://github.com/sinedgiveaways/tool) (repository `sinedgiveaways/tool`, formerly
+`Lichii-tool`; an Eden fork, used as a measuring tool only).
 
 ## Where the game is
 
 - Boot, the three logos, the warning, the title, the main menu, the Deluxe add-on ("CONTENU BONUS DÉVERROUILLÉ",
-  "GALERIE Deluxe"), the controller screen, the hero choice, the intro cutscenes and the start of the first level
-  (split screen) run, with sound and both controllers, at 30 fps.
+  "GALERIE Deluxe"), the controller screen, the hero choice, the intro cutscenes and the first level (the colony, split
+  screen) run, with sound and both controllers, at 30 fps. Since `92f4c8c` (18/11/2026) the colony draws: characters,
+  environment, lights and HUD in both halves; the environment is still too dark (1.1b).
 - Shaders: Orbitals' programs live in Unreal containers the setup does not read, so a run dumps every program it has
   no SPIR-V for into `<game>/spirv-dump` (default since `ffce7da`) and `tools/prepare/dumped_shaders.py` translates
-  them. After a run into the first level: 687 programs dumped, 674 translated (98.1 %).
+  them. After a run into the colony: 753 programs dumped (cs 99, ps 488, vs 165, gs 1), 751 translated; the two left
+  are pixel programs `93b54007c4699bde` and `e2d9a1f0ae647869` (`tex_scr_urc_`, 1.3).
+- Geometry stages are translated and run (`sm86/translate/glsl/geom.py`, 1.1). Tessellation is not (no Orbitals
+  program has it so far; `vk_exec_draw.c` logs any program that does).
 
 ## 1. Open problems, most blocking first
 
-### 1.1 The level's world draws black (fixed 18/11/2026; the lighting is still too dark)
+### 1.1 The level's world drew black (fixed 18/11/2026)
 
-recomp45 (`92f4c8c`): the colony draws, both split-screen halves: characters, the environment, lights, HUD. The cause
-was the geometry stage the pipelines left out (below). Left: the environment is much darker than on Lichii, some
-noisy or flat patches remain (a translucent panel drawn as a flat grey quad, grainy surfaces). **Next:** that is 1.1b.
+recomp45 (`92f4c8c`): the colony draws in both split-screen halves. The causes, in the order they were fixed:
+
+1. Texture handles OR'ed from two constant words through uniform registers were not traced (`d1807eb`): the
+   G-buffer passes wrote black. Fixed, the G-buffer is right.
+2. The colour-grading LUT (32x32x32 rgb10a2) is drawn as one instanced draw into 32 layers, and the layer comes from a
+   **geometry stage** the pipelines left out: only layer 0 was written, and the tonemapper `3196324f4cfd42ac` graded
+   every colour to black. Fixed by translating geometry programs (`7e1ef12`) and accepting their prepared files
+   (`92f4c8c`).
+
+Lessons for the next black frame: `ORBITALS_SKIP_PROGRAMS` changes what later passes read (skipping the composite
+`238181b4` left a stale target, and the tonemapper then showed the characters), so it points at the pass whose
+output matters, not at the faulty one. `ORBITALS_DUMP_FS=<hash>` with `ORBITALS_DUMP_FS_AFTER=<n>` follows one pass
+and the chain after it, whatever the pass numbers (they move between runs); the first all-zero image names the pass.
+Then read that pass's inputs (`images.txt`: a 3D LUT with a channel max of 0 is a missing layer).
+
+What remains visible: the environment is much darker than on Lichii (1.1b); some patches are wrong (a translucent
+panel drawn as a flat grey quad, grainy surfaces), not looked at yet.
 
 How it was found, for the record:
 
@@ -78,18 +97,29 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   index, `S2R SR_INVOCATION_INFO` is input vertices << 16) and run on triangle draws (`VkPipeState.gs`, monolithic
   pipelines, no libraries; a stage with resources is refused). Checked offline: the listing rebuilt as instructions
   translates, compiles and passes spirv-val. recomp44: translated on the player's machine (751/753), but the runtime
-  refused its `.res.json` (`reflection_valid` did not know `"gs"`): "no prepared SPIR-V", fixed. **Next:** rerun `dumped_shaders.py`, then the colony: the log line
-  `has a geometry stage ...: run on its triangle draws`, and the LUT (`ORBITALS_DUMP_FS=3196324f4cfd42ac`) with all
-  32 slices.
+  refused its `.res.json` (`reflection_valid` did not know `"gs"`): "no prepared SPIR-V", fixed in `92f4c8c`.
+  recomp45: 32 programs logged `has a geometry stage ...: run on its triangle draws`; the colony draws.
 - Skipping 238181b4 hid this: the tonemapper then read stale data. The dark environment in the lighting output is a
   separate fault.
 
 ### 1.1b The environment is too dark
 
-The clustered deferred lighting `d18042401d56bbea` (light grid r32ui 20x20x100) already outputs a dark environment
-while the characters are lit (recomp41). Candidates: the light grid (built by compute) or the lights' data, the
-G-buffer of the environment's materials, shadows. **Next:** a dump of that pass with `ORBITALS_DUMP_UBO=1`, its light
-grid volume, and the same pass on Lichii.
+The frame chain of the colony (recomp40-42, per split-screen half; SPIR-V hashes as `passes.txt` shows them):
+
+| Step | Shader | Reads | Writes |
+|---|---|---|---|
+| G-buffer (base pass) | material shaders | | scene colour (rgba16f, emissive), 7 targets (rgb10a2, bgra8, bgra8srgb) |
+| Clustered deferred lighting | fs `d18042401d56bbea` | depth, G-buffer, scene colour, light grid (3D r32ui 20x20x100), 1024x1024x8 r8 volume | lit scene colour |
+| Composite / reflections | fs `69b9eb2009c11c75` (program 238181b4) | depth, G-buffer, two 256x256 rgba16f tables, lit scene | composite |
+| Bloom | fs `03b151f849cc3f6f` and the 960x540 to 15x17 chain | composite | bloom 480x270 |
+| Exposure | cs `b1c0ee32fec29921`, `88cbd364b84c0669` | | 1x1 rgba32f (1.0667) |
+| LUT | vs `b05e3b1c71c467e5`, gs (the layer selector), fs `31a8a47efac993e5` | | 32x32x32 rgb10a2 |
+| Tonemap | fs `3196324f4cfd42ac` | composite, bloom, LUT, depth | rgba16f |
+
+The lighting `d18042401d56bbea` already outputs a dark environment while the characters are lit (recomp41).
+Candidates: the light grid (built by compute) or the lights' data, the environment's G-buffer, shadows, the 3D r8
+volume. **Next:** `ORBITALS_DUMP=4500`, `ORBITALS_DUMP_FS=d18042401d56bbea`, `ORBITALS_DUMP_UBO=1`: its inputs, its
+uniform blocks and the light grid; and the same view on Lichii to compare.
 
 ### 1.2 A crash after the logos in about one run in three
 
@@ -111,9 +141,15 @@ The structure was corrupted earlier; the code reading it is right.
 - The "MAINTENIR (B) POUR PASSER" prompt is not drawn during cutscenes; holding B (Xbox B) does skip them.
 - Logos 2 and 3 (Shapefarm, Kepler) are silent; on Lichii they have sound from about 10 to 18 s after start. Not
   investigated yet; the movie library (`nn::movie`, subsdk0) is initialized but no playback call shows in the logs.
-- 13 programs are still refused by the translator: 5 `tex_scr_urc_` (handle in a uniform register not traced:
-  `tools/shaders/base_origin.py --tex` shows where from), 3 `red__RaNonRZ` and 1 `atomg__RaNonRZ` (untraced global
-  base), 2 `TLD4 2D AOFFI`, 2 shared-memory `ATOMS` forms.
+- 2 programs are still refused by the translator, pixel programs `93b54007c4699bde` and `e2d9a1f0ae647869`:
+  `tex_scr_urc_`, a texture handle in a uniform register not traced to a constant bank (likely a predicated UMOV or
+  ULOP3 on the way; `tools/shaders/base_origin.py --tex` and `handle_trace.py` show the writes). Fixed since
+  17/11/2026: `TLD4.AOFFI` (`d59d10a`), shared `ATOMS` and untraced `RED`/`ATOMG` bases through a run-time search
+  (`1211e9c`), handles OR'ed through uniform registers (`d1807eb`), geometry programs (`7e1ef12`).
+- The three boot logos cannot be skipped. The game reads Unreal's command line from `rom:/UECommandLine.txt` and calls
+  `nn::os::GetHostArgc/Argv`, so arguments could be passed (a mod replacing the file, or the runtime answering
+  GetHostArgv); whether any argument skips these logos is not known (`-nomoviestartup` is Unreal 3's). Keep them in
+  diagnostic runs: the 1.2 crash happens right after them.
 
 ## 2. Known trade-offs in the code
 
