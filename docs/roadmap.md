@@ -65,9 +65,11 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
 - That vertex shader uses `gl_InstanceIndex` and writes no layer (no `a[0x64]` AST; the translator would refuse it).
   The layer must come from a stage the runtime does not run: the pipelines take VS and FS only (`vk_pipeline.c`).
   `vk_exec_draw.c` now logs programs with a geometry or tessellation stage (`program N has a geometry stage`).
-  **Next:** a run to the colony and that log line. If a GS shows up: translate SM86 GS (`OUT`, the SPH's output
-  topology and vertex count) and add it to the pipeline. If none does, look at how NVN2 picks the layer (VS SPH
-  system-value bits, `nvnCommandBufferSetGeometryProcessingMode`).
+  recomp43: 10 programs have one (685, 757, 14610, 40292, 45926, 185035, ...), each 1024 bytes of code. The
+  lookup now dumps that stage into spirv-dump. **Next:** `tools/shaders/show.py` prints it (in chat only). Then
+  translate SM86 GS (inputs per vertex through ALD with a vertex register, `OUT.EMIT`/`OUT.CUT`, AST with the output
+  handle, the SPH's output topology and vertex count; Ryujinx `InstEmitAttribute.cs` / `InstEmitOut` for the
+  semantics) and add the stage to `vk_pipeline.c`.
 - Skipping 238181b4 hid this: the tonemapper then read stale data. The dark environment in the lighting output is a
   separate fault.
 

@@ -143,9 +143,14 @@ static void note_extra_stages(const VkExec *ex) {
         int fresh = k == nseen && nseen < 32;
         if (fresh) seen[nseen++] = ex->prog->serial;
         plat_mutex_unlock(&lock);
-        if (fresh)
+        if (fresh) {
             rt_log("vk: program %llu has a %s stage (%u bytes of code), not run: pipelines take the vertex and fragment "
                    "stages only", (unsigned long long)ex->prog->serial, names[st - 2], len);
+            // The lookup dumps the stage into spirv-dump when it has no SPIR-V (gfx_shader.c prepared_get): the
+            // translator's input for it (tools/shaders/show.py prints it)
+            GfxShaderAnswers a = {0};
+            (void)gfx_shader_get(ctl, code, &a);
+        }
         return;
     }
 }
