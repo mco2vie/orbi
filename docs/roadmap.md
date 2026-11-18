@@ -44,9 +44,14 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   four 1920x1080 bgra8 G-buffer targets, two 256x256 rgba16f tables and the scene colour `0xf49130000`, and writes
   `0xf795a0000`, which pass 426 (`3196324f4cfd42ac`) reads: the lighting composite everything after it shows.
   Skipping it leaves the characters because the later passes then read whatever `0xf795a0000` held.
-- That dump has no image after pass 257 ("too many copies in flight"). **Next:** `ORBITALS_DUMP_PASSES=360-400` with
-  `ORBITALS_DUMP_UBO=1`: its inputs and output, and its uniform blocks with any NaN rows. A black input points at the
-  passes that write it; good inputs and a black output at the program (then `glsl_cpu.py` on one pixel).
+- The next dump (recomp40, `ORBITALS_DUMP_PASSES=360-400`) missed it: pass numbers move between runs, the composite
+  was at 498 and 531. It showed the chain: the base pass writes scene colour `0xf351f0000` (G-buffer pass t0); the
+  clustered deferred lighting `d18042401d56bbea` (pass 497, light grid r32ui 20x20x100) reads it with the G-buffer and
+  writes `0xf2df60000`; the composite `69b9eb2009c11c75` (238181b4) reads that and writes `0xf6e800000`. Its uniform
+  blocks look sane (c4: viewport rectangles and inverse sizes 1/800, 1/900); the "not finite" rows 280-295 of c5
+  hold integers (12, 17, all-ones), not floats.
+- **Next:** `ORBITALS_DUMP_FS=d18042401d56bbea,69b9eb2009c11c75` copies only the passes those shaders draw in. A
+  black `0xf2df60000` puts the fault in the lighting pass, a good one with a black `0xf6e800000` in the composite.
 
 ### 1.2 A crash after the logos in about one run in three
 

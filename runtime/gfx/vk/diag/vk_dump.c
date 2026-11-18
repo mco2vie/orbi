@@ -28,6 +28,9 @@
 // ORBITALS_DUMP_PASSES=<from>-<to>: only passes and dispatches from..to (numbers of passes.txt) are copied; the others
 // are logged. The copies of a whole frame fill INFLIGHT_CAP by pass 257, so the passes after it never had images
 // (Orbitals colony, 18/11/2026: the lighting composite at passes 364 and 396).
+// ORBITALS_DUMP_FS=<hash>[,...]: only render passes with a draw by one of those fragment shaders (the SPIR-V hashes of
+// passes.txt) are copied, dispatches not at all. Pass numbers move between runs (that composite was at 498 and 531 in
+// the next one), shader hashes do not while the translation stays the same.
 // ORBITALS_DUMP_DRAWS: a copy of the first colour target after each draw of a run of passes (vk_dump_draws.c).
 // The parts: vk_dump_img.c (formats, image copies and PNGs), vk_dump_buf.c (ORBITALS_DUMP_BUF) and vk_dump_draws.c
 // (ORBITALS_DUMP_DRAWS), sharing vk_dump_internal.h.
@@ -78,6 +81,8 @@ FILE *passes_f;
 static int seq, finished, copied;      // copied: passes and dispatches of the dump frame whose images were copied
 static int skip_runs, dump_ubo;        // ORBITALS_DUMP_SKIP_RUNS, ORBITALS_DUMP_UBO
 static int pass_from, pass_to = -1;   // ORBITALS_DUMP_PASSES; -1: every pass
+static uint64_t want_fs[16];           // ORBITALS_DUMP_FS
+static int nwant_fs, fs_hit;           // fs_hit: a draw of the pass being recorded used one of want_fs
 static int luts_only;                  // ORBITALS_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
 static uint32_t want_tex[16][2];       // ORBITALS_DUMP_TEX: slot id and 0, or width and height
 static int nwant_tex;
@@ -409,6 +414,10 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
     if (!active()) goto out;
     draws_select(ex, s, seq);
     pass_draws++;
+    if (nwant_fs && s->fs && !fs_hit) {
+        uint64_t fh = shader_hash(s->fs);
+        for (int k = 0; k < nwant_fs; k++) fs_hit |= want_fs[k] == fh;
+    }
     uint64_t th = bindings_hash(ex, info);
     for (int i = 0; i < nents; i++)
         if (ents[i].p == p && ents[i].th == th) {
@@ -488,11 +497,12 @@ uint64_t targets_sig(const VkExec *ex) {
 }
 
 // Sets pass_skip for the pass or dispatch being logged and counts it when it copies.
-static void pass_decide(int same_targets) {
+static void pass_decide(int same_targets, int wanted_fs) {
     if (frame_now() != dump_frame) copied = 0;
     int n = seq - 1;   // the caller numbered this pass already
     pass_skip = luts_only                                      ? "volumes only"
                 : pass_to >= 0 && (n < pass_from || n > pass_to) ? "outside ORBITALS_DUMP_PASSES"
+                : nwant_fs && !wanted_fs                       ? "no draw by ORBITALS_DUMP_FS"
                 : copied >= MAX_PASSES                         ? "pass cap"
                 : same_targets                                 ? "same targets as the previous pass"
                                                                : NULL;
@@ -563,7 +573,8 @@ void vk_dump_pass_end(VkExec *ex) {
     if (!active()) goto out;
     int n = seq++;
     uint64_t sig = targets_sig(ex);
-    pass_decide(skip_runs && sig == last_targets);
+    pass_decide(skip_runs && sig == last_targets, fs_hit);
+    fs_hit = 0;
     last_targets = sig;
     pass_skip = draws_pass_end(sig, pass_skip);
     fprintf(passes_f, "pass %04d: render pass, draws %d, area %ux%u layers %u, fence %llu, frame %llu\n", n, pass_draws,
@@ -629,7 +640,7 @@ void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPip
     plat_mutex_lock(&rec_lock);
     if (!active()) goto out;
     int n = seq++;
-    pass_decide(0);
+    pass_decide(0, 0);
     last_targets = 0;
     Str b = {0};
     describe_bindings(&b, ex, info);
@@ -782,6 +793,15 @@ void vk_dump_init(void) {
         pass_from = (int)strtol(dp, &q, 10);
         pass_to = *q == '-' ? (int)strtol(q + 1, NULL, 10) : pass_from;
         if (pass_from < 0 || pass_to < pass_from) pass_from = 0, pass_to = -1;
+    }
+    const char *df = cfg_get("ORBITALS_DUMP_FS");
+    for (const char *q = df; q && *q && nwant_fs < 16;) {
+        char *end;
+        uint64_t h = strtoull(q, &end, 16);
+        if (end == q) break;
+        want_fs[nwant_fs++] = h;
+        q = *end == ',' ? end + 1 : end;
+        if (*end != ',') break;
     }
     const char *du = cfg_get("ORBITALS_DUMP_UBO");
     dump_ubo = du && *du && *du != '0';
