@@ -234,7 +234,13 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
         const GfxShaderRes *r = bd->res;
         if (r && bd->kind == GFX_RES_SSBO) {   // where the address lives (c0: the stage's NVN slot table) and the stage's slots
             int st = nvn_stage(bd->stage);
-            sp(b, "    %s ssbo at c%d+%#x%s, bound:", stn[st], r->cbuf_slot, r->handle * 4, r->flags & 1 ? " written" : "");
+            sp(b, "    %s ssbo at c%d+%#x%s", stn[st], r->cbuf_slot, r->handle * 4, r->flags & 1 ? " written" : "");
+            if (r->cbuf_slot >= 3 && r->cbuf_slot - 3 < 18) {   // the address the shader reads from the block (ubo_ptr)
+                uint64_t a = ubo_ptr(ex, st, r);
+                sp(b, ": address %#llx%s\n", (unsigned long long)a, a & 15 ? " (not 16-byte aligned)" : "");
+                continue;
+            }
+            sp(b, ", bound:");
             for (int k = 0; k < 16; k++)
                 if (ex->ssbo[st][k].addr)
                     sp(b, " %d=%#llx+%#llx", k, (unsigned long long)ex->ssbo[st][k].addr, (unsigned long long)ex->ssbo[st][k].size);
