@@ -38,10 +38,15 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   does not. `class_diff.py --keys 238181b409956cac,9255edc18c6332c0` finds no form unique to it.
 - `.FMZ` is not the cause: the dump shows `fmz=FTZ` (flush denormals) on every FMUL/FFMA of both programs, never
   `.FMZ`. The translator handles `.FMZ` anyway (`fmzmul` / `fmzfma`, `9f9ea7a`; encoding bit 76 checked with nvdisasm).
-- The two programs differ by a few instructions only (592 vs 600): 2 vs 4 `IPA.PASS`, 14 vs 15 `MUFU.RCP`. So the
-  difference is the interface or the data: `class_diff.py` now prints the render targets written, depth output and
-  inputs of each. **Next:** compare those lines; then the constants the draw binds (`ORBITALS_TRACE_UBO=<FS hash>`),
-  `glsl_cpu.py` on one pixel, and the same draw on Lichii.
+- `238181b4` has no interpolated input, reads only `gl_FragCoord.xy` (`a[0x70]`, `a[0x74]`) and writes rt0: a
+  full-screen pass. In the 4500 dump (recomp39) it matches SPIR-V `69b9eb2009c11c75`, the only fragment shader of
+  that shape: passes 364 and 396 (one per split-screen half, viewports 0,0 and 800,0 of 800x900). It reads depth,
+  four 1920x1080 bgra8 G-buffer targets, two 256x256 rgba16f tables and the scene colour `0xf49130000`, and writes
+  `0xf795a0000`, which pass 426 (`3196324f4cfd42ac`) reads: the lighting composite everything after it shows.
+  Skipping it leaves the characters because the later passes then read whatever `0xf795a0000` held.
+- That dump has no image after pass 257 ("too many copies in flight"). **Next:** `ORBITALS_DUMP_PASSES=360-400` with
+  `ORBITALS_DUMP_UBO=1`: its inputs and output, and its uniform blocks with any NaN rows. A black input points at the
+  passes that write it; good inputs and a black output at the program (then `glsl_cpu.py` on one pixel).
 
 ### 1.2 A crash after the logos in about one run in three
 

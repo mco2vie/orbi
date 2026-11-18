@@ -25,6 +25,9 @@
 // before the submission (vk_draw_internal.h upd_note).
 // ORBITALS_DUMP_SKIP_RUNS=1: a render pass with the same targets as the render pass before it is logged but not copied
 // (the terrain decals draw one pass each into the G-buffer and would use up both caps).
+// ORBITALS_DUMP_PASSES=<from>-<to>: only passes and dispatches from..to (numbers of passes.txt) are copied; the others
+// are logged. The copies of a whole frame fill INFLIGHT_CAP by pass 257, so the passes after it never had images
+// (Orbitals colony, 18/11/2026: the lighting composite at passes 364 and 396).
 // ORBITALS_DUMP_DRAWS: a copy of the first colour target after each draw of a run of passes (vk_dump_draws.c).
 // The parts: vk_dump_img.c (formats, image copies and PNGs), vk_dump_buf.c (ORBITALS_DUMP_BUF) and vk_dump_draws.c
 // (ORBITALS_DUMP_DRAWS), sharing vk_dump_internal.h.
@@ -74,6 +77,7 @@ FILE *images_f;
 FILE *passes_f;
 static int seq, finished, copied;      // copied: passes and dispatches of the dump frame whose images were copied
 static int skip_runs, dump_ubo;        // ORBITALS_DUMP_SKIP_RUNS, ORBITALS_DUMP_UBO
+static int pass_from, pass_to = -1;   // ORBITALS_DUMP_PASSES; -1: every pass
 static int luts_only;                  // ORBITALS_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
 static uint32_t want_tex[16][2];       // ORBITALS_DUMP_TEX: slot id and 0, or width and height
 static int nwant_tex;
@@ -486,7 +490,12 @@ uint64_t targets_sig(const VkExec *ex) {
 // Sets pass_skip for the pass or dispatch being logged and counts it when it copies.
 static void pass_decide(int same_targets) {
     if (frame_now() != dump_frame) copied = 0;
-    pass_skip = luts_only ? "volumes only" : copied >= MAX_PASSES ? "pass cap" : same_targets ? "same targets as the previous pass" : NULL;
+    int n = seq - 1;   // the caller numbered this pass already
+    pass_skip = luts_only                                      ? "volumes only"
+                : pass_to >= 0 && (n < pass_from || n > pass_to) ? "outside ORBITALS_DUMP_PASSES"
+                : copied >= MAX_PASSES                         ? "pass cap"
+                : same_targets                                 ? "same targets as the previous pass"
+                                                               : NULL;
     if (!pass_skip) copied++;
 }
 
@@ -767,6 +776,13 @@ void vk_dump_init(void) {
     if (lf && *lf) log_from = strtoull(lf, NULL, 10);
     const char *sr = cfg_get("ORBITALS_DUMP_SKIP_RUNS");
     skip_runs = sr && *sr && *sr != '0';
+    const char *dp = cfg_get("ORBITALS_DUMP_PASSES");
+    if (dp && *dp) {
+        char *q;
+        pass_from = (int)strtol(dp, &q, 10);
+        pass_to = *q == '-' ? (int)strtol(q + 1, NULL, 10) : pass_from;
+        if (pass_from < 0 || pass_to < pass_from) pass_from = 0, pass_to = -1;
+    }
     const char *du = cfg_get("ORBITALS_DUMP_UBO");
     dump_ubo = du && *du && *du != '0';
     const char *d = cfg_get("ORBITALS_DUMP_DIR");
