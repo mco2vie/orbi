@@ -21,6 +21,7 @@ from program import Insn, Sph
 
 from glsl import subroutines
 from glsl.alu import AluOps
+from glsl.geom import GeomOps
 from glsl.common import FMUL_SCALE, MUFU, PT, RZ, TURNS, URZ, Unsupported, pred, reg
 from glsl.head import (
     MESH_MAIN,
@@ -43,7 +44,7 @@ from glsl.thread import ThreadOps
 SPEC_ON = os.environ.get("SM86_SPEC", "0") == "1"
 
 
-class Builder(AluOps, MemOps, TexOps, ThreadOps):
+class Builder(AluOps, MemOps, TexOps, ThreadOps, GeomOps):
     def __init__(self, sph: Sph | None, stage: str) -> None:
         self.sph, self.stage = sph, stage
         self.cbufs: set[int] = set()
@@ -176,6 +177,10 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
     # ---- instructions
     def insn(self, i: Insn) -> str:
         op = i.op
+        if self.stage == "gs":
+            out = self.gs_insn(i)
+            if out is not None:
+                return out
         # BREAK only takes the thread out of a convergence barrier (BSSY/BSYNC, dropped too); the BRA after it with
         # the same predicate does the jump (agl_technique_shdw: `@!P1 BREAK B2; @!P1 BREAK B1; @!P1 BRA`)
         if op in ("NOP", "DEPBAR", "BSSY", "BSYNC", "BREAK", "WARPSYNC", "ERRBAR"):
@@ -394,7 +399,7 @@ def translate(
 ) -> tuple[str, dict]:
     """shape: compute_shape() of a compute program; without it the workgroup is 1x1x1 (a census without controls).
     c1: the program's own constants (extract.py <sha1>.c1), where a BRX's jump table is."""
-    if stage not in ("ps", "vs", "cs", "tes?"):
+    if stage not in ("ps", "vs", "cs", "tes?", "gs"):
         raise Unsupported(f"stage {stage}")
     b = Builder(sph, stage)
     insns = inline_single_call(insns)

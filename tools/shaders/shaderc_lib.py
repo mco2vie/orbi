@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 
 # shaderc.h shaderc_shader_kind (printed from the header: task and mesh come after the ray tracing kinds)
-KIND = {"vs": 0, "ps": 1, "cs": 2, "task": 26, "mesh": 27}
+KIND = {"vs": 0, "ps": 1, "cs": 2, "gs": 3, "task": 26, "mesh": 27}   # shaderc_shader_kind
 VULKAN, VULKAN_1_3 = 0, (1 << 22) | (3 << 12)  # env.h
 PERFORMANCE = 2  # glslc -O
 

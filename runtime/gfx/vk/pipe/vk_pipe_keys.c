@@ -23,7 +23,7 @@
 // built the pipeline and appended by the present thread (vk_pipeline_autosave) or at exit (vk_pipeline_save). A file
 // with another magic, version or record size is ignored and rewritten. Bump KEYS_VERSION when VkPipeState or the
 // record changes meaning without changing size.
-#define KEYS_VERSION 5                 // 3: shaders named by input id (gfx_shader.c); 4: prepared shaders by program key; 5: VkPipeState.mesh
+#define KEYS_VERSION 6                 // 3: shaders named by input id (gfx_shader.c); 4: prepared shaders by program key; 5: VkPipeState.mesh; 6: VkPipeState.gs
 KeyFile K = {.io = PLAT_MUTEX_INIT};
 
 static uint64_t rec_hash(const KeyRec *r) {
@@ -61,14 +61,15 @@ static void rec_fill(KeyRec *r, const VkPipeState *s) {
     memcpy(r->vs, gfx_shader_input_id(s->vs), 32);
     if (s->fs) memcpy(r->fs, gfx_shader_input_id(s->fs), 32), r->has_fs = 1;
     r->s = *s;
-    r->s.vs = r->s.fs = r->s.mesh = NULL;
+    r->s.vs = r->s.fs = r->s.mesh = r->s.gs = NULL;
     r->s.prim_restart = 0;   // dynamic state: the same pipeline either way
 }
 
 // A pipeline was built for a draw: queue its record for the file. Caller holds P.lock.
 static void keys_note(const VkPipeState *s) {
     // Variants (vk_spec.c) have no prepared file: a record of one could not be loaded at the next boot.
-    if (!A.on || !K.path[0] || mesh_pipe(s) || gfx_shader_variant_of(s->vs) || (s->fs && gfx_shader_variant_of(s->fs))) return;
+    // A geometry stage is not in the record (it names the vertex and fragment shaders only)
+    if (!A.on || !K.path[0] || mesh_pipe(s) || s->gs || gfx_shader_variant_of(s->vs) || (s->fs && gfx_shader_variant_of(s->fs))) return;
     KeyRec r;
     rec_fill(&r, s);
     if (!seen_add(rec_hash(&r))) return;
@@ -187,7 +188,7 @@ static void pipe_worker(void *arg) {
         }
         // Step 1 for a job a draw waits for: its stage libraries and the fast link. Step 2, the optimised build, goes to
         // the head of the low queue, so a burst of new pipelines gets every fast link before any optimised build.
-        if (P.gpl && (!j->prebuild || j->demanded) && !j->p->info.pipeline && !j->p->fast_tried && j->p->lay) {
+        if (P.gpl && !j->k.gs && (!j->prebuild || j->demanded) && !j->p->info.pipeline && !j->p->fast_tried && j->p->lay) {
             int final;
             VkPipeline f = gpl_link(&j->s, &j->k, j->p->lay, 1, &final);   // releases P.lock while building
             j->p->fast_tried = 1;
@@ -324,6 +325,8 @@ static Pipe *pipe_miss(const VkPipeState *s, const GKey *k, uint64_t h, int mode
     uint32_t span = binding_span(s->vs);
     if (gfx_shader_stage(s->vs) != GFX_STAGE_VS || (s->fs && gfx_shader_stage(s->fs) != GFX_STAGE_FS)) why = "stage mismatch";
     else if (k->topo_class == 3) why = "patches need tessellation stages, which are not translated";
+    else if (s->gs && (gfx_shader_stage(s->gs) != GFX_STAGE_GS || binding_span(s->gs) > 1))
+        why = "a geometry stage with resources (the layouts take the vertex and fragment stages' only)";
     else if (k->meshp) {   // one set: task, mesh, fragment (mesh_offsets)
         uint32_t mo, fo;
         mesh_offsets(s, &mo, &fo);
@@ -493,7 +496,7 @@ static void gave_up_report(Pipe *p, const VkPipeState *s, const GKey *k, uint32_
     if (n++ >= 8) return;
     char vs[65], fs[65], libs[96] = "";
     shader_hex(s->vs, vs), shader_hex(s->fs, fs);
-    if (P.gpl && !k->meshp) {
+    if (P.gpl && !k->meshp && !k->gs) {
         ViKey v;
         PrKey pk;
         FsKey fk;
@@ -540,7 +543,7 @@ VkPipeline pipe_graphics(const VkPipeState *s, const VkPipeInfo **info, int asyn
     }
     if (p && p->gave_up && p->building && !p->info.pipeline) wait_ms = 0;   // one full wait per pipeline, not one per frame
     double end = wait_ms ? now_ms() + wait_ms : 0;
-    if (p && p->building && P.gpl && !k.meshp && !p->info.pipeline && !p->fast_tried && p->lay) {
+    if (p && p->building && P.gpl && !k.meshp && !k.gs && !p->info.pipeline && !p->fast_tried && p->lay) {
         int final = 0, build = wait_ms != 0 && draw_build;
         uint64_t p0 = perf_begin(), t0 = pipe_qpc();
         if (build && U.on) {

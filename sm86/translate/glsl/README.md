@@ -11,9 +11,10 @@ The SM86 → GLSL 4.6 translator, split by responsibility. Used as `import glsl`
 | `mem.py` | Memory: constant banks (`ULDC`, `LDC`), global as storage buffers (`LDG`/`STG`, atomics, base tracking), shared, local, attributes (`ALD`/`AST`) and `IPA` with its `w` fold |
 | `tex.py` | Textures and images (`TEX`, `TLD`, `TLD4`, `TMML`, `TXQ`, `SUST`/`SULD`/`SURED`) |
 | `thread.py` | Subgroups (`SHFL`, `VOTE`, `MATCH`, `REDUX`), system values (`S2R`), task/mesh outputs (`ISBEWR`/`ISBERD`) and `EXIT` |
+| `geom.py` | Geometry programs (NVN stage 2): per-vertex `ALD` (`gl_in`, `in_attrN[]`), `AST` to the layer and viewport index, `OUT.EMIT`/`CUT`, `ISBERD` and `S2R SR_INVOCATION_INFO` as Ryujinx reads them, the input/output layouts from the SPH (triangles in) |
 | `head.py` | Declarations before `main()` (extensions, helper functions, inputs and outputs, bindings and their reflection) and the task/mesh wrappers |
 | `subroutines.py` | Subroutines called from several places (CALL/RET): a copy of the body in each call for the structured form, once the return address is proven to be the instruction after the CALL |
 | `common.py` | Shared pieces: `Unsupported`, GLSL helper functions, comparison and `LOP3` tables, register and predicate names |
 
-The groups in `alu`, `mem`, `tex` and `thread` are mixins of `Builder`: they use its operand helpers (`src_u`, `dst`…)
+The groups in `alu`, `mem`, `tex`, `thread` and `geom` are mixins of `Builder`: they use its operand helpers (`src_u`, `dst`…)
 and its state.

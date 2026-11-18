@@ -34,7 +34,7 @@ from extract import sph_stage, trim
 from program import Decoder
 from shaderc_lib import Shaderc
 
-GLSLC_STAGE = {"ps": "frag", "vs": "vert", "cs": "comp", "task": "task", "mesh": "mesh"}
+GLSLC_STAGE = {"ps": "frag", "vs": "vert", "cs": "comp", "gs": "geom", "task": "task", "mesh": "mesh"}
 _dec = None
 _shaderc: Shaderc | None = None  # libshaderc in this process when found; else one glslc a program
 

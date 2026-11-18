@@ -79,7 +79,7 @@ typedef struct {
                                 // (Orbitals: texture | sampler words, translator tex.py tex_key); -1 none
 } GfxShaderRes;
 typedef struct { uint8_t type, comps, packed; } GfxShaderIo;   // GFX_TYPE_*, components, 1 with a Component decoration
-int gfx_shader_stage(const GfxShader *s);                   // GFX_STAGE_VS, GFX_STAGE_FS or GFX_STAGE_CS
+int gfx_shader_stage(const GfxShader *s);                   // GFX_STAGE_VS, GFX_STAGE_GS, GFX_STAGE_FS or GFX_STAGE_CS
 int gfx_shader_resources(const GfxShader *s, int kind, const GfxShaderRes **res);   // count of GFX_RES_* kind; array in *res
 int gfx_shader_spec(const GfxShader *s, const uint32_t **words);   // fixed-address constant words: bank << 16 | byte
 // s with word k fixed to val[k] where fix[k] (specialization constants' defaults); lives for the process; NULL if none

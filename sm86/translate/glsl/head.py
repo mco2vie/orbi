@@ -90,7 +90,11 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         head.insert(2, "#extension GL_EXT_texture_shadow_lod : require")
     if getattr(b, "uses_demote", False):
         head.insert(2, "#extension GL_EXT_demote_to_helper_invocation : require")
-    head += [f"layout(location = {a}) {interp(b, stage, a)}in vec4 in_attr{a};" for a in sorted(b.in_attrs)]
+    if stage == "gs":   # per-vertex inputs, as arrays (glsl/geom.py)
+        head += b.gs_head()
+        head += [f"layout(location = {a}) in vec4 in_attr{a}[];" for a in sorted(b.in_attrs)]
+    else:
+        head += [f"layout(location = {a}) {interp(b, stage, a)}in vec4 in_attr{a};" for a in sorted(b.in_attrs)]
     if stage == "ps":
         head += [f"layout(location = {t}) out vec4 out_color{t};" for t in sorted(b.out_attrs)]
     else:

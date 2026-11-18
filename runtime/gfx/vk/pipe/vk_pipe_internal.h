@@ -121,6 +121,7 @@ typedef struct {                       // normalized: zero where the state is dy
     uint8_t meshp;                     // a task/mesh pipeline (mesh_pipe): monolithic, one set, no vertex input
     uint8_t pad2;
     const GfxShader *mesh;             // VkPipeState.mesh
+    const GfxShader *gs;               // VkPipeState.gs: monolithic (no pipeline libraries), its module between VS and FS
 } GKey;
 
 extern PlatCond work_cv, done_cv;

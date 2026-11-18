@@ -24,6 +24,7 @@
 #define ZERO_BYTES 65536u
 #define SUPPORT_BYTES 1408u   // Ryujinx SupportBuffer (std140): alpha_test, is_bgra[8], viewport_inverse, viewport_size, ...
 #define NVN_STAGE_VS 0
+#define NVN_STAGE_GS 2
 #define NVN_STAGE_FS 1
 #define NVN_STAGE_CS 5
 

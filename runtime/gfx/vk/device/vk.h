@@ -619,6 +619,8 @@ typedef struct VkPipeState {
     vs_st vstream[16];                     // OP_BIND_VSTREAM
     const GfxShader *mesh;                 // a task/mesh draw whose vs is the task program: its mesh program; NULL
                                            // otherwise (a mesh program alone sits in vs)
+    const GfxShader *gs;                   // the program's geometry stage (sm86 glsl/geom.py), on triangle draws only;
+                                           // NULL none (vk_exec_draw.c gs_for)
 } VkPipeState;
 _Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "alpha_ref must stay in the padding (KeyRec size)");
 void vk_pipe_state_defaults(VkPipeState *s);   // NVN defaults of every state object (shaders and formats left 0)
@@ -691,6 +693,7 @@ int vk_pipeline_vertex_input_dynamic(void);    // 1: vertex input is VK_EXT_vert
 // GFX_STAGE_FS: out_type from the colour target formats).
 void vk_pipeline_answers(const VkPipeState *s, int stage, GfxShaderAnswers *a);
 uint32_t vk_pipeline_target_wmask(const VkPipeState *s, int i);   // colour write mask of target i the pipeline uses
+int vk_pipeline_gs_prim(int nvn_prim);   // the draw's primitives are triangles a geometry stage declared `triangles` takes
 VkPrimitiveTopology vk_pipeline_topology(int nvn_prim);   // quads -> triangle list, line loop -> strip: the replay
                                                           // rewrites those draws; polygon -> fan
 VkFormat vk_vertex_format(int nvn_format, int *type);     // attribute format (supported fallback), GFX_TYPE_* in *type

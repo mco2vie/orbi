@@ -65,11 +65,15 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
 - That vertex shader uses `gl_InstanceIndex` and writes no layer (no `a[0x64]` AST; the translator would refuse it).
   The layer must come from a stage the runtime does not run: the pipelines take VS and FS only (`vk_pipeline.c`).
   `vk_exec_draw.c` now logs programs with a geometry or tessellation stage (`program N has a geometry stage`).
-  recomp43: 10 programs have one (685, 757, 14610, 40292, 45926, 185035, ...), each 1024 bytes of code. The
-  lookup now dumps that stage into spirv-dump. **Next:** `tools/shaders/show.py` prints it (in chat only). Then
-  translate SM86 GS (inputs per vertex through ALD with a vertex register, `OUT.EMIT`/`OUT.CUT`, AST with the output
-  handle, the SPH's output topology and vertex count; Ryujinx `InstEmitAttribute.cs` / `InstEmitOut` for the
-  semantics) and add the stage to `vk_pipeline.c`.
+  recomp43: 10 programs have one, all the same 1024-byte program (`show.py`): Unreal's layer selector. Per vertex
+  of a triangle it copies the position and generic 0 and writes generic 1.x (the instance index from the VS) to
+  `a[0x64]`, the layer; SPH: triangle strip out, 3 vertices.
+- Geometry stages are now translated (`sm86/translate/glsl/geom.py`, Ryujinx semantics: `ISBERD` passes the vertex
+  index, `S2R SR_INVOCATION_INFO` is input vertices << 16) and run on triangle draws (`VkPipeState.gs`, monolithic
+  pipelines, no libraries; a stage with resources is refused). Checked offline: the listing rebuilt as instructions
+  translates, compiles and passes spirv-val. **Next:** rerun `dumped_shaders.py`, then the colony: the log line
+  `has a geometry stage ...: run on its triangle draws`, and the LUT (`ORBITALS_DUMP_FS=3196324f4cfd42ac`) with all
+  32 slices.
 - Skipping 238181b4 hid this: the tonemapper then read stale data. The dark environment in the lighting output is a
   separate fault.
 
