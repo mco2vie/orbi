@@ -264,11 +264,11 @@ class MemOps:
     def global_search_fns(self) -> list[str]:
         """gld/gst over the storage buffers the program names (bank 0 base, bound length); every one may be stored
         into when gst is used. No buffer at all: nothing to search."""
-        if not (self.gsearch_load or self.gsearch_store):
+        if not (self.gsearch_load or self.gsearch_store or self.gsearch_atom):
             return []
         if not self.ssbos:
             raise Unsupported("global access with no storage buffer to search")
-        if self.gsearch_store:
+        if self.gsearch_store or self.gsearch_atom:
             self.ssbos_written |= self.ssbos
         find = []
         for k, o in enumerate(sorted(self.ssbos)):
@@ -283,6 +283,10 @@ class MemOps:
             ld = pick.replace("{X(", "v = ").replace(")}", ".d[(w >> 2) + k];")
             out += ["uint gld(uint lo, uint hi, uint k) {", "    int s; uint w = gfind(lo, hi, s), v = 0u;",
                     f"    {ld}", "    return v;", "}"]  # fmt: skip
+        for op in sorted(self.gsearch_atom):
+            at = pick.replace("{X(", "o = " + self.ATOM[op] + "(").replace(")}", ".d[w >> 2], v);")
+            out += [f"uint gatm_{op}(uint lo, uint hi, uint v) {{", "    int s; uint w = gfind(lo, hi, s), o = 0u;",
+                    f"    {at}", "    return o;", "}"]  # fmt: skip
         if self.gsearch_store:
             st = pick.replace("{X(", "").replace(")}", ".d[(w >> 2) + k] = v;")
             out += ["void gst(uint lo, uint hi, uint k, uint v) {", "    int s; uint w = gfind(lo, hi, s);",
@@ -300,10 +304,59 @@ class MemOps:
             raise Unsupported(f"{i.op}.{op}.{sz}")
         if i.has("Pu") and i.v("Pu") != PT:
             raise Unsupported(f"{i.op} with predicate out")
-        slot, rel = self.global_addr(i)
+        try:
+            slot, rel = self.global_addr(i)
+        except Unsupported:
+            # A register base the tracking lost (RaNonRZ): looked up at run time among the program's storage buffers,
+            # as global_search does for LDG/STG (4 Orbitals compute programs, 18/11/2026)
+            if "RaNonRZ" not in i.cls or i.v("Ra") == RZ:
+                raise
+            ra, off = i.v("Ra"), i.sv("Ra_offset") & 0xFFFFFFFF
+            self.regs.update((ra, ra + 1))
+            self.gsearch_atom.add(op)
+            addr = f"uint gc, gl = uaddCarry(r{ra}, {off:#x}u, gc), gh = r{ra + 1} + gc;"
+            call = f"gatm_{op}(gl, gh, {self.src_u(i, 'b')})"
+            if i.op == "RED" or i.v("Rd", RZ) == RZ:
+                return f"{{ {addr} {call}; }}"
+            n = i.v("Rd")
+            self.regs.add(n)
+            return f"{{ {addr} r{n} = {call}; }}"
         self.ssbos_written.add(slot)
         e = f"{self.ATOM[op]}(sb{slot:x}.d[{rel} >> 2], {self.src_u(i, 'b')})"
         return f"{e};" if i.op == "RED" else self.dst(i, e)
+
+    def atoms(self, i: Insn) -> str:
+        """ATOMS: an atomic on a 32-bit shared memory word (byte address Ra + offset), Rd the old value. Unsigned and
+        bitwise ops map to GLSL's; signed MIN/MAX, INC and DEC (old >= b ? 0 : old + 1; old == 0 || old > b ? b :
+        old - 1, as Ryujinx's AtomicDecrement/Increment) go through a compare-and-swap loop."""
+        op, sz = i.sym("op"), i.sym("sz")
+        if sz not in ("", "U32", "_32", "32", "S32"):
+            raise Unsupported(f"ATOMS.{op}.{sz}")
+        self.uses_shared = True
+        off = (i.sv("Ra_offset") if "NonRZ" in i.cls else i.v("Ra_offset")) & 0xFFFFFFFF
+        ra = i.v("Ra") if i.has("Ra") else RZ
+        addr = f"({reg(ra)} + {off:#x}u)" if ra != RZ else f"{off:#x}u"
+        if ra != RZ:
+            self.regs.add(ra)
+        b = self.src_u(i, "b")
+        word = f"SMEM(({addr}) >> 2)"
+        signed = sz == "S32"
+        new = {"MIN": "uint(min(int(w), int(bv)))", "MAX": "uint(max(int(w), int(bv)))"} if signed else {}
+        new |= {"INC": "(w >= bv ? 0u : w + 1u)", "DEC": "((w == 0u || w > bv) ? bv : w - 1u)"}
+        n = i.v("Rd", RZ)
+        if n != RZ:
+            self.regs.add(n)
+        put = f" r{n} = w;" if n != RZ else ""
+        if op in new:
+            loop = (f"{{ uint ad = {addr}, bv = {b}, o = SMEM(ad >> 2), w; do {{ w = o; "
+                    f"o = atomicCompSwap(SMEM(ad >> 2), w, {new[op]}); }} while (o != w);{put} }}")  # fmt: skip
+            return loop
+        fn = {"ADD": "atomicAdd", "MIN": "atomicMin", "MAX": "atomicMax", "AND": "atomicAnd", "OR": "atomicOr",
+              "XOR": "atomicXor", "EXCH": "atomicExchange"}.get(op)  # fmt: skip
+        if fn is None:
+            raise Unsupported(f"ATOMS.{op}")
+        call = f"{fn}({word}, {b})"
+        return f"r{n} = {call};" if n != RZ else f"{call};"
 
     def track_ssbo(self, i: Insn) -> None:
         """reg_ssbo after i: a register written from a bank-0 word that is a storage buffer's address (LEA/IADD3 of

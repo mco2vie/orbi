@@ -94,6 +94,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.textures: dict[tuple[int, int], str] = {}  # (handle bank, handle index) -> GLSL sampler type
         self.uses_ldsm = self.uses_hmma = self.uses_movm = False  # LDSM_FN, HMMA_FN, MOVM_FN in the head
         self.gsearch_load = self.gsearch_store = False  # global_search used: gld/gst go into the head
+        self.gsearch_atom: set[str] = set()  # ATOMG/RED ops through the search (gatm_<op>, mem.py global_search_fns)
 
     # ---- operands
     def const(self, bank: int, byte: int, spec: bool = True) -> str:
@@ -282,6 +283,8 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             return getattr(self, op.lower())(i)
         if op in ("ATOMG", "RED"):
             return self.atom_global(i)
+        if op == "ATOMS":
+            return self.atoms(i)
         if op == "UPOPC":
             return self.dst(i, f"uint(bitCount({self.src_u(i, 'b')}))")
         if op in ("HADD2", "HSETP2", "MATCH", "POPC", "REDUX"):
