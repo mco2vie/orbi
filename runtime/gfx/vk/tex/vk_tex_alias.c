@@ -169,6 +169,27 @@ void vk_texture_debug(const VkTexImage *img, uint32_t *uploads, int *last_change
     unlock();
 }
 
+// What the guest memory behind a mirrored texture holds now, as 32-bit words (layout-independent): how many are all
+// ones, zero and other, and the first other one. Compared with the image's own statistics in a frame dump it tells a
+// texture the CPU never filled from one whose new contents the upload missed. 0 when not mirrored or larger than 16 MiB.
+int vk_texture_guest_words(const VkTexImage *img, uint32_t *ones, uint32_t *zeros, uint32_t *other, uint32_t *first) {
+    lock();
+    const Tex *e = (const Tex *)img;
+    const uint8_t *m = e->pub.mirrored ? (const uint8_t *)e->t.mem : NULL;
+    uint64_t n = m ? e->t.L.size / 4 : 0;
+    *ones = *zeros = *other = *first = 0;
+    if (n > (16u << 20) / 4) n = 0;
+    for (uint64_t i = 0; i < n; i++) {
+        uint32_t w;
+        memcpy(&w, m + 4 * i, 4);
+        if (w == 0xffffffffu) ++*ones;
+        else if (!w) ++*zeros;
+        else if (!(*other)++) *first = w;
+    }
+    unlock();
+    return n != 0;
+}
+
 const VkTexImage *vk_texture_get(const tex_t *t) {
     if (!t || !t->mem) return NULL;
     lock();

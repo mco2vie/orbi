@@ -118,8 +118,22 @@ The frame chain of the colony (recomp40-42, per split-screen half; SPIR-V hashes
 
 The lighting `d18042401d56bbea` already outputs a dark environment while the characters are lit (recomp41).
 Candidates: the light grid (built by compute) or the lights' data, the environment's G-buffer, shadows, the 3D r8
-volume. **Next:** `ORBITALS_DUMP=4500`, `ORBITALS_DUMP_FS=d18042401d56bbea`, `ORBITALS_DUMP_UBO=1`: its inputs, its
-uniform blocks and the light grid; and the same view on Lichii to compare.
+volume.
+
+recomp46 (dump of that pass, and a Lichii recording of the same walk): on Lichii the colony is bright (lit walls,
+teal floor, blue lights); here it is dark everywhere but the characters. The lighting's uniform blocks look sane
+(view matrices, c7 light parameters 0.5, 30, 1.2, 1000, 8000...). Both its volumes are **mirrored textures uploaded
+from guest memory and never written by the GPU in the frame**: the light grid (3D r32ui 20x20x100, uploads 1, pages
+not written since) and a 1024x1024x8 r8 volume (uploads 2). In recomp39 that grid read all 0xffffffff (every cell
+"no light"). No copy, clear or storage binding in the frame touches its range. If the console fills it in a way the
+runtime does not see (a GPU write left in VRAM, `ORBITALS_WB_UNSIZED=vram`, or CPU writes the page tracking misses),
+the lighting would see no light anywhere.
+
+The dump did not copy the volumes: a texture first sampled in a skipped pass was marked done and never copied again;
+fixed (`drop_luts`). The pass line now also gives a 3D texture's guest memory as words (all ones, zero, other).
+**Next:** the same dump (`ORBITALS_DUMP_FS=d18042401d56bbea`): the grid's image (`lut<id>` in `images.txt`) against
+its guest words. Image all ones and guest memory with other values: the upload misses the CPU's writes. Both all
+ones: the writer is on the GPU or elsewhere (then `ORBITALS_WB_UNSIZED=merge` as an A/B).
 
 ### 1.2 A crash after the logos in about one run in three
 

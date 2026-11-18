@@ -207,6 +207,19 @@ static void flush_luts(VkExec *ex, int n) {
     nluts = 0;
 }
 
+// A skipped pass drops its queued textures and forgets them, so the next copied pass that samples one copies it: with
+// ORBITALS_DUMP_FS the lighting pass's light grid (3D r32ui) was marked done by the skipped G-buffer passes and never
+// copied (18/11/2026).
+static void drop_luts(void) {
+    for (int i = 0; i < nluts; i++)   // removed, not cleared: every skipped pass queues them again
+        for (int k = 0; k < nluts_done; k++)
+            if (luts_done[k] == luts[i].image) {
+                luts_done[k] = luts_done[--nluts_done];
+                break;
+            }
+    nluts = 0;
+}
+
 static int nvn_stage(int gfx_stage) {
     if (gfx_stage & VK_PIPE_STAGE_NVN) return gfx_stage & 7;   // task or mesh binding
     return gfx_stage == GFX_STAGE_VS ? 0 : gfx_stage == GFX_STAGE_FS ? 1 : 5;
@@ -346,6 +359,9 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
             vk_texture_debug(t, &ups, &last, &wr);
             sp(b, " | addr %#llx image %p mirrored %d gpu_owned %d bound %d uploads %u last-check %d written-since %d",
                (unsigned long long)t->addr, (void *)t->image, t->mirrored, t->gpu_owned, t->bound, ups, last, wr);
+            uint32_t g1, g0, go, gf;   // a 3D texture's guest memory now, against the image dumped as lut<id>
+            if (t->type == VK_IMAGE_TYPE_3D && vk_texture_guest_words(t, &g1, &g0, &go, &gf))
+                sp(b, " | guest words ones %u zero %u other %u (first %#x)", g1, g0, go, gf);
             uint8_t ssw[4] = {0};
             vk_texture_slot_swz(NVN_HANDLE_TEX(h), ssw);
             sp(b, " | swz image %u%u%u%u slot %u%u%u%u", t->swz[0], t->swz[1], t->swz[2], t->swz[3], ssw[0], ssw[1], ssw[2],
@@ -600,7 +616,7 @@ void vk_dump_pass_end(VkExec *ex) {
         fprintf(passes_f, "\n");
     }
     if (!pass_skip || luts_only) flush_luts(ex, n);
-    else nluts = 0;
+    else drop_luts();
     buf_snap(ex, n);
     fflush(passes_f);
     nents = ents_over = pass_draws = n_over_fs = 0;
@@ -678,7 +694,7 @@ void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPip
                 dd, name, why ? " skipped: " : "", why ? why : "");
     }
     if (!pass_skip || luts_only) flush_luts(ex, n);
-    else nluts = 0;
+    else drop_luts();
     buf_snap(ex, n);
     fflush(passes_f);
 out:

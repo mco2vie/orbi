@@ -449,6 +449,8 @@ VkFormat vk_texture_view_format(const VkTexImage *img, VkFormat want);   // a ta
 const VkTexImage *vk_texture_get(const tex_t *t);   // created and made current; NULL for BUFFER or unmapped formats
 // A texture slot; a slot whose texture was finalized follows the live texture at the same storage (hle_nvn.c).
 const VkTexImage *vk_texture_by_id(int id, view_t *view, int *has_view);
+// The 32-bit words of a mirrored texture's guest memory: all ones, zero, other and the first other (frame dumps)
+int vk_texture_guest_words(const VkTexImage *img, uint32_t *ones, uint32_t *zeros, uint32_t *other, uint32_t *first);
 VkFormat vk_srgb_twin(VkFormat f);                    // the sRGB / UNORM twin of an 8-bit colour format, else UNDEFINED
 int vk_format_numeric(VkFormat f);                    // GFX_TYPE_* its components read as in a shader
 uint32_t vk_texture_slot_format(int id, uint64_t *addr);   // NVN format the game registered in slot id (0: none)
