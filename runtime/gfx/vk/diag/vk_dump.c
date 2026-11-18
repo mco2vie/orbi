@@ -30,7 +30,8 @@
 // (Orbitals colony, 18/11/2026: the lighting composite at passes 364 and 396).
 // ORBITALS_DUMP_FS=<hash>[,...]: only render passes with a draw by one of those fragment shaders (the SPIR-V hashes of
 // passes.txt) are copied, dispatches not at all. Pass numbers move between runs (that composite was at 498 and 531 in
-// the next one), shader hashes do not while the translation stays the same.
+// the next one), shader hashes do not while the translation stays the same. ORBITALS_DUMP_FS_AFTER=<n>: the n passes and
+// dispatches after each of those are copied too (the post-processing chain after a pass, whatever its numbers).
 // ORBITALS_DUMP_DRAWS: a copy of the first colour target after each draw of a run of passes (vk_dump_draws.c).
 // The parts: vk_dump_img.c (formats, image copies and PNGs), vk_dump_buf.c (ORBITALS_DUMP_BUF) and vk_dump_draws.c
 // (ORBITALS_DUMP_DRAWS), sharing vk_dump_internal.h.
@@ -83,6 +84,7 @@ static int skip_runs, dump_ubo;        // ORBITALS_DUMP_SKIP_RUNS, ORBITALS_DUMP
 static int pass_from, pass_to = -1;   // ORBITALS_DUMP_PASSES; -1: every pass
 static uint64_t want_fs[16];           // ORBITALS_DUMP_FS
 static int nwant_fs, fs_hit;           // fs_hit: a draw of the pass being recorded used one of want_fs
+static int fs_after, fs_after_left;    // ORBITALS_DUMP_FS_AFTER; passes still to copy after the last hit
 static int luts_only;                  // ORBITALS_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
 static uint32_t want_tex[16][2];       // ORBITALS_DUMP_TEX: slot id and 0, or width and height
 static int nwant_tex;
@@ -502,11 +504,12 @@ static void pass_decide(int same_targets, int wanted_fs) {
     int n = seq - 1;   // the caller numbered this pass already
     pass_skip = luts_only                                      ? "volumes only"
                 : pass_to >= 0 && (n < pass_from || n > pass_to) ? "outside ORBITALS_DUMP_PASSES"
-                : nwant_fs && !wanted_fs                       ? "no draw by ORBITALS_DUMP_FS"
+                : nwant_fs && !wanted_fs && fs_after_left <= 0 ? "no draw by ORBITALS_DUMP_FS"
                 : copied >= MAX_PASSES                         ? "pass cap"
                 : same_targets                                 ? "same targets as the previous pass"
                                                                : NULL;
     if (!pass_skip) copied++;
+    if (nwant_fs) fs_after_left = wanted_fs ? fs_after : fs_after_left - 1;
 }
 
 // Pipeline statistics per render pass of the dumped frame (stats.txt): input primitives, vertex shader invocations,
@@ -803,6 +806,8 @@ void vk_dump_init(void) {
         q = *end == ',' ? end + 1 : end;
         if (*end != ',') break;
     }
+    const char *dfa = cfg_get("ORBITALS_DUMP_FS_AFTER");
+    if (dfa && *dfa) fs_after = atoi(dfa);
     const char *du = cfg_get("ORBITALS_DUMP_UBO");
     dump_ubo = du && *du && *du != '0';
     const char *d = cfg_get("ORBITALS_DUMP_DIR");

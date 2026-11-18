@@ -50,8 +50,15 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   writes `0xf2df60000`; the composite `69b9eb2009c11c75` (238181b4) reads that and writes `0xf6e800000`. Its uniform
   blocks look sane (c4: viewport rectangles and inverse sizes 1/800, 1/900); the "not finite" rows 280-295 of c5
   hold integers (12, 17, all-ones), not floats.
-- **Next:** `ORBITALS_DUMP_FS=d18042401d56bbea,69b9eb2009c11c75` copies only the passes those shaders draw in. A
-  black `0xf2df60000` puts the fault in the lighting pass, a good one with a black `0xf6e800000` in the composite.
+- With `ORBITALS_DUMP_FS=d18042401d56bbea,69b9eb2009c11c75` (recomp41, passes 451/452 and 482/484): the composite is
+  right. Its output matches its input, with no NaN. In both, the characters are lit and the environment is black.
+  So 238181b4 is not what blackens the frame. Two faults remain: (a) the environment is already black in the clustered
+  lighting output, so the cause is upstream (G-buffer of the environment, or the lighting itself); (b) the frame turns
+  black somewhere after the composite: bloom (`03b151f849cc3f6f`, the 960x540 to 15x17 chain), the 1x1 computes
+  `b1c0ee32fec29921` / `88cbd364b84c0669` (eye adaptation?), `3196324f4cfd42ac` (TAA?), `899b938acbed2d8a`, tonemap.
+  Skipping 238181b4 leaves `0xf6d6f0000`/`0xf6e800000` stale, and that changes what this chain computes.
+- **Next:** `ORBITALS_DUMP_FS=69b9eb2009c11c75` with `ORBITALS_DUMP_FS_AFTER=80`: the composite and every pass after
+  it, so the first black image names the faulty pass.
 
 ### 1.2 A crash after the logos in about one run in three
 
