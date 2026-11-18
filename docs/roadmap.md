@@ -31,11 +31,16 @@ Only the HUD, emissive glows and a few edges show in the first level; Lichii sho
   runtime drops (NVN2 keeps them in root table 0, read as constant bank 24, bank 17 after Eden's Ampere lowering:
   Lichii `src/video_core/engines/maxwell_3d.h`; `tools/shaders/c0_reads.py --banks` finds no Orbitals program reading
   bank 17 or 24, nor c0 below 0x110).
-- Not known yet: whether the materials' textures resolve. The dump listed every texture "no handle (dummy)" because it
-  looked handles up by slot while Orbitals keeps them in a uniform block (c3, OR'ed with a sampler word); `fd6ef01`
-  makes the dump read them as the bind does. **Next:** the same dump with that build. `handle 0` points at the uniform
-  block read (`ubo_word`, `vk_exec_ubuf.c`), `tex N unresolved` at texture registration, a resolved texture at its
-  contents or sampler; then compare that draw on Lichii.
+- Textures resolve (dump with `fd6ef01`), and since the handle tracking of `d1807eb` the G-buffer passes are right.
+  `base_origin.py --keys` shows the handles come from two fixed c3 words OR'ed, with nothing in between.
+- Since `d1807eb` translates it, pixel program `238181b409956cac` turns the whole level black again:
+  `ORBITALS_SKIP_PROGRAMS=238181b409956cac` alone brings the characters back, skipping its near twin `9255edc18c6332c0`
+  does not. `class_diff.py --keys 238181b409956cac,9255edc18c6332c0` finds no form unique to it.
+- Suspect (unconfirmed): `.FMZ` on FMUL/FFMA (a zero factor gives 0, also against inf or NaN) was read as an IEEE
+  multiply, so 0 × inf from an overflowing reciprocal gave NaN. The translator now emits `fmzmul` / `fmzfma`
+  (encoding checked against nvdisasm: bit 76). **Next:** rerun `dumped_shaders.py`, run the level without
+  `SKIP_PROGRAMS`. If still black, look at other NaN sources in that program (MUFU RCP/RSQ, FMUL scale), then compare
+  its draw on Lichii.
 
 ### 1.2 A crash after the logos in about one run in three
 

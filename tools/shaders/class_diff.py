@@ -23,7 +23,8 @@ from extract import sph_stage, trim  # noqa: E402
 from program import Decoder  # noqa: E402
 
 MODS = ("sz", "fmt", "dstfmt", "srcfmt", "paramA", "lodlc", "dc", "toff", "aoffi", "op", "mode", "rnd", "ftz", "sat",
-        "cmp", "bop", "sem", "ipaop", "query", "comp", "scr", "f16rm", "ndv", "redop", "mufuop", "swz", "shfl")
+        "cmp", "bop", "sem", "ipaop", "query", "comp", "scr", "f16rm", "ndv", "redop", "mufuop", "swz", "shfl", "fmz",
+        "scale")
 
 
 def forms(dec: Decoder, code: Path) -> Counter:

@@ -78,6 +78,9 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         head.append(SHFL_FN)
     if b.uses_prmt:
         head.append(PRMT_FN)
+    if getattr(b, "uses_fmz", False):
+        head.append("float fmzmul(float a, float b) { return (a == 0.0 || b == 0.0) ? 0.0 : a * b; }")
+        head.append("float fmzfma(float a, float b, float c) { return (a == 0.0 || b == 0.0) ? c + 0.0 : fma(a, b, c); }")
     if getattr(b, "uses_nminmax", False):
         head.insert(2, "#extension GL_EXT_spirv_intrinsics : require")
         head.append(NMINMAX_FN)

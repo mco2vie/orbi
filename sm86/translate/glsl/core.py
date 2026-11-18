@@ -56,6 +56,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.uses_lop3 = False
         self.uses_subgroup = self.uses_shfl = self.uses_shared = self.uses_prmt = self.uses_arith = False
         self.uses_nminmax = False
+        self.uses_fmz = False   # FMUL/FFMA .FMZ: fmzmul/fmzfma in the head
         self.txq_tex: set[tuple[int, int]] = set()  # textures TXQ reads the size of (txqsz_* functions)
         self.tld1d: set[tuple[int, int]] = set()  # 1D textures TLD fetches from: they may be buffer textures (head.py)
         self.uses_shadow_lod = False
@@ -191,10 +192,19 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             plain = None if scale else self.fold_ipa_w(i)
             if plain:
                 return self.dst_f(i, plain)
+            if i.sym("fmz") == "FMZ":
+                # .FMZ: a zero factor gives 0 whatever the other is, infinities and NaN included (the D3D9 multiply,
+                # Ryujinx's FmzMultiply). Read as IEEE, 0 * inf gives NaN where a reciprocal overflowed: suspected
+                # cause of the black Orbitals level drawn by pixel program 238181b4 (17/11/2026).
+                self.uses_fmz = True
+                return self.dst_f(i, f"(fmzmul({self.src_f(i, 'a')}, {self.src_f(i, 'b')}){scale})")
             return self.dst_f(i, f"({self.src_f(i, 'a')} * {self.src_f(i, 'b')}{scale})")
         if op == "FADD":
             return self.dst_f(i, f"({self.src_f(i, 'a')} + {self.src_f(i, 'c')})")
         if op == "FFMA":
+            if i.sym("fmz") == "FMZ":   # as FMUL.FMZ: a zero factor leaves c
+                self.uses_fmz = True
+                return self.dst_f(i, f"fmzfma({self.src_f(i, 'a')}, {self.src_f(i, 'b')}, {self.src_f(i, 'c')})")
             return self.dst_f(i, f"fma({self.src_f(i, 'a')}, {self.src_f(i, 'b')}, {self.src_f(i, 'c')})")
         if op == "MOV":
             return self.dst(i, self.src_u(i, "b"))
