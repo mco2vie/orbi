@@ -12,6 +12,11 @@ Windows PC; the code, the builds and the analysis are elsewhere. What is open is
 
 The recompilation never emulates the CPU or the GPU. Lichii is only a reference to measure against.
 
+`pmocer-latibro` is also on GitLab, at `gitlab.com/sinedgiveaways/pmocer-latibro` (since 18/11/2026, every branch and
+tag copied from GitHub). GitHub stays the main repository: issues, pull requests, the CI and the releases are there.
+GitLab only holds the code, pushed by hand: after a push to GitHub, push the same branch to GitLab too
+(`git push gitlab <branch>`; branches and tags as on GitHub).
+
 ## Builds
 
 - `gh api -X POST repos/sinedgiveaways/pmocer-latibro/actions/workflows/build-windows.yml/dispatches -f ref=<branch>`
