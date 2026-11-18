@@ -1,79 +1,91 @@
 # Roadmap
 
-What is being worked on, in order of priority: Orbitals running from boot to play, then nothing hanging the GPU, then
-the picture as on the console, then the frame rate. Updated 16/11/2026, after the removal of the first game's code
-([mkw-removal.md](mkw-removal.md)).
+What is being worked on, in order of priority: Orbitals playable from boot (no crash, a picture as on the console),
+then nothing hanging the GPU, then the frame rate. Updated 17/11/2026 (branch `diag/frame-history-trace`; how the
+work is done with a player's machine: [workflow.md](workflow.md)).
 
-## 1. Orbitals from boot to play
+All measurements below are from one machine: Windows 11, RTX 4080, NVIDIA 616.92, Orbitals Deluxe Edition 1.0.5
+(program `040032B023CA4000`, main build `d6efcc0a51c1c792`) with its add-on, from a `.nup` package. The reference is
+the same dump on [Lichii](https://github.com/sinedgiveaways/Lichii-tool) (an Eden fork, used as a measuring tool only).
 
-The setup recognises Orbitals (`recomp/versions.py`, version 1) and the runtime has a row for it
-(`runtime/core/boot/version.c`) with no guest address measured yet: every feature that needs one is off and says so in
-the log.
+## Where the game is
 
-- Boot constants from a run with logs on: the return address of the first `nvnBootstrapLoader` call and each module's
-  `DT_INIT` count (`version.c` says which log lines give them), the NVN2 device table of Orbitals' own sdk
-  (`tools/gpu/gen_nvn2_devinfo.py`), its display version (`nn::oe::GetDisplayVersion` answers "unknown").
-- The main thread with the priority, core and stack `main.npdm` asks for (`kernel.c` builds fixed values; `boot.c`
-  logs the difference).
-- SDK coverage: 991 of Orbitals' 1 305 SDK imports are not replaced yet, 319 of them backed by a console service
-  (`tools/analisis/port_check.py`, `sdk_gaps.py`).
-- NVN2 coverage: 171 procs listed and not implemented, 195 names without an implementation, out of 731.
-- First run of the game (16/11/2026, RTX 4080, Windows): the SDK and the 1 990 `DT_INIT` constructors run, `nnMain`
-  is reached, Unreal reads its pak and config files, the audio and NVN start, frames are presented. At 120 s Unreal's
-  watchdog (`GameThread timed out waiting for RenderThread`) aborts the run through `svc #0x26 Break`. In the dump
-  every thread is waiting on an event and none is running, so it is a missing signal, not a loop. The log also shows
-  `no prepared SPIR-V` and draws skipped for it. Whether the two are linked is **not known**; no run of the first
-  game exists as a baseline for Orbitals. The way forward, in this order:
-  1. **Which event is never signalled.** Read the log without the noise (`Select-String -NotMatch` on `AllocateMemoryPages`,
-     `nn::codec: queued`, `sdk call`, `fs entry`), count the presents, and find the fence, vsync or
-     frame-history wait the RenderThread and the Viewport thread sit on (`main+0x4a6d4`, `main+0x1540434`).
-     `nn::vi::ListFrameHistory` answered 0, then one entry. Measured on 17/11/2026 on Lichii (Orbitals' own SDK,
-     lichii-probe): the size query answers 8 always, the array holds every frame shown, newest first, each with its
-     queue and show ticks; `ov_gfx.c` now answers the same (the measurements are in its comment). A second run with draws without a shader made non-blocking would
-     tell whether the shaders are the cause; no such switch exists yet (`ORBITALS_PIPE_SKIP` is about draws whose
-     pipeline is still building).
-  2. **Fix what step 1 finds.** Shader work only if step 1 points at it.
-  3. **Shaders.** Where Orbitals' programs are (its RomFS is Unreal `.pak`/`.utoc` containers, no BNSH archive) and
-     how they reach NVN2; the log's `no prepared SPIR-V <hash>` lines are the hashes of the blobs the game hands to
-     `nvnProgramSetShaders`, which may be captured at run time (to check). The setup's shader step is skipped for
-     Orbitals (`skip_steps`) until then. The image atomic with its handle in a register (Ampere instruction 394) is
-     a known blocker of the translator for this game.
-- The save format, if hacks on the save are wanted again (the former one was the first game's).
+- Boot, the three logos, the warning, the title, the main menu, the Deluxe add-on ("CONTENU BONUS DÉVERROUILLÉ",
+  "GALERIE Deluxe"), the controller screen, the hero choice, the intro cutscenes and the start of the first level
+  (split screen) run, with sound and both controllers, at 30 fps.
+- Shaders: Orbitals' programs live in Unreal containers the setup does not read, so a run dumps every program it has
+  no SPIR-V for into `<game>/spirv-dump` (default since `ffce7da`) and `tools/prepare/dumped_shaders.py` translates
+  them. After a run into the first level: 687 programs dumped, 674 translated (98.1 %).
 
-## 2. Stability and memory
+## 1. Open problems, most blocking first
 
-- GPU hangs on AMD: upload batches already split; next, breadcrumbs and `VK_EXT_device_fault` to find the cause of the
-  remaining ones.
-- Five kernel and platform bugs inherited from totk-pc-recomp (the fiber stack alignment can crash a run).
-- Zero Vulkan validation errors.
+### 1.1 The level's world draws black
 
-## 3. The picture as on the console
+Only the HUD, emissive glows and a few edges show in the first level; Lichii shows the colony lit.
 
-- Push constants of constant bank 24 are not passed yet.
-- Task/mesh shaders as compute.
-- A lower render resolution on weak GPUs (the Steam Deck), through Orbitals' own engine settings: the former setting
-  wrote the first game's RomFS parameters ([romfs-res-audit.md](romfs-res-audit.md)).
+- Measured: a frame dump of the level (`ORBITALS_DUMP=3900`, `images.txt`): the depth prepass is filled (geometry is
+  placed), but the G-buffer passes write a base colour of 0 in R, G and B (alpha varies), normals of 0.5 everywhere and
+  almost nothing in the other targets; the 8-target pass after them is all zero. The materials' pixel shaders run and
+  output black.
+- Ruled out: missing programs (674 of 687 translated, 14 still missing in that run), the graphics push constants the
+  runtime drops (NVN2 keeps them in root table 0, read as constant bank 24, bank 17 after Eden's Ampere lowering:
+  Lichii `src/video_core/engines/maxwell_3d.h`; `tools/shaders/c0_reads.py --banks` finds no Orbitals program reading
+  bank 17 or 24, nor c0 below 0x110).
+- Not known yet: whether the materials' textures resolve. The dump listed every texture "no handle (dummy)" because it
+  looked handles up by slot while Orbitals keeps them in a uniform block (c3, OR'ed with a sampler word); `fd6ef01`
+  makes the dump read them as the bind does. **Next:** the same dump with that build. `handle 0` points at the uniform
+  block read (`ubo_word`, `vk_exec_ubuf.c`), `tex N unresolved` at texture registration, a resolved texture at its
+  contents or sampler; then compare that draw on Lichii.
 
-## 4. Frame rate: the replay thread
+### 1.2 A crash after the logos in about one run in three
 
-Measured in the first game's races (07-09/11/2026, Radeon 660M, Linux, 720p): a frame took 31-33 ms, of which the
-Vulkan back end recording the game's big submit on the replay thread took ~19 ms, on the critical path. The back end
-is the same for Orbitals; its own numbers come from `tools/run/ab.py` runs (`ORBITALS_AB`) once it reaches a scene.
-Already done: recordings reused across frames, recording overlapped with the game, submits on their own thread, the
-shadow copies off the replay thread, the replay thread on its own core. Next:
+`access violation ... reading address 0x104` in `f_7001759b20` (`main+0x1759b20`), Unreal's render graph popping an
+element of an internal array (`main+0x1759d9c` loop, elements of 0xe8 and 0x40 bytes) and freeing its allocation
+through `FMemory::Free` (`main+0xbf040`, a tail call to `GMalloc`'s vtable slot 0x50, which reads the thread's TLS).
+The structure was corrupted earlier; the code reading it is right.
 
-- Dynamic state recorded only when it changes (idea and code from totk-pc-recomp, MIT).
-- Less work per draw: descriptor sets kept across frames by their contents (`ORBITALS_DRAW_CACHE`).
-- Recording in parallel: chunks of a submit on several threads; they fight over the texture lock, which has to be
-  split first.
-- The kernel's global lock: waits by address are done; the rest of the lock remains.
-- The game thread: the generated C at `-O1`, with profile-guided optimization next.
+- Ruled out by A/B runs of 3-4 starts each: GPU write-backs (`ORBITALS_WB_MERGE=none`), asynchronous preemption
+  (`ORBITALS_ASYNC_PREEMPT=0`), page freezing (`ORBITALS_FREEZE_IDLE=0`), the VRAM mirror (`ORBITALS_MEMORY=import`),
+  and STLR ordered as a release store (fixed in `7b4a312`, a correct change, the crash stayed). The game library was
+  checked rebuilt (its lifted code grew by 4 544 bytes).
+- **Next:** the kernel's synchronization (`runtime/core/kernel/`: mutex arbitration, condition variables, events) for
+  a path that lets two threads in at once; then the SDK functions the runtime replaces for threads and TLS.
+
+### 1.3 Smaller visible differences
+
+- The title and main menu backgrounds (nebula, starfield, menu art) are black, while their logos and text show.
+- The "MAINTENIR (B) POUR PASSER" prompt is not drawn during cutscenes; holding B (Xbox B) does skip them.
+- Logos 2 and 3 (Shapefarm, Kepler) are silent; on Lichii they have sound from about 10 to 18 s after start. Not
+  investigated yet; the movie library (`nn::movie`, subsdk0) is initialized but no playback call shows in the logs.
+- 13 programs are still refused by the translator: 5 `tex_scr_urc_` (handle in a uniform register not traced:
+  `tools/shaders/base_origin.py --tex` shows where from), 3 `red__RaNonRZ` and 1 `atomg__RaNonRZ` (untraced global
+  base), 2 `TLD4 2D AOFFI`, 2 shared-memory `ATOMS` forms.
+
+## 2. Known trade-offs in the code
+
+- Shader stores into storage buffers of unknown size (an address read from a uniform block) stay in the pool's VRAM
+  mirror and are never copied to guest memory (`ORBITALS_WB_UNSIZED`, default `vram`): GPU work after them reads them,
+  the CPU does not. Both ways back to guest memory failed (merged on the GPU: device lost; copied whole: corruption).
+- Other shader stores go back merged by bytes on the CPU at the fence (`ORBITALS_WB_MERGE`, default 1). A merge in a
+  compute shader lost the device inside its own dispatches four times; the cause was not found and that code is gone.
+- Texel buffer views are cached (4096) and evicted least recently bound first.
+- TXD's source order follows Ryujinx and is not checked against a picture yet (`sm86/translate/glsl/tex.py txd`).
+
+## 3. Stability and memory
+
+- Zero Vulkan validation errors (not measured on Orbitals yet; needs the Vulkan SDK on the player's machine).
+- The NVN2 coverage: 171 procs listed and not implemented, 195 names without an implementation, out of 731 (from
+  before the Orbitals runs; `tools/analisis/port_check.py`, `sdk_gaps.py`).
+
+## 4. Frame rate
+
+30 fps in the level with 2.6 GB a log interval compared by the merged write-back; no profile of Orbitals yet. The
+replay thread's work found on the first game (recordings reused across frames, parallel recording) applies; its
+numbers for Orbitals come from `tools/run/ab.py` runs (`ORBITALS_AB`).
 
 ## 5. The player's side
 
-- A Linux package that starts on non-rolling distributions (glibc 2.31 through zig), and the launcher tested on real
-  Windows machines.
-- Windows with a dedicated GPU: memory the GPU wrote is not uploaded again to its mirror.
-- "Detect" in the graphics settings: a preset picked from the GPU.
+- Shaders are translated by hand after a run (`dumped_shaders.py`); the setup could do it at each start when
+  `spirv-dump` grew.
+- A Linux package that starts on non-rolling distributions, and the launcher tested on more Windows machines.
 - Steam Remote Play Together checked with Orbitals ([remote-play.md](remote-play.md)).
-- Translations of the README and of the two texts that changed (the missing-game help and the wrong-build error).
