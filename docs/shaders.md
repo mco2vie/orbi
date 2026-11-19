@@ -86,9 +86,10 @@ Per split-screen half (two 800x900 viewports in 1920x1080 targets). Shaders by t
    The grids' guest memory is all zero; nothing writes them in a colony frame. With `ORBITALS_TRACE_3D=1` (recomp48)
    each grid was uploaded once and written by `a29340cb16aff1e1` at the level's load. The alias fix found no alias to
    sync, so the sampled grid is that compute's own image: it wrote "empty" everywhere. **Next:** what that compute
-   reads (`ORBITALS_TRACE_3D=1` logs its bindings and uniform blocks and keeps its SPIR-V in `<game>/trace3d/`): an
-   empty or unreadable light list (a storage buffer of unknown size kept in VRAM, `ORBITALS_WB_UNSIZED`? a count read
-   from a uniform block the runtime fills wrong?).
+   reads (`ORBITALS_TRACE_3D=1` logs its bindings and uniform blocks and keeps its SPIR-V in `<game>/trace3d/`).
+   recomp50: that compute is a clear (ClearUAV: c4[0] the value, c4[1] the offset, c4[2] the size), so another writer
+   fills the grid, most likely through a buffer over the same memory (guest memory went from garbage to zeros with no
+   CPU write). The trace now logs dispatches whose buffers reach a 3D image's memory.
 4. Bright, speckled patches on lamps and ceilings in the colony (light shafts?): not looked at.
 
 ## Tools

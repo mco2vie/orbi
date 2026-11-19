@@ -155,6 +155,15 @@ bright speckled patches on lamps and ceilings (volumetric light shafts?), not lo
 **Next:** `ORBITALS_TRACE_3D=1` now also logs, for the first write of each 3D storage image, the dispatch's bindings
 with its uniform blocks (`vk: trace3d <hash>: ...`) and writes its SPIR-V to `<game>/trace3d/`. Read the light grid
 compute: where its lights come from (a storage buffer, its count in a uniform block) and why it finds none.
+recomp50: `a29340cb16aff1e1` is only a **clear** (Unreal's ClearUAV): one uniform block, c4[0] = the value
+(`0xffffffff` x4), c4[1] = the offset, c4[2] = the size (20, 20, 100); it stores the value into every cell of the
+3D image. So the real fill comes after it, from another writer. The grid's guest memory went from garbage at its
+upload to all zeros with no CPU write and no re-upload: the fill most likely writes the same memory **through a
+buffer** (a storage buffer or buffer texture) that the 3D image never sees. **Next:** `ORBITALS_TRACE_3D=1` now also
+logs any dispatch whose storage buffers or buffer textures reach the memory of a 3D image written before (`vk:
+trace3d <hash> (its storage buffer ... reaches the 3D image at ...)`), with its bindings and SPIR-V. If that is the
+fill, the fix is a buffer/image alias: buffer writes into a texture's storage must reach the image (or the image be
+re-read from the buffer's mirror).
 
 ### 1.2 A crash after the logos in about one run in three
 

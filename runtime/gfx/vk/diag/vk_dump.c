@@ -636,12 +636,94 @@ int vk_trace_3d_on(void) {
 
 // ORBITALS_TRACE_3D=1 (diagnosis): the first dispatch that writes each 3D storage image is logged with its frame, size,
 // shader and caller (the race's colour-grading LUT is written in some earlier frame, not in the one dumped).
+// The dispatch's bindings with its uniform blocks into the log (tag: what it is traced for), and its SPIR-V into
+// <game>/trace3d/sh_<hash>.spv (ORBITALS_TRACE_3D).
+static void trace3d_dispatch(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, uint64_t sh, const char *tag) {
+    Str bs = {0};
+    int du = dump_ubo;
+    dump_ubo = 1;
+    describe_bindings(&bs, ex, info);
+    dump_ubo = du;
+    rt_log("vk: trace3d %016llx (%s), frame %llu:", (unsigned long long)sh, tag, (unsigned long long)frame_now());
+    for (char *line = bs.s, *nl; line && *line; line = nl) {
+        nl = strchr(line, '\n');
+        if (nl) *nl++ = 0;
+        rt_log("vk: trace3d %016llx: %s", (unsigned long long)sh, line);
+        if (!nl) break;
+    }
+    free(bs.s);
+    uint64_t words = 0;
+    const void *b = gfx_shader_spirv(cs, &words);
+    char path[1100];
+    snprintf(path, sizeof path, "%s/trace3d", cfg_game_dir());
+    plat_file_mkdir_p(path);
+    snprintf(path, sizeof path, "%s/trace3d/sh_%016llx.spv", cfg_game_dir(), (unsigned long long)sh);
+    if (b && !plat_file_exists(path)) plat_file_write(path, b, (size_t)words * 4);
+}
+
+// The storage of the 3D images written so far (first writer seen): a dispatch that later writes the same memory through
+// a storage buffer or a buffer texture is logged once per shader and image. Orbitals' light grid is cleared to all ones
+// by a ClearUAV-like compute through its 3D image (a29340cb16aff1e1) and filled by something else: its guest memory
+// changed from garbage to zero with no CPU write and no other write to the image (19/11/2026).
+static struct { uint64_t lo, hi; } g3d[32];
+static int ng3d;
+
+static void trace3d_overlap(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, uint64_t sh) {
+    static struct { uint64_t sh; int r; } logged[64];
+    static int nlogged;
+    for (uint32_t i = 0; i < info->n_bindings; i++) {
+        const VkPipeBinding *bd = &info->bindings[i];
+        const GfxShaderRes *r = bd->res;
+        if (!r) continue;
+        uint64_t lo[17], hi[17];
+        int n = 0;
+        const char *how = NULL;
+        int st = nvn_stage(bd->stage);
+        if (bd->kind == GFX_RES_SSBO) {
+            how = "storage buffer";
+            if (r->cbuf_slot >= 3 && r->cbuf_slot - 3 < 18) {   // an address in a uniform block, its size unknown
+                lo[0] = ubo_ptr(ex, st, r), hi[0] = lo[0] + (1u << 20), n = lo[0] != 0;
+            } else {
+                for (int k = 0; k < 16; k++)   // the stage's bound slots (c0 table)
+                    if (ex->ssbo[st][k].addr)
+                        lo[n] = ex->ssbo[st][k].addr, hi[n] = lo[n] + ex->ssbo[st][k].size, n++;
+            }
+        } else if ((bd->kind == GFX_RES_IMG || bd->kind == GFX_RES_TEX) &&
+                   (bd->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || bd->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER)) {
+            uint64_t h = handle_of(ex, st, r, 0, bd->kind == GFX_RES_IMG), addr = 0;
+            int fmt = 0;
+            uint32_t texels = 0;
+            if (h && vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels))
+                lo[0] = addr, hi[0] = addr + (uint64_t)texels * 16, n = 1;
+            how = bd->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ? "storage buffer texture" : "buffer texture";
+        }
+        for (int q = 0; q < n; q++)
+        for (int k = 0; k < ng3d; k++) {
+            if (hi[q] <= g3d[k].lo || lo[q] >= g3d[k].hi) continue;
+            int seen = 0;
+            for (int j = 0; j < nlogged; j++) seen |= logged[j].sh == sh && logged[j].r == k;
+            if (seen || nlogged == 64) continue;
+            logged[nlogged].sh = sh, logged[nlogged++].r = k;
+            char tag[160];
+            snprintf(tag, sizeof tag, "its %s %#llx reaches the 3D image at %#llx", how, (unsigned long long)lo[q],
+                     (unsigned long long)g3d[k].lo);
+            trace3d_dispatch(ex, cs, info, sh, tag);
+        }
+    }
+}
+
 void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, const p_dispatch *d) {
     static int on = -1;
     static VkImage seen[256];
     static int nseen;
     if (on < 0) on = cfg_get("ORBITALS_TRACE_3D") && atoi(cfg_get("ORBITALS_TRACE_3D"));
     if (!on) return;
+    if (ng3d) {
+        uint64_t w0 = 0, h0 = 0xcbf29ce484222325ull;
+        const uint8_t *b0 = (const uint8_t *)gfx_shader_spirv(cs, &w0);
+        for (uint64_t j = 0; j < w0 * 4; j++) h0 = (h0 ^ b0[j]) * 0x100000001b3ull;
+        trace3d_overlap(ex, cs, info, h0);
+    }
     for (uint32_t i = 0; i < info->n_bindings; i++) {
         const VkPipeBinding *bd = &info->bindings[i];
         if (!bd->res || bd->kind != GFX_RES_IMG || !(bd->res->flags & 4) || bd->type != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
@@ -662,25 +744,8 @@ void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info,
                "caller %#llx", (unsigned long long)frame_now(), t->width, t->height, t->depth, (int)t->format,
                (unsigned)NVN_HANDLE_TEX(h), hv, (unsigned long long)sh, bd->res->slot, d->x, d->y, d->z,
                (unsigned long long)d->caller);
-        // What the dispatch reads, as a dump's pass lines with its uniform blocks (the colony's light grid compute
-        // runs once, at the level's load, outside any dumped frame), and its SPIR-V into <game>/trace3d
-        Str bs = {0};
-        int du = dump_ubo;
-        dump_ubo = 1;
-        describe_bindings(&bs, ex, info);
-        dump_ubo = du;
-        for (char *line = bs.s, *nl; line && *line; line = nl) {
-            nl = strchr(line, '\n');
-            if (nl) *nl++ = 0;
-            rt_log("vk: trace3d %016llx: %s", (unsigned long long)sh, line);
-            if (!nl) break;
-        }
-        free(bs.s);
-        char path[1100];
-        snprintf(path, sizeof path, "%s/trace3d", cfg_game_dir());
-        plat_file_mkdir_p(path);
-        snprintf(path, sizeof path, "%s/trace3d/sh_%016llx.spv", cfg_game_dir(), (unsigned long long)sh);
-        if (!plat_file_exists(path)) plat_file_write(path, b, (size_t)words * 4);
+        if (ng3d < 32) g3d[ng3d].lo = t->addr, g3d[ng3d++].hi = t->addr + (uint64_t)t->width * t->height * t->depth * 16;
+        trace3d_dispatch(ex, cs, info, sh, "first writer of a 3D image");
     }
 }
 

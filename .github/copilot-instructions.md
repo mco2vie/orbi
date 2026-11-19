@@ -26,12 +26,15 @@ shaders are translated to SPIR-V (`sm86/`). The game runs from boot to its first
 ## The task in progress (19/11/2026)
 
 The colony's environment is dark; Lichii shows it bright. The lighting shader (`d18042401d56bbea` in frame dumps)
-reads a 3D r32ui light grid per half and skips cells equal to `0xffffffff`; both grids are all `0xffffffff`. They are
-written once, at the level's load, by compute `a29340cb16aff1e1`, which found no light. The current build logs that
-dispatch's bindings and uniform blocks with `ORBITALS_TRACE_3D=1` (`vk: trace3d <hash>: ...`) and writes its SPIR-V to
-`<game>/trace3d/`. The player was asked for that log and folder. Next: read that compute (spirv-cross
-`--vulkan-semantics` on the SPIR-V), find where its light list comes from (a storage buffer, a count in a uniform
-block), check what the runtime gives it, and fix the cause in the runtime or the translator. Details: roadmap 1.1b.
+reads a 3D r32ui light grid per half and skips cells equal to `0xffffffff`; both grids are all `0xffffffff`. At the
+level's load, compute `a29340cb16aff1e1` clears them (it is Unreal's ClearUAV, not the fill). The real fill is another
+writer, most likely through a buffer over the same memory (the grid's guest memory went from garbage to zeros with no
+CPU write and no re-upload of the image). The current build, with `ORBITALS_TRACE_3D=1`, logs any dispatch whose
+storage buffers or buffer textures reach a 3D image's memory (`vk: trace3d <hash> (its storage buffer ... reaches the
+3D image at ...)`), with its bindings and uniform blocks, and writes its SPIR-V to `<game>/trace3d/`. Next: get that
+log and folder, read the writer (spirv-cross `--vulkan-semantics`), and make buffer writes into a texture's storage
+reach the image the lighting samples (runtime/gfx/vk/tex: the image re-read from the buffer's mirror after such a
+write, or a buffer-to-image copy at use). Details: roadmap 1.1b, docs/shaders.md.
 
 Other open items: two refused fragment programs (`tex_scr_urc_`), bright speckled patches on lamps, a crash at
 `main+0x1759b20` reading 0x104 in about one start in three (roadmap 1.2), silent logos 2 and 3, black title and menu
