@@ -38,6 +38,7 @@
 #include "gamelib.h"
 #include "hacks.h"
 #include "host.h"
+#include "kernel.h"
 #include "players.h"
 #include "platform/platform.h"
 #include "sha256.h"
@@ -262,6 +263,7 @@ static void crash_handler(const PlatCrash *x) {
     uint64_t f = lifted_function(rip);
     if (f) rt_logf("  in lifted function f_%llx = %s\n", (unsigned long long)f, ldr_describe(f, d, sizeof d));
     Cpu *c = kern_cpu();
+    if (c) kern_crash_context(c);
     if (c) {
         for (int i = 0; i < 31; i++)
             rt_logf("  x%-2d %016llx%s", i, (unsigned long long)c->x[i], i % 4 == 3 ? "\n" : "");

@@ -340,6 +340,29 @@ uint64_t kern_threads_created(void) {
 
 Cpu *kern_cpu(void) { return tcur ? tcur->cur : NULL; }
 
+// Capture the TLS ownership at the fault site without taking the kernel lock: this runs in a crash handler.
+void kern_crash_context(const Cpu *c) {
+    RtThread *t = tcur;
+    if (!t) {
+        rt_logf("  kernel TLS: no current guest thread (cpu %p)\n", (const void *)c);
+        return;
+    }
+    rt_logf("  kernel TLS: thread=%#x id=%llu cpu=%p cur=%p fault_cpu=%p exited=%d closed=%d host_depth=%d\n",
+            t->handle, (unsigned long long)t->id, (void *)t->cpu, (void *)t->cur, (const void *)c,
+            t->exited, t->closed, t->host_depth);
+    rt_logf("  kernel TLS: thread tls=%p tlr=%p; cpu tpidr=%#llx tpidrro=%#llx; match tls=%d tlr=%d cur=%d\n",
+            (void *)t->tls, (void *)t->tlr, (unsigned long long)(c ? c->tpidr : 0),
+            (unsigned long long)(c ? c->tpidrro : 0), c && (uintptr_t)t->tls == c->tpidr,
+            c && (uintptr_t)t->tlr == c->tpidrro, c == t->cur);
+    rt_logf("  kernel TLS: fiber=%#llx switches=%llu base_tpidr=%#llx base_tpidrro=%#llx\n",
+            (unsigned long long)t->fiber_addr, (unsigned long long)t->fiber_switches,
+            (unsigned long long)t->cpu->tpidr, (unsigned long long)t->cpu->tpidrro);
+    rt_logf("  kernel TLS: last fiber switch %#llx -> %#llx; TPIDR %#llx -> %#llx; TPIDRRO %#llx -> %#llx\n",
+            (unsigned long long)t->fiber_last_from, (unsigned long long)t->fiber_last_to,
+            (unsigned long long)t->fiber_last_from_tpidr, (unsigned long long)t->fiber_last_to_tpidr,
+            (unsigned long long)t->fiber_last_from_tpidrro, (unsigned long long)t->fiber_last_to_tpidrro);
+}
+
 uint32_t kern_main_thread(Cpu **cpu) {
     if (tcur) {
         if (!tcur->is_main) rt_fatal("kern_main_thread on guest thread %#x, not the main thread", tcur->handle);

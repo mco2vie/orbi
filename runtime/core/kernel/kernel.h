@@ -26,6 +26,8 @@ void kern_fiber_switch(Cpu *c);
 void kern_fiber_current(Cpu *c);
 
 uint64_t kern_threads_created(void);
+// Log the current guest thread's TLS pointers and ownership at a fatal host crash.
+void kern_crash_context(const Cpu *c);
 
 // The guest frame-pointer chain from c->x[29] to stderr.
 void kern_backtrace(const Cpu *c);
