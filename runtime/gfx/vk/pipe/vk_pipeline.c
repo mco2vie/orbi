@@ -296,6 +296,12 @@ static VkPolygonMode polygon_mode(unsigned m) {
     return (VkPolygonMode)(2 - m);
 }
 
+int vk_pipeline_gs_prim(int prim) {
+    VkPrimitiveTopology t = vk_pipeline_topology(prim);
+    return t == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST || t == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+           t == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+}
+
 VkPrimitiveTopology vk_pipeline_topology(int prim) {
     switch (prim) {
     case NVN_DRAW_PRIMITIVE_POINTS: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
@@ -457,7 +463,7 @@ void vk_pipeline_answers(const VkPipeState *s, int stage, GfxShaderAnswers *a) {
             if (s->color_fmt[i]) a->out_type[i] = (uint8_t)vk_format_numeric(target_format(s->color_fmt[i], NULL, NULL));
         return;
     }
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 32; i++) {
         va_st va;
         memcpy(&va, &s->vattr[i], sizeof va);
         int type = GFX_TYPE_FLOAT;
@@ -498,7 +504,7 @@ void vertex_input(const VkPipeState *s, VtxInput *v) {
         *a = (VkVertexInputAttributeDescription2EXT){.sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                                                      .location = (uint32_t)l};
         va_st va = {0};
-        if (l < 16) memcpy(&va, &s->vattr[l], sizeof va);
+        memcpy(&va, &s->vattr[l], sizeof va);
         VkFormat f = va.fmt ? vk_vertex_format((int)va.fmt, NULL) : VK_FORMAT_UNDEFINED;
         if (f != VK_FORMAT_UNDEFINED && va.stream < 16) {
             a->binding = va.stream, a->format = f, a->offset = va.offset;
@@ -644,6 +650,7 @@ void gkey_fill(const VkPipeState *s, GKey *k) {
     k->vs = s->vs, k->fs = s->fs;
     k->indep = (uint8_t)P.indep;
     if (mesh_pipe(s)) k->meshp = 1, k->mesh = s->mesh, k->indep = 0;
+    else k->gs = s->gs;
     k->n_color = (uint8_t)target_count(s);
     for (int i = 0; i < k->n_color; i++) k->color[i] = target_format(s->color_fmt[i], NULL, NULL);
     int d, st;
@@ -997,17 +1004,29 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
     }
     vm = make_module(vcode, vw);
     free(vpatched), free(fpatched);
+    VkShaderModule gm = VK_NULL_HANDLE;
+    if (s->gs) {   // no resources (pipe_miss checks it) and no patching: its outputs are what the fragment stage reads
+        uint64_t gw;
+        const uint32_t *gcode = gfx_shader_spirv(s->gs, &gw);
+        if (gcode) gm = make_module(gcode, gw);
+    }
     VkPipeline pipe = VK_NULL_HANDLE;
-    if (!vm || (s->fs && !fm)) goto out;
+    if (!vm || (s->fs && !fm) || (s->gs && !gm)) goto out;
 
-    VkPipelineShaderStageCreateInfo stages[2] = {
+    VkPipelineShaderStageCreateInfo stages[3] = {
         {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vm, .pName = "main"},
-        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fm, .pName = "main"}};
+        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fm, .pName = "main"},
+        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = gm, .pName = "main"}};
     VkPipelineShaderStageRequiredSubgroupSizeCreateInfo rqv, rqf;
     uint64_t sw;
     const uint32_t *scode = gfx_shader_spirv(s->vs, &sw);   // vcode may be a patched copy that is freed by now
     pin_subgroup32(&stages[0], &rqv, scode, sw);
     if (s->fs) pin_subgroup32(&stages[1], &rqf, gfx_shader_spirv(s->fs, &sw), sw);
+    uint32_t nstages = s->fs ? 2 : 1;
+    if (gm) {   // the geometry stage after the fragment one in the array (stage order does not matter to Vulkan)
+        if (!s->fs) stages[1] = stages[2];
+        nstages = s->fs ? 3 : 2;
+    }
     VkVertexInputAttributeDescription va[32];
     VkVertexInputBindingDescription vb[17];
     uint32_t na = 0, nb = 0;
@@ -1060,7 +1079,7 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
                                         .pColorAttachmentFormats = (const VkFormat *)k->color,
                                         .depthAttachmentFormat = (VkFormat)k->depth, .stencilAttachmentFormat = (VkFormat)k->stencil};
     VkGraphicsPipelineCreateInfo pi = {.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, .pNext = &ri,
-                                       .stageCount = s->fs ? 2 : 1, .pStages = stages, .pVertexInputState = &vi,
+                                       .stageCount = nstages, .pStages = stages, .pVertexInputState = &vi,
                                        .pInputAssemblyState = &ia, .pViewportState = &vp, .pRasterizationState = &rs,
                                        .pMultisampleState = &ms, .pDepthStencilState = &ds, .pColorBlendState = &cb,
                                        .pDynamicState = &dy, .layout = l->layout};
@@ -1081,6 +1100,7 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
 out:
     if (vm) vkDestroyShaderModule(P.device, vm, NULL);
     if (fm) vkDestroyShaderModule(P.device, fm, NULL);
+    if (gm) vkDestroyShaderModule(P.device, gm, NULL);
     return pipe;
 }
 

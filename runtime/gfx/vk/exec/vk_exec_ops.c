@@ -256,7 +256,101 @@ static void dispatch_barrier(VkExec *ex) {
     vk_exec_barrier(ex);
 }
 
+// ---- program bindings per stage. nvnCommandBufferBindProgram(cmd, program, stages) binds the program to the stages in
+// its mask only, and compute is bound apart from graphics: the replay kept one program for everything, replaced whole at
+// each bind. Mario Kart World binds one program with all its stages, so that was enough; Orbitals (Unreal) does not: in
+// its black frames every draw was skipped, 38 a frame with no program bound and 12 with a program without a vertex stage
+// (ORBITALS_TRACE=gfx, 17/11/2026), and no vertex shader ran. Now each stage keeps its own program; draws use the graphics
+// stages' program, made into one when they come from different programs, and dispatches use the compute stage's.
+#define MERGED_N 1024
+static struct { const prog_t *in[5]; uint64_t serial[5]; prog_t *out; } merged[MERGED_N];
+static PlatMutex merged_lock = PLAT_MUTEX_INIT;
+
+// The shader of p for NVN stage s, or -1.
+static int prog_stage_index(const prog_t *p, int s) {
+    for (uint32_t i = 0; i < p->nstage && i < 6; i++)
+        if (p->sd[i].control && p->sd[i].data &&
+            nvn2_program_stage(p->sd[i].control, (const uint8_t *)(uintptr_t)p->sd[i].data) == s)
+            return (int)i;
+    return -1;
+}
+
+static const prog_t *graphics_program(const VkExec *ex) {
+    const prog_t *one = NULL;
+    int same = 1;
+    for (int s = 0; s < 5; s++) {
+        const prog_t *p = ex->sprog[s];
+        if (!p) continue;
+        if (!one) one = p;
+        else if (p != one) same = 0;
+    }
+    if (!one || same) return one;
+    uint64_t h = 0xcbf29ce484222325ull;
+    for (int s = 0; s < 5; s++) {
+        const prog_t *p = ex->sprog[s];
+        h = (h ^ (uintptr_t)p) * 0x100000001b3ull, h = (h ^ (p ? p->serial : 0)) * 0x100000001b3ull;
+    }
+    plat_mutex_lock(&merged_lock);
+    prog_t *out = NULL;
+    for (uint32_t i = 0, k = (uint32_t)(h % MERGED_N); i < MERGED_N && !out; i++, k = (k + 1) % MERGED_N) {
+        int hit = merged[k].out != NULL;
+        for (int s = 0; hit && s < 5; s++)
+            hit = merged[k].in[s] == ex->sprog[s] && merged[k].serial[s] == (ex->sprog[s] ? ex->sprog[s]->serial : 0);
+        if (hit) { out = merged[k].out; break; }
+        if (merged[k].out && i + 1 < MERGED_N) continue;
+        // a free slot (or the table is full: the slot is taken over; its program is kept, a pipeline may name it)
+        prog_t *m = calloc(1, sizeof *m);
+        if (!m) rt_fatal("vk: out of memory (merged programs)");
+        m->magic = one->magic;
+        for (int s = 0; s < 5; s++) {
+            const prog_t *p = ex->sprog[s];
+            int j = p ? prog_stage_index(p, s) : -1;
+            if (j >= 0 && m->nstage < 6) m->sd[m->nstage++] = p->sd[j];
+        }
+        m->serial = nvn_new_serial();
+        for (int s = 0; s < 5; s++) merged[k].in[s] = ex->sprog[s], merged[k].serial[s] = ex->sprog[s] ? ex->sprog[s]->serial : 0;
+        merged[k].out = out = m;
+        static int logged;
+        if (logged++ < 8) {
+            char d[160];
+            int o = 0;
+            for (int s = 0; s < 5; s++)
+                if (ex->sprog[s]) o += snprintf(d + o, sizeof d - (size_t)o, " s%d=%p", s, (const void *)ex->sprog[s]);
+            rt_log("vk: graphics program made of the stages of several programs:%s -> %u shaders", d, m->nstage);
+        }
+    }
+    plat_mutex_unlock(&merged_lock);
+    return out;
+}
+
+static void bind_program(VkExec *ex, const p_bind_program *b) {
+    for (int s = 0; s < 6; s++)
+        if (b->stages & (1 << s)) ex->sprog[s] = b->prog;
+    ex->cprog = ex->sprog[5];
+    if (b->stages & NVN_SHADER_STAGE_ALL_GRAPHICS_BITS) {
+        ex->prog = graphics_program(ex);
+        ex->prog_stages = 0;
+        for (int s = 0; s < 5; s++) ex->prog_stages |= ex->sprog[s] ? 1 << s : 0;
+    }
+}
+
+static void op_dispatch_body(VkExec *ex, const p_dispatch *d);
+static void op_dispatch_ind_body(VkExec *ex, const p_dispatch_ind *d);
+// A dispatch runs the compute program: ex->prog is the graphics one between dispatches.
 static void op_dispatch(VkExec *ex, const p_dispatch *d) {
+    const prog_t *g = ex->prog;
+    ex->prog = ex->cprog;
+    op_dispatch_body(ex, d);
+    ex->prog = g;
+}
+static void op_dispatch_ind_body(VkExec *ex, const p_dispatch_ind *d) {
+    const prog_t *g = ex->prog;
+    ex->prog = ex->cprog;
+    op_dispatch_ind_body(ex, d);
+    ex->prog = g;
+}
+
+static void op_dispatch_body(VkExec *ex, const p_dispatch *d) {
     if (d->x <= 0 || d->y <= 0 || d->z <= 0) return;
     if (!ex->prog) return warn_once(W_PROGRAM, "a dispatch without a bound program is skipped");
     cb_res(ex);
@@ -278,7 +372,9 @@ static void op_dispatch(VkExec *ex, const p_dispatch *d) {
     bind_pipeline(ex, VK_PIPELINE_BIND_POINT_COMPUTE, p);
     recent_note(cs, NULL);
     c0_dim[0] = (uint32_t)d->x, c0_dim[1] = (uint32_t)d->y, c0_dim[2] = (uint32_t)d->z, c0_cs = cs;
+    c0_push = d->push_n ? d->push : NULL, c0_push_n = d->push_n;
     bind_resources(ex, info);
+    c0_push = NULL, c0_push_n = 0;
     int pt = vk_pt_enabled();
     if (vk_spec_census_on()) spec_census(ex, cs, NVN_STAGE_CS);
     if (pt && vk_pt_draw_mode()) vk_pt_draw(ex->cb, cs, NULL);
@@ -460,8 +556,7 @@ static void op_draw_mesh_cs(VkExec *ex, const p_draw_mesh *d) {
 int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload) {
     switch (op) {
     case OP_BIND_PROGRAM: {
-        const p_bind_program *b = payload;
-        ex->prog = b->prog, ex->prog_stages = b->stages;
+        bind_program(ex, payload);
         break;
     }
     case OP_BIND_STATE: {
@@ -483,7 +578,7 @@ int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload) {
     }
     case OP_BIND_VATTR: {
         const p_bind_vattr *b = payload;
-        if (b->first < 0 || b->n < 0 || b->first + b->n > 16) break;
+        if (b->first < 0 || b->n < 0 || b->first + b->n > 32) break;
         memset(ex->pipe.vattr, 0, sizeof ex->pipe.vattr);   // MNG: the new list replaces the old one
         memcpy(&ex->pipe.vattr[b->first], b->st, sizeof(uint32_t) * (size_t)b->n);
         break;

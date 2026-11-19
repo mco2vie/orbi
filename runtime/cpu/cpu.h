@@ -114,8 +114,8 @@ void fnprof_hit(uint64_t addr, uint64_t lr, uint64_t x0);
     static inline uint64_t lda##N(uint64_t a) {                                            \
         return __atomic_load_n((T *)(uintptr_t)a, __ATOMIC_ACQUIRE);                       \
     }                                                                                      \
-    static inline void stl##N(uint64_t a, uint64_t v) {                                    \
-        __atomic_store_n((T *)(uintptr_t)a, (T)v, __ATOMIC_RELEASE);                       \
+    static inline void stl##N(uint64_t a, uint64_t v) { /* seq_cst: STLR then LDAR order */ \
+        __atomic_store_n((T *)(uintptr_t)a, (T)v, __ATOMIC_SEQ_CST);                       \
     }
 EXCL(8, uint8_t)
 EXCL(16, uint16_t)

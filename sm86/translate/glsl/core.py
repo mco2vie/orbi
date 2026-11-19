@@ -21,6 +21,7 @@ from program import Insn, Sph
 
 from glsl import subroutines
 from glsl.alu import AluOps
+from glsl.geom import GeomOps
 from glsl.common import FMUL_SCALE, MUFU, PT, RZ, TURNS, URZ, Unsupported, pred, reg
 from glsl.head import (
     MESH_MAIN,
@@ -43,7 +44,7 @@ from glsl.thread import ThreadOps
 SPEC_ON = os.environ.get("SM86_SPEC", "0") == "1"
 
 
-class Builder(AluOps, MemOps, TexOps, ThreadOps):
+class Builder(AluOps, MemOps, TexOps, ThreadOps, GeomOps):
     def __init__(self, sph: Sph | None, stage: str) -> None:
         self.sph, self.stage = sph, stage
         self.cbufs: set[int] = set()
@@ -56,7 +57,9 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.uses_lop3 = False
         self.uses_subgroup = self.uses_shfl = self.uses_shared = self.uses_prmt = self.uses_arith = False
         self.uses_nminmax = False
+        self.uses_fmz = False   # FMUL/FFMA .FMZ: fmzmul/fmzfma in the head
         self.txq_tex: set[tuple[int, int]] = set()  # textures TXQ reads the size of (txqsz_* functions)
+        self.tld1d: set[tuple[int, int]] = set()  # 1D textures TLD fetches from: they may be buffer textures (head.py)
         self.uses_shadow_lod = False
         self.uses_demote = False
         self.lmem_bytes = 0  # local memory (LDL/STL): the furthest constant extent, 0 = none
@@ -64,9 +67,20 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.mesh = False  # a mesh program (ISBEWR.SKEW per-vertex writes): set by translate()
         self.zombie = False  # a compute program with BAR: a predicated EXIT keeps the lane going (exited): translate()
         self.images: dict[tuple[int, int], str] = {}
+        self.img_ld: set[str] = set()   # images SULD reads and SUST writes: their imld_/imst_ helpers (head.py)
+        self.img_st: set[str] = set()
         self.ssbos: set[int] = set()  # driver bank 0 offsets of the storage buffer addresses read
         self.ssbos_written: set[int] = set()  # those a STG, ATOMG or RED stores into (reflection flag 1)
         self.ur_ssbo: dict[int, int] = {}  # uniform register -> the c[0] offset its 64-bit value came from
+        self.ur_const: dict[int, tuple[int, int]] = {}  # uniform register -> (bank, byte) its ULDC word came from
+        # uniform register -> the two constant words a ULOP3 OR made it from (Unreal's texture | sampler handle words)
+        self.ur_or: dict[int, tuple[tuple[int, int], tuple[int, int]]] = {}
+        self.tex_h2: dict[tuple[int, int], int] = {}  # texture key -> the word index OR'ed into its handle
+        # general registers, as ur_const and ur_or: (bank, byte) a MOV of a constant word gave, and the two words a LOP3
+        # OR of such a register with a constant word made (Unreal's handles in a register: 8 Orbitals programs)
+        # each with the guard (Pg, negated) of its write, None when unguarded
+        self.r_const: dict[int, tuple[tuple[int, int], tuple[int, int] | None]] = {}
+        self.r_or: dict[int, tuple[tuple[tuple[int, int], tuple[int, int]], tuple[int, int] | None]] = {}
         self.reg_ssbo: dict[int, int] = {}
         self.ur_derived: dict[
             int, int
@@ -82,6 +96,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
         self.textures: dict[tuple[int, int], str] = {}  # (handle bank, handle index) -> GLSL sampler type
         self.uses_ldsm = self.uses_hmma = self.uses_movm = False  # LDSM_FN, HMMA_FN, MOVM_FN in the head
         self.gsearch_load = self.gsearch_store = False  # global_search used: gld/gst go into the head
+        self.gsearch_atom: set[str] = set()  # ATOMG/RED ops through the search (gatm_<op>, mem.py global_search_fns)
 
     # ---- operands
     def const(self, bank: int, byte: int, spec: bool = True) -> str:
@@ -162,6 +177,10 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
     # ---- instructions
     def insn(self, i: Insn) -> str:
         op = i.op
+        if self.stage == "gs":
+            out = self.gs_insn(i)
+            if out is not None:
+                return out
         # BREAK only takes the thread out of a convergence barrier (BSSY/BSYNC, dropped too); the BRA after it with
         # the same predicate does the jump (agl_technique_shdw: `@!P1 BREAK B2; @!P1 BREAK B1; @!P1 BRA`)
         if op in ("NOP", "DEPBAR", "BSSY", "BSYNC", "BREAK", "WARPSYNC", "ERRBAR"):
@@ -178,10 +197,19 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             plain = None if scale else self.fold_ipa_w(i)
             if plain:
                 return self.dst_f(i, plain)
+            if i.sym("fmz") == "FMZ":
+                # .FMZ: a zero factor gives 0 whatever the other is, infinities and NaN included (the D3D9 multiply,
+                # Ryujinx's FmzMultiply). Read as IEEE, 0 * inf gives NaN where a reciprocal overflowed: suspected
+                # cause of the black Orbitals level drawn by pixel program 238181b4 (17/11/2026).
+                self.uses_fmz = True
+                return self.dst_f(i, f"(fmzmul({self.src_f(i, 'a')}, {self.src_f(i, 'b')}){scale})")
             return self.dst_f(i, f"({self.src_f(i, 'a')} * {self.src_f(i, 'b')}{scale})")
         if op == "FADD":
             return self.dst_f(i, f"({self.src_f(i, 'a')} + {self.src_f(i, 'c')})")
         if op == "FFMA":
+            if i.sym("fmz") == "FMZ":   # as FMUL.FMZ: a zero factor leaves c
+                self.uses_fmz = True
+                return self.dst_f(i, f"fmzfma({self.src_f(i, 'a')}, {self.src_f(i, 'b')}, {self.src_f(i, 'c')})")
             return self.dst_f(i, f"fma({self.src_f(i, 'a')}, {self.src_f(i, 'b')}, {self.src_f(i, 'c')})")
         if op == "MOV":
             return self.dst(i, self.src_u(i, "b"))
@@ -211,7 +239,7 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             return self.dst_f(i, f"({pred(i.v('Pp'), i.v('Pp@not'))} ? {self.src_f(i, 'a')} : {self.src_f(i, 'b')})")
         if op in ("FSETP", "ISETP", "UISETP"):
             return self.setp(i)
-        if op in ("F2FP", "R2UR", "I2F", "UP2UR", "P2R", "TXQ", "FLO", "SGXT", "IABS", "UBREV", "PRMT", "UFLO",
+        if op in ("F2FP", "R2UR", "I2F", "UP2UR", "P2R", "TXQ", "FLO", "SGXT", "IABS", "UBREV", "BREV", "PRMT", "UFLO",
                   "R2P", "ULEA", "USEL", "UPLOP3", "SUST", "SULD", "SURED", "SUATOM"):  # fmt: skip
             return getattr(self, op.lower())(i)
         if op == "IPA":
@@ -226,6 +254,8 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             return self.tex(i)
         if op == "TLD":
             return self.tld(i)
+        if op == "TXD":
+            return self.txd(i)
         if op == "TMML":
             return self.tmml(i)
         if op in ("S2R", "S2UR"):
@@ -268,6 +298,8 @@ class Builder(AluOps, MemOps, TexOps, ThreadOps):
             return getattr(self, op.lower())(i)
         if op in ("ATOMG", "RED"):
             return self.atom_global(i)
+        if op == "ATOMS":
+            return self.atoms(i)
         if op == "UPOPC":
             return self.dst(i, f"uint(bitCount({self.src_u(i, 'b')}))")
         if op in ("HADD2", "HSETP2", "MATCH", "POPC", "REDUX"):
@@ -367,7 +399,7 @@ def translate(
 ) -> tuple[str, dict]:
     """shape: compute_shape() of a compute program; without it the workgroup is 1x1x1 (a census without controls).
     c1: the program's own constants (extract.py <sha1>.c1), where a BRX's jump table is."""
-    if stage not in ("ps", "vs", "cs", "tes?"):
+    if stage not in ("ps", "vs", "cs", "tes?", "gs"):
         raise Unsupported(f"stage {stage}")
     b = Builder(sph, stage)
     insns = inline_single_call(insns)

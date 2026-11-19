@@ -2,9 +2,11 @@
 // nvn_api_cmd.c (its header says where the code comes from).
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "cfg.h"
 #include "gfx.h"
 #include "host.h"
 #include "nvn_api.h"
@@ -120,6 +122,17 @@ NVN_API(nvnCommandBufferSetRenderEnableConditional) {
 // void nvnCommandBufferBindProgram(NVNcommandBuffer *cmd, const NVNprogram *program, int stages)
 NVN_API(nvnCommandBufferBindProgram) {
     *REC(cmd_of(c), OP_BIND_PROGRAM, p_bind_program) = (p_bind_program){arg_p(c, 1), (int)arg_x(c, 2)};
+    static volatile int32_t seen;   // the stage masks the game binds with (vk_exec_ops.c bind_program)
+    if (plat_inc32(&seen) <= 24) {
+        const prog_t *p = arg_p(c, 1);
+        char st[40] = "";
+        int o = 0;
+        for (uint32_t i = 0; p && i < p->nstage && i < 6; i++)
+            if (p->sd[i].control && p->sd[i].data)
+                o += snprintf(st + o, sizeof st - (size_t)o, " %d",
+                              nvn2_program_stage(p->sd[i].control, (const uint8_t *)(uintptr_t)p->sd[i].data));
+        rt_log("nvn: BindProgram %p stages %#x, its shaders' stages:%s", (const void *)p, (unsigned)arg_x(c, 2), p ? st : " (none)");
+    }
 }
 // void nvnCommandBufferBind{Blend,Color,ChannelMask,Multisample,Polygon,DepthStencil}State(NVNcommandBuffer *cmd,
 // const NVN*State *state): the state object's bytes are copied (p_bind_state.kind order)
@@ -145,12 +158,28 @@ NVN_API(nvnCommandBufferSetPointSize) {
 NVN_API(nvnCommandBufferBindVertexAttribState) {
     cmd_t *o = cmd_of(c);
     int n = (int)arg_x(c, 1);
-    if (n < 0 || n > 16) { rt_log("nvn: BindVertexAttribState n %d", n); return; }
+    // NVN2 takes up to 32 attributes, the Ampere register count: Orbitals' Unreal binds 17 (MaxVertexElementCount) for
+    // its 3D draws; a limit of 16 dropped every one of them (1.5 million in a run, 17/11/2026).
+    // ORBITALS_VATTR_MAX (diagnosis, 16 to 32, default 32): lists longer than it are dropped, as all past 16 were before.
+    static int vmax = -1;
+    if (vmax < 0) {
+        const char *e = cfg_get("ORBITALS_VATTR_MAX");
+        int v = e && *e ? atoi(e) : 32;
+        vmax = v < 16 ? 16 : v > 32 ? 32 : v;
+        if (vmax != 32) rt_log("nvn: ORBITALS_VATTR_MAX=%d: longer vertex attribute lists are dropped", vmax);
+    }
+    if (n < 0 || n > vmax) {
+        static volatile int32_t drops;   // logged 8 times: every 3D draw of Orbitals filled the log with them
+        if (plat_inc32(&drops) <= 8) rt_log("nvn: BindVertexAttribState n %d dropped", n);
+        return;
+    }
     p_bind_vattr *r = RECN(o, OP_BIND_VATTR, p_bind_vattr, st, n);
     r->first = 0;
     r->n = n;
     memcpy(r->st, arg_p(c, 2), 4 * (size_t)n);
-    cmd_hw_fix(o, 68);   // the driver always writes all 16 attribute formats: 17 words
+    // NVN1's driver always writes all 16 attribute formats: 17 words. Past 16 (NVN2) assumed one word per attribute,
+    // not measured.
+    cmd_hw_fix(o, n <= 16 ? 68 : 4 * (1 + (size_t)n));
 }
 // void nvnCommandBufferBindVertexStreamState(NVNcommandBuffer *cmd, int n, const NVNvertexStreamState *states)
 NVN_API(nvnCommandBufferBindVertexStreamState) {
@@ -351,9 +380,74 @@ NVN_API(nvnCommandBufferMultiDrawElementsIndirectCount) {
     *REC(cmd_of(c), OP_DRAW_IDX_IND, p_draw_idx_ind) = (p_draw_idx_ind){
         (int)arg_x(c, 1), (int)arg_x(c, 2), arg_x(c, 3), arg_x(c, 4), arg_x(c, 5), (int)arg_x(c, 6), (int)arg_x(c, 7)};
 }
+// ---- Compute push constants: what nvnCommandBufferPushComputeConstants wrote, per command buffer, until its next recording.
+// The NVN2 driver puts them in c0 from byte 0x10, ahead of the program's packed resource table (gfx_shader.c cs_res: the
+// table starts 4 * control+0xa9 bytes past 0x10 in all 728 compute programs of the first game). The replay left those bytes
+// zero, so every compute shader read zeros for them; Orbitals pushes about 12 a frame for 11 dispatches (run of
+// 17/11/2026). cmd_t fills the 0xa0 bytes NVN reserves, so the bytes live in a host table keyed by the command buffer; each
+// dispatch copies them into its record, which keeps the replay's chunks independent of the order they run in.
+// An entry lives while its command buffer records: dispatches read it at record time, so BeginRecording, EndRecording
+// and Finalize free it (nvn_cmd_push_reset). Kept until the next BeginRecording before 17/11/2026, entries of command
+// buffers Unreal no longer used filled the table after a few minutes of Orbitals, and every later command buffer's
+// dispatches read zeros for their constants, their storage buffers' addresses among them.
+#define PUSH_SLOTS 512
+#define PUSH_FREED ((const void *)1)   // a freed entry: lookups go on past it, an insert takes it
+static struct { const void *cmd; uint32_t n; uint8_t data[256]; } push_tab[PUSH_SLOTS];
+static PlatMutex push_lock = PLAT_MUTEX_INIT;
+
+static int push_slot(const void *cmd, int make) {   // under push_lock; -1 when absent (or the table is full)
+    uint32_t h = (uint32_t)(((uintptr_t)cmd >> 4) * 0x9E3779B1u) % PUSH_SLOTS;
+    int freed = -1;
+    for (uint32_t i = 0; i < PUSH_SLOTS; i++, h = (h + 1) % PUSH_SLOTS) {
+        if (push_tab[h].cmd == cmd) return (int)h;
+        if (push_tab[h].cmd == PUSH_FREED) {
+            if (freed < 0) freed = (int)h;
+            continue;
+        }
+        if (!push_tab[h].cmd) {
+            if (!make) return -1;
+            if (freed < 0) freed = (int)h;
+            break;
+        }
+    }
+    if (make && freed >= 0) {
+        push_tab[freed].cmd = cmd, push_tab[freed].n = 0;
+        memset(push_tab[freed].data, 0, sizeof push_tab[freed].data);
+        return freed;
+    }
+    static int full;
+    if (make && !full++) rt_log("nvn: more than %d command buffers with compute push constants: the rest are dropped", PUSH_SLOTS);
+    return -1;
+}
+
+void nvn_cmd_push_compute(const void *cmd, uint32_t offset, uint32_t size, const void *data) {
+    if (!cmd || !data || offset >= 256) return;
+    if (size > 256 - offset) size = 256 - offset;
+    plat_mutex_lock(&push_lock);
+    int k = push_slot(cmd, 1);
+    if (k >= 0) {
+        memcpy(push_tab[k].data + offset, data, size);
+        if (offset + size > push_tab[k].n) push_tab[k].n = offset + size;
+    }
+    plat_mutex_unlock(&push_lock);
+}
+
+// Begin/EndRecording and Finalize: a recording starts without the last one's constants, and ended ones need none.
+void nvn_cmd_push_reset(const void *cmd) {
+    plat_mutex_lock(&push_lock);
+    int k = push_slot(cmd, 0);
+    if (k >= 0) push_tab[k].cmd = PUSH_FREED, push_tab[k].n = 0;
+    plat_mutex_unlock(&push_lock);
+}
+
 // void nvnCommandBufferDispatchCompute(NVNcommandBuffer *cmd, int x, int y, int z): caller = the game's return address
 NVN_API(nvnCommandBufferDispatchCompute) {
-    *REC(cmd_of(c), OP_DISPATCH, p_dispatch) = (p_dispatch){(int)arg_x(c, 1), (int)arg_x(c, 2), (int)arg_x(c, 3), c->x[30]};
+    p_dispatch *d = REC(cmd_of(c), OP_DISPATCH, p_dispatch);
+    *d = (p_dispatch){(int)arg_x(c, 1), (int)arg_x(c, 2), (int)arg_x(c, 3), c->x[30]};
+    plat_mutex_lock(&push_lock);
+    int k = push_slot(cmd_of(c), 0);
+    if (k >= 0 && push_tab[k].n) d->push_n = push_tab[k].n, memcpy(d->push, push_tab[k].data, push_tab[k].n);
+    plat_mutex_unlock(&push_lock);
 }
 // void nvnCommandBufferDispatchComputeIndirect(NVNcommandBuffer *cmd, NVNbufferAddress indirect): vkCmdDispatchIndirect
 NVN_API(nvnCommandBufferDispatchComputeIndirect) {

@@ -223,6 +223,9 @@ void vk_mem_pick(VkMemSpan *sp);
 #define VK_MEM_USE(sp) do { if (vk_mirror_on && (sp).pool) vk_mem_use(&(sp)); } while (0)
 #define VK_MEM_PICK(sp) do { if (vk_mirror_on && (sp).pool) vk_mem_pick(&(sp)); } while (0)
 void vk_mem_gpu_wrote(const VkMemSpan *sp, uint64_t size);
+// The same for a write that may cover part of the range only (storage texel buffers): only the bytes the GPU changed go
+// back, merged on the CPU at the fence against the mirror's bytes as the writing part began (vk_mem_mirror.c).
+void vk_mem_gpu_wrote_merged(const VkMemSpan *sp, uint64_t size);
 // Uniform blocks as of the submit call (vk_usnap.c): vk_exec_record copies the uniform ranges a submission binds before
 // it records, ubo bindings take the copy (0: not copied, bind memory), GPU writes of the replay drop the copies they touch.
 void vk_usnap_take(const uint64_t *handles, int n);   // ORBITALS_USNAP_AT_SUBMIT (vk_usnap_take.c), on the submitting thread
@@ -446,9 +449,13 @@ VkFormat vk_texture_view_format(const VkTexImage *img, VkFormat want);   // a ta
 const VkTexImage *vk_texture_get(const tex_t *t);   // created and made current; NULL for BUFFER or unmapped formats
 // A texture slot; a slot whose texture was finalized follows the live texture at the same storage (hle_nvn.c).
 const VkTexImage *vk_texture_by_id(int id, view_t *view, int *has_view);
+// The 32-bit words of a mirrored texture's guest memory: all ones, zero, other and the first other (frame dumps)
+int vk_texture_guest_words(const VkTexImage *img, uint32_t *ones, uint32_t *zeros, uint32_t *other, uint32_t *first);
 VkFormat vk_srgb_twin(VkFormat f);                    // the sRGB / UNORM twin of an 8-bit colour format, else UNDEFINED
 int vk_format_numeric(VkFormat f);                    // GFX_TYPE_* its components read as in a shader
 uint32_t vk_texture_slot_format(int id, uint64_t *addr);   // NVN format the game registered in slot id (0: none)
+int vk_texture_slot_buffer(int id, uint64_t *addr, int *format, uint32_t *texels);   // a buffer texture slot
+void vk_texel_views_drop(VkBuffer b);   // vk_exec_bind.c: the texel buffer views over b, before b is destroyed
 // The replay looks up many slots per draw: it takes the texture lock once around them (vk_texture_lock) and uses the
 // _locked lookups; vk_texture_slots_gen changes whenever a slot may resolve to another image or view.
 void vk_texture_lock(void);
@@ -610,10 +617,12 @@ typedef struct VkPipeState {
     ms_st ms;
     poly_st poly;
     ds_st ds;
-    uint32_t vattr[16];                    // OP_BIND_VATTR: va_st words; attribute i feeds vertex shader Location i
+    uint32_t vattr[32];                    // OP_BIND_VATTR: va_st words; attribute i feeds vertex shader Location i
     vs_st vstream[16];                     // OP_BIND_VSTREAM
     const GfxShader *mesh;                 // a task/mesh draw whose vs is the task program: its mesh program; NULL
                                            // otherwise (a mesh program alone sits in vs)
+    const GfxShader *gs;                   // the program's geometry stage (sm86 glsl/geom.py), on triangle draws only;
+                                           // NULL none (vk_exec_draw.c gs_for)
 } VkPipeState;
 _Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "alpha_ref must stay in the padding (KeyRec size)");
 void vk_pipe_state_defaults(VkPipeState *s);   // NVN defaults of every state object (shaders and formats left 0)
@@ -686,6 +695,7 @@ int vk_pipeline_vertex_input_dynamic(void);    // 1: vertex input is VK_EXT_vert
 // GFX_STAGE_FS: out_type from the colour target formats).
 void vk_pipeline_answers(const VkPipeState *s, int stage, GfxShaderAnswers *a);
 uint32_t vk_pipeline_target_wmask(const VkPipeState *s, int i);   // colour write mask of target i the pipeline uses
+int vk_pipeline_gs_prim(int nvn_prim);   // the draw's primitives are triangles a geometry stage declared `triangles` takes
 VkPrimitiveTopology vk_pipeline_topology(int nvn_prim);   // quads -> triangle list, line loop -> strip: the replay
                                                           // rewrites those draws; polygon -> fan
 VkFormat vk_vertex_format(int nvn_format, int *type);     // attribute format (supported fallback), GFX_TYPE_* in *type

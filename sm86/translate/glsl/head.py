@@ -18,9 +18,11 @@ def interp(b, stage: str, attr: int) -> str:
     return {1: "flat ", 3: "noperspective "}.get(modes.pop(), "") if len(modes) == 1 else ""
 
 def sampler_type(glsl_type: str) -> int:
-    """Ryujinx SamplerType (gfx_shader.c GfxShaderRes.type): 1 1D, 3 2D, 4 3D, 5 cube | 0x100 array, 0x200
+    """Ryujinx SamplerType (gfx_shader.c GfxShaderRes.type): 1 1D, 2 buffer, 3 2D, 4 3D, 5 cube | 0x100 array, 0x200
     multisample, 0x400 shadow."""
     base = glsl_type.removeprefix("sampler").removeprefix("u").removeprefix("image")
+    if base == "Buffer":
+        return 2
     ms = "MS" in base
     code = {"1D": 1, "2D": 3, "3D": 4, "Cube": 5}[base.removesuffix("Shadow").removesuffix("Array").replace("MS", "")]
     return code | (0x100 if "Array" in base else 0) | (0x200 if ms else 0) | (0x400 if base.endswith("Shadow") else 0)
@@ -76,6 +78,9 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         head.append(SHFL_FN)
     if b.uses_prmt:
         head.append(PRMT_FN)
+    if getattr(b, "uses_fmz", False):
+        head.append("float fmzmul(float a, float b) { return (a == 0.0 || b == 0.0) ? 0.0 : a * b; }")
+        head.append("float fmzfma(float a, float b, float c) { return (a == 0.0 || b == 0.0) ? c + 0.0 : fma(a, b, c); }")
     if getattr(b, "uses_nminmax", False):
         head.insert(2, "#extension GL_EXT_spirv_intrinsics : require")
         head.append(NMINMAX_FN)
@@ -85,7 +90,11 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         head.insert(2, "#extension GL_EXT_texture_shadow_lod : require")
     if getattr(b, "uses_demote", False):
         head.insert(2, "#extension GL_EXT_demote_to_helper_invocation : require")
-    head += [f"layout(location = {a}) {interp(b, stage, a)}in vec4 in_attr{a};" for a in sorted(b.in_attrs)]
+    if stage == "gs":   # per-vertex inputs, as arrays (glsl/geom.py)
+        head += b.gs_head()
+        head += [f"layout(location = {a}) in vec4 in_attr{a}[];" for a in sorted(b.in_attrs)]
+    else:
+        head += [f"layout(location = {a}) {interp(b, stage, a)}in vec4 in_attr{a};" for a in sorted(b.in_attrs)]
     if stage == "ps":
         head += [f"layout(location = {t}) out vec4 out_color{t};" for t in sorted(b.out_attrs)]
     else:
@@ -120,24 +129,53 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         head.append(f"layout(std430, binding = {nb}) buffer SB{o:x} {{ uint d[]; }} sb{o:x};")
         # flags 1: the shader stores into it. The replay copies such a range back to guest memory and keeps the CPU's
         # writes out of it until then; every buffer marked so hid the HUD's glyph records (01/11/2026).
-        refl["sbufs"].append({"binding": nb, "slot": len(refl["sbufs"]), "cb_slot": 0, "cb_offset": o // 4,
+        # o: mem.py sb_key, the bank in the bits above 16 (0: the driver's c0 table; 3..: a user uniform block)
+        refl["sbufs"].append({"binding": nb, "slot": len(refl["sbufs"]), "cb_slot": o >> 16, "cb_offset": (o & 0xFFFF) // 4,
                               "flags": 1 if o in b.ssbos_written else 0})  # fmt: skip
         nb += 1
     for (bank, idx), t in sorted(b.textures.items()):
         head.append(f"layout(binding = {nb}) uniform {t} t{bank}_{idx};")
         refl["textures"].append({"binding": nb, "type": sampler_type(t), "format": "Unknown", "cbuf_slot": bank,
-                                 "handle": idx, "array": 1, "separate": False, "flags": 0})  # fmt: skip
+                                 "handle": idx & 0xFFFF, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1,
+                                 "separate": False, "flags": 0})  # fmt: skip
         nb += 1
+    # A 1D texture that TLD reads may be a buffer texture: its twin, a samplerBuffer on the same handle (reflection
+    # type 2, a uniform texel buffer the back end binds as a view of the buffer's memory, vk_exec_bind.c texel_view).
+    # For a buffer slot the 1D binding gets the 1x1 stand-in and the twin the buffer; for a 1D texture the twin gets
+    # the zero view. A width of at most 1 picks the twin (a real 1D texture one texel wide reads 0: none seen).
+    twins = {k for k in b.tld1d if b.textures.get(k) == "sampler1D"}
+    for bank, idx in sorted(b.tld1d):
+        t = f"t{bank}_{idx}"
+        if (bank, idx) not in twins:
+            head.append(f"vec4 tld1d_{bank}_{idx}(int x, int l) {{ return texelFetch({t}, x, l); }}")
+            continue
+        head.append(f"layout(binding = {nb}) uniform samplerBuffer tb{bank}_{idx};")
+        refl["textures"].append({"binding": nb, "type": 2, "format": "Unknown", "cbuf_slot": bank, "handle": idx & 0xFFFF,
+                                 "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
+                                 "flags": 0})  # fmt: skip
+        nb += 1
+        head.append(f"vec4 tld1d_{bank}_{idx}(int x, int l) {{ return textureSize({t}, 0) <= 1 ? "
+                    f"texelFetch(tb{bank}_{idx}, x) : texelFetch({t}, x, l); }}")
     for (bank, idx), t in sorted(b.images.items()):
         fmt = "r32ui, " if t.startswith("uimage") else ""
         head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx};")
+        # SULD/SUST as the texels' bits (tex.py image): straight on an r32ui image, through the float views otherwise
+        im, u = f"i{bank}_{idx}", t.startswith("uimage")
+        pt = {"1D": "int", "Buffer": "int", "2D": "ivec2", "1DArray": "ivec2"}.get(t.removeprefix("u").removeprefix("image"), "ivec3")
+        if im in b.img_ld:
+            head.append(f"uvec4 imld_{im}({pt} p) {{ return {'imageLoad(' + im + ', p)' if u else 'floatBitsToUint(imageLoad(' + im + ', p))'}; }}")
+        if im in b.img_st:
+            head.append(f"void imst_{im}({pt} p, uvec4 v) {{ imageStore({im}, p, {'v' if u else 'uintBitsToFloat(v)'}); }}")
         refl["images"].append({"binding": nb, "type": sampler_type(t), "format": "R32Uint" if fmt else "Unknown", "cbuf_slot": bank,
-                               "handle": idx, "array": 1, "separate": False, "flags": 4})  # fmt: skip
+                               "handle": idx & 0xFFFF, "handle2": b.tex_h2.get((bank, idx), -1), "array": 1, "separate": False,
+                               "flags": 4})  # fmt: skip
         nb += 1
     for bank, idx in sorted(b.txq_tex):
         n = {"sampler1D": 1, "sampler2D": 2, "sampler3D": 3, "samplerCube": 2, "sampler2DArray": 3,
              "samplerCubeArray": 3, "sampler1DArray": 2}.get(b.textures[(bank, idx)].replace("Shadow", ""), 2)  # fmt: skip
         sz = f"textureSize(t{bank}_{idx}, l)"
+        if (bank, idx) in twins:   # a buffer texture's size is its twin's
+            sz = f"(textureSize(t{bank}_{idx}, 0) <= 1 ? textureSize(tb{bank}_{idx}) : {sz})"
         v = sz if n == 3 else f"ivec3({sz}, 1)" if n == 2 else f"ivec3({sz}, 1, 1)"
         head.append(f"ivec3 txqsz_{bank}_{idx}(int l) {{ return {v}; }}")
     # Specialization constants of the fixed-address constant words (Builder.const); "spec" lists each k's [bank, byte].

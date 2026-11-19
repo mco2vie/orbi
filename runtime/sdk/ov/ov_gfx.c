@@ -6,9 +6,12 @@
 //   nn::vi::*    display, layer and native window identities; the vsync event is bound here; HDR status (gfx_hdr.c)
 //   nvnBootstrapLoader   the end of --boot (rt_boot_event "nvn"); otherwise the synthetic address of an NVN proc (nvn_procs.c)
 #include <stdint.h>
+#include <stdlib.h>
 
+#include "cfg.h"
 #include "gfx.h"
 #include "host.h"
+#include "kernel.h"
 #include "ov.h"
 #include "platform/platform.h"
 
@@ -197,15 +200,164 @@ HOST_OVERRIDE("_ZN2nn2vi35SetLayerNextHdrContentGamutMetadataEPNS0_5LayerENS0_15
 HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrAdjustableBezierMetadataEPNS0_5LayerEfff", ov_vi_nothing);
 HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrToSdrToneMappingMetadataEPNS0_5LayerENS0_14HdrToneMappingE", ov_vi_nothing);
 
-// ---- frame history (Orbitals' Unreal reads it each frame, main+0x153f994; the import was unresolved, a call to 0).
-// Result GetLatestFrameNumber(uint64_t *out, const Layer *): the frames presented so far
+// ---- frame history (Orbitals' Unreal reads it each frame; main+0x153f990 and main+0x1540460 call it).
+// What the console's SDK answers, measured on 17/11/2026 with lichii-probe on Lichii, which runs Orbitals' own
+// nn::vi (sdk+0x5d5ac0 GetLatestFrameNumber, sdk+0x5d5ad0 ListFrameHistory) over its nx2:vi2 service: 400 calls
+// on the flip tracker's thread, frames 1 to 3, and GetLatestFrameNumber up to frame 418.
+//   - ListFrameHistory(NULL, 0, layer), the size query, answers 8 every time, before any frame and after: it is
+//     the history's capacity, not the frames recorded. The tracker then passes an array of 8 (count = 8).
+//   - ListFrameHistory(array, 8, layer) fills one 40-byte FrameInfo per frame shown, newest first, and returns how
+//     many: 0, then 1 ([1]), 2 ([2, 1]), 3 ([3, 2, 1]). Entries past the count stay as the caller zeroed them.
+//   - A FrameInfo is five u64: +0x00 = 2 in all 580 entries, +0x08 the frame number (from 1), +0x10 a tick taken
+//     when the game queued the present, +0x18 and +0x20 a tick taken when it was shown, the two always equal;
+//     +0x18 - +0x10 was 0.1 to 0.8 ms. Ticks are the guest clock (31.25 MHz, RT_TICK_HZ).
+//   - GetLatestFrameNumber counts the presents queued, which runs ahead of the history (2 while it held [1]); before
+//     the first present it failed with 0x1672 (module 114, vi; description 11).
+// The previous answer (one entry, +0x10 zero, the size query equal to the frames held, newest only) dropped every
+// frame but the newest when two were shown between polls, and the RenderThread waits for each frame's record.
+// ORBITALS_FRAME_HISTORY=<n> sets the capacity (default 8, the console's; 0 answers "none", the old stall);
+// ORBITALS_FRAME_BIAS=<n> adds n to GetLatestFrameNumber.
+#define VI_HISTORY_MAX 8
+#define VI_R_NO_FRAME 0x1672u   // GetLatestFrameNumber before the first present (measured, see above)
+
+typedef struct { uint64_t frame, queued, shown; } ViFrame;
+static ViFrame g_hist[VI_HISTORY_MAX];          // ring, by frame number
+static uint64_t g_hist_newest;                  // newest frame shown (0: none)
+static uint64_t g_queued_ticks[VI_HISTORY_MAX]; // +0x10 of each frame, by present number
+static uint64_t g_presents_queued;
+static uint64_t g_latest_calls, g_history_calls, g_history_real;
+
+static uint64_t frame_bias(void) {
+    static uint64_t bias;
+    static int done;
+    if (!__atomic_load_n(&done, __ATOMIC_ACQUIRE)) {
+        const char *b = cfg_get("ORBITALS_FRAME_BIAS");
+        bias = b && *b ? strtoull(b, NULL, 10) : 0;
+        __atomic_store_n(&done, 1, __ATOMIC_RELEASE);
+    }
+    return bias;
+}
+
+static uint64_t history_cap(void) {
+    static uint64_t cap;
+    static int done;
+    if (!__atomic_load_n(&done, __ATOMIC_ACQUIRE)) {
+        const char *v = cfg_get("ORBITALS_FRAME_HISTORY");
+        cap = v && *v ? strtoull(v, NULL, 10) : VI_HISTORY_MAX;
+        if (cap > VI_HISTORY_MAX) cap = VI_HISTORY_MAX;
+        __atomic_store_n(&done, 1, __ATOMIC_RELEASE);
+    }
+    return cap;
+}
+
+// The game queued a present (vk_be_present, on its thread): the frame's +0x10 time and GetLatestFrameNumber's count.
+void vi_history_queued(void) {
+    uint64_t now = rt_ticks();
+    plat_mutex_lock(&lock);
+    g_queued_ticks[g_presents_queued % VI_HISTORY_MAX] = now;
+    g_presents_queued++;
+    plat_mutex_unlock(&lock);
+}
+
+// Present number `frame` (from 1, in queue order) reached the screen: its +0x18 and +0x20 time.
+void vi_history_shown(uint64_t frame) {
+    uint64_t now = rt_ticks();
+    plat_mutex_lock(&lock);
+    uint64_t queued = frame && frame <= g_presents_queued && g_presents_queued - frame < VI_HISTORY_MAX
+                          ? g_queued_ticks[(frame - 1) % VI_HISTORY_MAX] : now;
+    g_hist[frame % VI_HISTORY_MAX] = (ViFrame){frame, queued > now ? now : queued, now};
+    if (frame > g_hist_newest) g_hist_newest = frame;
+    plat_mutex_unlock(&lock);
+}
+
+// Result GetLatestFrameNumber(uint64_t *out, const Layer *): the presents queued so far
 static void ov_latest_frame(Cpu *c) {
     uint64_t *out = arg_p(c, 0);
-    if (out) *out = gfx_stats().frames;
-    ret_x(c, out ? 0 : 1);
+    plat_mutex_lock(&lock);
+    uint64_t queued = g_presents_queued;
+    plat_mutex_unlock(&lock);
+    uint64_t n = queued + frame_bias();
+    uint32_t r = queued ? 0 : VI_R_NO_FRAME;
+    uint64_t k = __atomic_add_fetch(&g_latest_calls, 1, __ATOMIC_RELAXED);
+    if (k <= 5 || !(k & (k - 1))) {
+        char lr[96];
+        rt_log("vi: GetLatestFrameNumber #%llu -> %#x, %llu (queued %llu, shown %llu, bias %llu) from %s",
+               (unsigned long long)k, r, (unsigned long long)n, (unsigned long long)queued,
+               (unsigned long long)gfx_stats().frames, (unsigned long long)frame_bias(),
+               ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    }
+    if (out && !r) *out = n;
+    ret_x(c, out ? r : 1);
 }
-// int ListFrameHistory(FrameInfo *out, int count, const Layer *): no per-frame timing records kept
-static void ov_frame_history(Cpu *c) { ret_x(c, 0); }
+
+// ORBITALS_THREADS_AT=<frame>[,<frame>...] (diagnosis, up to 4): as each of those many frames is presented, every guest
+// thread's wait and call chain go to the log (kern_threads_dump, otherwise written only at a fatal abort), to see what a game
+// that presents frames but draws black waits for; a thread found at the same wait in every dump is stuck there. The flip
+// tracker calls ListFrameHistory each frame, so it is the place that sees the count go by. Each dump also logs the call
+// count of every host function (hostfn_report, otherwise only at the end of --boot): between two dumps, what the game calls
+// once a frame. The import census (ORBITALS_IMPORT_CENSUS) counts the SDK functions that are not replaced.
+static void threads_dump_at(uint64_t presented) {
+    static uint64_t at[4];
+    static int n, next, state;   // state 0 unread, 1 armed, 2 done or off
+    if (__atomic_load_n(&state, __ATOMIC_ACQUIRE) == 2) return;
+    if (state == 0) {
+        const char *v = cfg_get("ORBITALS_THREADS_AT");
+        for (char *e; v && *v && n < 4; v = *e == ',' ? e + 1 : e) {
+            uint64_t f = strtoull(v, &e, 10);
+            if (e == v) break;
+            if (f) at[n++] = f;
+        }
+        __atomic_store_n(&state, n ? 1 : 2, __ATOMIC_RELEASE);
+        if (!n) return;
+    }
+    plat_mutex_lock(&lock);
+    int due = next < n && presented >= at[next];
+    uint64_t which = due ? at[next] : 0;
+    if (due && ++next == n) __atomic_store_n(&state, 2, __ATOMIC_RELEASE);
+    plat_mutex_unlock(&lock);
+    if (due) {
+        rt_log("threads: dump at frame %llu (ORBITALS_THREADS_AT %llu)", (unsigned long long)presented,
+               (unsigned long long)which);
+        kern_threads_dump();
+        hostfn_report();
+    }
+}
+
+// int ListFrameHistory(FrameInfo *out, int count, const Layer *): the size query answers the capacity; with an
+// array, the frames shown, newest first, as many as fit (see the measurements above).
+static void ov_frame_history(Cpu *c) {
+    uint64_t out = arg_x(c, 0);
+    int count = (int)arg_x(c, 1);
+    uint64_t cap = history_cap();
+    threads_dump_at(gfx_stats().frames);
+    uint64_t ret = 0, newest = 0;
+    if (!out && count == 0) {
+        ret = cap;                                     // the size query: the capacity, frames or not
+    } else if (out && count > 0) {
+        uint64_t *e = arg_p(c, 0);
+        plat_mutex_lock(&lock);
+        newest = g_hist_newest;
+        for (uint64_t f = newest; f >= 1 && ret < cap && ret < (uint64_t)count; f--) {
+            const ViFrame *h = &g_hist[f % VI_HISTORY_MAX];
+            if (h->frame != f) break;                  // older than the ring holds
+            uint64_t *o = e + ret * 5;
+            o[0] = 2, o[1] = f, o[2] = h->queued, o[3] = h->shown, o[4] = h->shown;
+            ret++;
+        }
+        plat_mutex_unlock(&lock);
+    }
+    uint64_t k = __atomic_add_fetch(&g_history_calls, 1, __ATOMIC_RELAXED);
+    int with_buffer = out || count;
+    uint64_t j = with_buffer ? __atomic_add_fetch(&g_history_real, 1, __ATOMIC_RELAXED) : 0;
+    if (k <= 5 || !(k & (k - 1)) || (with_buffer && j <= 20)) {
+        char lr[96];
+        rt_log("vi: ListFrameHistory #%llu count=%d out=%#llx -> %llu (newest %llu, shown %llu, cap %llu) from %s",
+               (unsigned long long)k, count, (unsigned long long)out, (unsigned long long)ret,
+               (unsigned long long)newest, (unsigned long long)gfx_stats().frames, (unsigned long long)cap,
+               ldr_describe(c->x[30] - 4, lr, sizeof lr));
+    }
+    ret_x(c, ret);
+}
 HOST_OVERRIDE("_ZN2nn2vi20GetLatestFrameNumberEPmPKNS0_5LayerE", ov_latest_frame);
 HOST_OVERRIDE("_ZN2nn2vi16ListFrameHistoryEPNS0_9FrameInfoEiPKNS0_5LayerE", ov_frame_history);
 HOST_OVERRIDE("_ZN2nn2vi36SetDisplay120HzRefreshRateCapabilityEPNS0_7DisplayEb", ov_vi_nothing);

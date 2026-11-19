@@ -301,9 +301,18 @@ counted:;
                e->pub.levels, t->L.size / 1024.0, e->uploaded ? " (again)" : "",
                (long long)(nvn_submit_count() - __atomic_load_n(&vk_replay_submit, __ATOMIC_RELAXED)));
     }
+    if (e->pub.type == VK_IMAGE_TYPE_3D && t->mem && vk_trace_3d_on()) {
+        uint32_t w0 = 0, same = 1, w;
+        if (t->L.size >= 4) memcpy(&w0, t->mem, 4);
+        for (uint64_t i = 4; i + 4 <= t->L.size && same; i += 4) memcpy(&w, (const uint8_t *)t->mem + i, 4), same = w == w0;
+        rt_log("vk: frame %llu: upload 3D %#llx %ux%ux%u fmt %#x%s from guest memory: first word %#x%s",
+               (unsigned long long)fr, (unsigned long long)e->pub.addr, d->width, d->height, d->depth, d->format,
+               e->uploaded ? " (again)" : "", w0, same ? ", all words the same" : "");
+    }
     e->wt_n = 0;
     e->uploaded = 1;
     e->n_up++;
+    e->wseq = ++tex_wseq, e->gpu_src = 0;   // the storage's bytes: newer than any GPU content of its aliases so far
     perf_end(PERF_TEX, p0);
 }
 

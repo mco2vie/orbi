@@ -82,8 +82,10 @@ typedef struct VkExec {
     VkPipeState pipe;
 
     // ---- the draw replay's slots (vk_draw_internal.h) (draws, binds, dispatch): left empty by vk_exec.c
-    const prog_t *prog;                  // OP_BIND_PROGRAM
-    int32_t prog_stages;
+    const prog_t *prog;                  // OP_BIND_PROGRAM: the graphics program draws use (vk_exec_ops.c bind_program)
+    int32_t prog_stages;                 // the graphics stage bits bound
+    const prog_t *sprog[6];              // the program bound per NVN stage (0 vertex .. 4 tessellation evaluation, 5 compute)
+    const prog_t *cprog;                 // the compute program dispatches use (sprog[5])
     NVNbufferRange vbuf[16];             // OP_BIND_VBUF
     p_bind_buf ubo[NVN_BIND_STAGES][18], ssbo[NVN_BIND_STAGES][16];   // OP_BIND_UBO / OP_BIND_SSBO per stage and index
     uint64_t tex[NVN_BIND_STAGES][128], samp[NVN_BIND_STAGES][128], img[NVN_BIND_STAGES][32];   // OP_BIND_TEX / OP_BIND_SAMP / OP_BIND_IMG handles per stage
@@ -190,6 +192,7 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
 void vk_dump_draw_after(VkExec *ex);     // after vkCmdDraw*: ORBITALS_DUMP_DRAWS copies after the actual draw
 void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPipeInfo *info, const p_dispatch *d);
 void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, const p_dispatch *d);
+int vk_trace_3d_on(void);   // ORBITALS_TRACE_3D: log uploads, clears and copies into 3D textures (vk_dump.c)
 void vk_dump_copy(VkExec *ex, uint32_t op, const void *payload);   // before a copy or texture clear is replayed
 void vk_dump_present(uint64_t frame);    // vk_be_present: waits for the dump frame's copies and closes the logs
 

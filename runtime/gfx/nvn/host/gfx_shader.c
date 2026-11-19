@@ -106,8 +106,11 @@ static int reflection_valid(const char *res, uint64_t size) {
     const char *st = strstr(b, "\"stage\"");
     if (!st) return 0;
     st = strchr(st + 7, '"');
+    // gs: geometry programs (sm86 glsl/geom.py). Missing here, their prepared files were refused as invalid and the
+    // runtime logged "no prepared SPIR-V" for a translated program (Orbitals colony, 18/11/2026)
     return st && (!strncmp(st, "\"vs\"", 4) || !strncmp(st, "\"ps\"", 4) || !strncmp(st, "\"cs\"", 4) ||
-                  !strncmp(st, "\"task\"", 6) || !strncmp(st, "\"mesh\"", 6));   // task/mesh: reflect() mesh_kind
+                  !strncmp(st, "\"gs\"", 4) || !strncmp(st, "\"task\"", 6) ||
+                  !strncmp(st, "\"mesh\"", 6));   // task/mesh: reflect() mesh_kind
 }
 
 // Every instruction after the header has a word count and the last one ends at the module's end: a module with
@@ -230,7 +233,7 @@ static const GfxShader *int_io_variant(GfxShader *s, uint32_t um, uint32_t sm, i
 static const GfxShader *int_input_variant(GfxShader *s, const GfxShaderAnswers *a) {
     if (!s || !a || s->stage != GFX_STAGE_VS || s->mesh_kind != GFX_MESH_NONE) return s;
     uint32_t um = 0, sm = 0;
-    for (int l = 0; l < 16; l++)
+    for (int l = 0; l < 32; l++)
         if (s->in_mask >> l & 1) {
             if (a->attr_type[l] == GFX_TYPE_UINT) um |= 1u << l;
             else if (a->attr_type[l] == GFX_TYPE_SINT) sm |= 1u << l;
@@ -275,9 +278,20 @@ static const GfxShader *prepared_get(const uint8_t *control, const uint8_t *code
         static volatile int32_t n_missing;
         int32_t n = plat_inc32(&n_missing);
         if (n <= 20 || !(n & (n - 1))) rt_log("gfx_shader: no prepared SPIR-V %s (%d lookups so far)", hex, n);
-        // ORBITALS_SPIRV_DUMP=<dir>: the missing program's control section and code, to find where it comes from.
+        // The missing program's control section and code, which tools/prepare/dumped_shaders.py translates into
+        // spirv/: into <game dir>/spirv-dump by default (Orbitals' programs are in Unreal containers the setup does not
+        // read, so a run is the only source; with the folder only filled while ORBITALS_SPIRV_DUMP was set, the
+        // gameplay's programs were never translated and its world drew black, 17/11/2026). ORBITALS_SPIRV_DUMP=<dir>
+        // elsewhere, 0 none. They stay on the player's machine.
+        static char def_dump[PATH_CAP];
         const char *dump = cfg_get("ORBITALS_SPIRV_DUMP");
-        if (dump && *dump) {   // every missing program once (the file exists after the first time)
+        if (!dump || !*dump) {
+            if (!*def_dump) snprintf(def_dump, sizeof def_dump, "%s/spirv-dump", cfg_game_dir());
+            dump = def_dump;
+        } else if (!strcmp(dump, "0")) {
+            dump = NULL;
+        }
+        if (dump) {   // every missing program once (the file exists after the first time)
             char p[PATH_CAP + 80];
             uint32_t ctl_size = 0xd8, size;
             memcpy(&size, control + 0x44, 4);
@@ -287,6 +301,11 @@ static const GfxShader *prepared_get(const uint8_t *control, const uint8_t *code
             plat_file_write(p, control, ctl_size);
             snprintf(p, sizeof p, "%s/%s.code", dump, hex);
             plat_file_write(p, code, size < (16u << 20) ? size : 0);
+            static volatile int32_t n_dumped;
+            int32_t d = plat_inc32(&n_dumped);
+            if (d <= 4 || !(d & (d - 1)))
+                rt_log("gfx_shader: %d programs without SPIR-V dumped into %s this run; translate them with "
+                       "setup/src/tools/prepare/dumped_shaders.py --dumped spirv-dump", d, dump);
         }
     }
     return s;
@@ -411,6 +430,7 @@ static void add_res(GfxShader *s, int kind, const char *o, const char *e) {
     r->handle = (uint16_t)handle;
     r->count = (uint16_t)json_int(o, e, "array", 1);
     r->separate = sep && *sep == 't';
+    r->handle2 = (int16_t)json_int(o, e, "handle2", -1);
     r->slot = (int16_t)handle_slot(kind, r->cbuf_slot, handle, r->separate);
     int slot;
     if (s->cs_known && r->cbuf_slot == 0 && cs_res(s, kind, handle * 4, &slot)) r->slot = (int16_t)slot;
@@ -508,7 +528,8 @@ static void reflect(GfxShader *s) {
     const char *js = s->reflection;
     char stage[8];
     json_str(js, js + strlen(js), "stage", stage, sizeof stage);
-    s->stage = !strcmp(stage, "cs") ? GFX_STAGE_CS : !strcmp(stage, "ps") ? GFX_STAGE_FS : GFX_STAGE_VS;
+    s->stage = !strcmp(stage, "cs") ? GFX_STAGE_CS : !strcmp(stage, "ps") ? GFX_STAGE_FS
+             : !strcmp(stage, "gs") ? GFX_STAGE_GS : GFX_STAGE_VS;   // gs: sm86 glsl/geom.py
     s->mesh_kind = !strcmp(stage, "task") ? GFX_MESH_TASK : !strcmp(stage, "mesh") ? GFX_MESH_MESH : GFX_MESH_NONE;
     for (int k = 0; k < GFX_RES_KINDS; k++) {
         int count = json_objects(js, kinds[k], NULL, s, k);

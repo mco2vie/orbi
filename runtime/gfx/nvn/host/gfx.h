@@ -31,7 +31,7 @@ enum { GFX_STAGE_VS, GFX_STAGE_TCS, GFX_STAGE_TES, GFX_STAGE_GS, GFX_STAGE_FS, G
 enum { GFX_MESH_NONE, GFX_MESH_TASK, GFX_MESH_MESH };      // gfx_shader_mesh_kind
 enum { GFX_TYPE_FLOAT, GFX_TYPE_SINT, GFX_TYPE_UINT };
 typedef struct {                                           // what a draw's state says of its program
-    uint8_t attr_type[16];                                 // GFX_TYPE_* of each vertex attribute's format: integer
+    uint8_t attr_type[32];                                 // GFX_TYPE_* of each vertex attribute's format: integer
                                                            // ones get an integer-input variant (int_input_variant)
     uint8_t out_type[8];                                   // fragment: GFX_TYPE_* of each colour target's format,
                                                            // integer ones an integer-output variant (int_output_variant)
@@ -75,9 +75,11 @@ typedef struct {
     uint16_t handle;            // TEX/IMG: raw handle (word offset; separate: texture | sampler << 14); SSBO: address offset
     uint16_t count;             // descriptors (array length)
     uint8_t separate;           // TEX: texture and sampler handles are separate
+    int16_t handle2;            // TEX/IMG in a user uniform block (cbuf_slot >= 3): the word OR'ed into the handle word
+                                // (Orbitals: texture | sampler words, translator tex.py tex_key); -1 none
 } GfxShaderRes;
 typedef struct { uint8_t type, comps, packed; } GfxShaderIo;   // GFX_TYPE_*, components, 1 with a Component decoration
-int gfx_shader_stage(const GfxShader *s);                   // GFX_STAGE_VS, GFX_STAGE_FS or GFX_STAGE_CS
+int gfx_shader_stage(const GfxShader *s);                   // GFX_STAGE_VS, GFX_STAGE_GS, GFX_STAGE_FS or GFX_STAGE_CS
 int gfx_shader_resources(const GfxShader *s, int kind, const GfxShaderRes **res);   // count of GFX_RES_* kind; array in *res
 int gfx_shader_spec(const GfxShader *s, const uint32_t **words);   // fixed-address constant words: bank << 16 | byte
 // s with word k fixed to val[k] where fix[k] (specialization constants' defaults); lives for the process; NULL if none
@@ -142,4 +144,6 @@ typedef struct { uint64_t frames, nvn_calls, nvn_distinct, unimplemented, valida
                  draws_skipped; } GfxStats;
 GfxStats gfx_stats(void);
 void rt_frame_presented(const tex_t *t, uint64_t n);       // boot.c: --frames N ends the run after the Nth present
+void vi_history_queued(void);                              // ov_gfx.c: the game queued a present (nn::vi frame history)
+void vi_history_shown(uint64_t frame);                     // ov_gfx.c: present number `frame` reached the screen
                                                            // (saves --shot first through read_texels)

@@ -191,7 +191,10 @@ GENERATOR = [
     *sorted((ROOT / "recomp").glob("patches-*.txt")),
     ROOT / "tools/cpu/spin_waits.py",  # a game without a table: the search that makes it
 ]  # each version's table
-COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name("gamecode.py")]
+# runtime/cpu: the inline helpers the lifted code includes (cpu.h's exclusives and atomics); a change there must
+# compile the game again too
+COMPILER = [*GENERATOR, *sorted((ROOT / "runtime/cpu").glob("*.h")), ROOT / "tools/build/build.py",
+            Path(__file__).with_name("gamecode.py")]
 
 
 def warm(game: Path, work: Path, runtime: Path | None = None) -> None:
@@ -378,11 +381,14 @@ def main() -> None:
                     nup.extract("romfs", romfs, lambda d, t: emit("progress", d, t))
                     remove_stale(romfs, romfs_src, set(nup.files("romfs")), version.name)
                     ini_set(game / "orbitals.ini", "romfs", "romfs")
+                    nup.extract_addons(game, lambda d, t: emit("progress", d, t))  # DLC: game/aoc/<index>
                 elif args.romfs == "copy":
                     copy_tree(romfs_src, romfs, version.romfs_files, version.name)
                     ini_set(game / "orbitals.ini", "romfs", "romfs")
                 else:
                     ini_set(game / "orbitals.ini", "romfs", str(romfs_src))
+                    if romfs_src.is_file() and not is_nx(romfs_src):  # a .nup read in place; its DLC unpacked
+                        Nup(romfs_src).extract_addons(game, lambda d, t: emit("progress", d, t))
             elif step == "generate":
                 generate(game / "exefs", work, gen_jobs, version, image)
             elif step == "compile":

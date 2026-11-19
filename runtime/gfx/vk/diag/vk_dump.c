@@ -25,6 +25,13 @@
 // before the submission (vk_draw_internal.h upd_note).
 // ORBITALS_DUMP_SKIP_RUNS=1: a render pass with the same targets as the render pass before it is logged but not copied
 // (the terrain decals draw one pass each into the G-buffer and would use up both caps).
+// ORBITALS_DUMP_PASSES=<from>-<to>: only passes and dispatches from..to (numbers of passes.txt) are copied; the others
+// are logged. The copies of a whole frame fill INFLIGHT_CAP by pass 257, so the passes after it never had images
+// (Orbitals colony, 18/11/2026: the lighting composite at passes 364 and 396).
+// ORBITALS_DUMP_FS=<hash>[,...]: only render passes with a draw by one of those fragment shaders (the SPIR-V hashes of
+// passes.txt) are copied, dispatches not at all. Pass numbers move between runs (that composite was at 498 and 531 in
+// the next one), shader hashes do not while the translation stays the same. ORBITALS_DUMP_FS_AFTER=<n>: the n passes and
+// dispatches after each of those are copied too (the post-processing chain after a pass, whatever its numbers).
 // ORBITALS_DUMP_DRAWS: a copy of the first colour target after each draw of a run of passes (vk_dump_draws.c).
 // The parts: vk_dump_img.c (formats, image copies and PNGs), vk_dump_buf.c (ORBITALS_DUMP_BUF) and vk_dump_draws.c
 // (ORBITALS_DUMP_DRAWS), sharing vk_dump_internal.h.
@@ -41,6 +48,7 @@
 #include "vk_exec.h"
 #include "platform/platform.h"
 #include "vk_dump_internal.h"
+#include "vk_draw_internal.h"
 
 
 // The host buffers come from an allocator of their own: the runtime's has ORBITALS_GPU_MEM_LIMIT's heap limits, which a
@@ -73,6 +81,10 @@ FILE *images_f;
 FILE *passes_f;
 static int seq, finished, copied;      // copied: passes and dispatches of the dump frame whose images were copied
 static int skip_runs, dump_ubo;        // ORBITALS_DUMP_SKIP_RUNS, ORBITALS_DUMP_UBO
+static int pass_from, pass_to = -1;   // ORBITALS_DUMP_PASSES; -1: every pass
+static uint64_t want_fs[16];           // ORBITALS_DUMP_FS
+static int nwant_fs, fs_hit;           // fs_hit: a draw of the pass being recorded used one of want_fs
+static int fs_after, fs_after_left;    // ORBITALS_DUMP_FS_AFTER; passes still to copy after the last hit
 static int luts_only;                  // ORBITALS_CTL "dump DIR lut": only the 3D volumes and small textures, no targets
 static uint32_t want_tex[16][2];       // ORBITALS_DUMP_TEX: slot id and 0, or width and height
 static int nwant_tex;
@@ -195,6 +207,19 @@ static void flush_luts(VkExec *ex, int n) {
     nluts = 0;
 }
 
+// A skipped pass drops its queued textures and forgets them, so the next copied pass that samples one copies it: with
+// ORBITALS_DUMP_FS the lighting pass's light grid (3D r32ui) was marked done by the skipped G-buffer passes and never
+// copied (18/11/2026).
+static void drop_luts(void) {
+    for (int i = 0; i < nluts; i++)   // removed, not cleared: every skipped pass queues them again
+        for (int k = 0; k < nluts_done; k++)
+            if (luts_done[k] == luts[i].image) {
+                luts_done[k] = luts_done[--nluts_done];
+                break;
+            }
+    nluts = 0;
+}
+
 static int nvn_stage(int gfx_stage) {
     if (gfx_stage & VK_PIPE_STAGE_NVN) return gfx_stage & 7;   // task or mesh binding
     return gfx_stage == GFX_STAGE_VS ? 0 : gfx_stage == GFX_STAGE_FS ? 1 : 5;
@@ -213,7 +238,14 @@ static const char *wrap_name(int w) {
     return w >= 0 && w < 8 ? n[w] : "?";
 }
 
-static uint64_t handle_of(const VkExec *ex, int st, int slot, int img) {
+// The handle a binding resolves as vk_exec_bind.c does: from a user uniform block (cbuf_slot 3 and up, OR'ed with handle2:
+// Unreal's texture | sampler words), else the stage's bound slot. With the block form left out, every Orbitals texture
+// was listed "no handle (dummy)" while the draw had its handle (17/11/2026).
+static uint64_t handle_of(const VkExec *ex, int st, const GfxShaderRes *r, uint32_t k, int img) {
+    if (r->cbuf_slot >= 3)
+        return ubo_word(ex, st, r->cbuf_slot, r->handle + k) |
+               (r->handle2 >= 0 ? ubo_word(ex, st, r->cbuf_slot, (uint32_t)r->handle2 + k) : 0);
+    int slot = r->slot + (int)k;
     if (img) return slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
     return slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
 }
@@ -226,7 +258,13 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
         const GfxShaderRes *r = bd->res;
         if (r && bd->kind == GFX_RES_SSBO) {   // where the address lives (c0: the stage's NVN slot table) and the stage's slots
             int st = nvn_stage(bd->stage);
-            sp(b, "    %s ssbo at c%d+%#x%s, bound:", stn[st], r->cbuf_slot, r->handle * 4, r->flags & 1 ? " written" : "");
+            sp(b, "    %s ssbo at c%d+%#x%s", stn[st], r->cbuf_slot, r->handle * 4, r->flags & 1 ? " written" : "");
+            if (r->cbuf_slot >= 3 && r->cbuf_slot - 3 < 18) {   // the address the shader reads from the block (ubo_ptr)
+                uint64_t a = ubo_ptr(ex, st, r);
+                sp(b, ": address %#llx%s\n", (unsigned long long)a, a & 15 ? " (not 16-byte aligned)" : "");
+                continue;
+            }
+            sp(b, ", bound:");
             for (int k = 0; k < 16; k++)
                 if (ex->ssbo[st][k].addr)
                     sp(b, " %d=%#llx+%#llx", k, (unsigned long long)ex->ssbo[st][k].addr, (unsigned long long)ex->ssbo[st][k].size);
@@ -265,14 +303,28 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
         int st = nvn_stage(bd->stage), img = bd->kind == GFX_RES_IMG;
         char dt[24], fn[16];
         if (bd->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER || bd->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-            sp(b, "    %s %s slot %d: buffer texture (zero view bound)\n", stn[st], img ? "img" : "tex", r->slot);
+            for (uint32_t k = 0; k < (bd->count ? bd->count : 1u); k++) {
+                uint64_t h = handle_of(ex, st, r, k, img), addr = 0;
+                int fmt = 0;
+                uint32_t texels = 0;
+                int ok = h && vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels);
+                sp(b, "    %s %s c%d+%#x: buffer texture handle %#llx", stn[st], img ? "img" : "tex", r->cbuf_slot,
+                   r->handle * 4, (unsigned long long)h);
+                if (ok) sp(b, " slot %d addr %#llx fmt %#x %u texels\n", (int)(h & 0xfffff), (unsigned long long)addr, fmt, texels);
+                else sp(b, h ? " not a buffer texture slot (zero view)\n" : " (zero view)\n");
+            }
             continue;
         }
         for (uint32_t k = 0; k < (bd->count ? bd->count : 1u); k++) {
             int slot = r->slot + (int)k;
-            uint64_t h = handle_of(ex, st, slot, img);
-            sp(b, "    %s %s slot %d decl %s%s: ", stn[st], img ? "img" : "tex", slot, decl_type(r->type, dt),
-               img && (r->flags & 4) ? " store" : "");
+            uint64_t h = handle_of(ex, st, r, k, img);
+            if (r->cbuf_slot >= 3)
+                sp(b, "    %s %s c%d+%#x|%#x decl %s%s: handle %#llx, ", stn[st], img ? "img" : "tex", r->cbuf_slot,
+                   r->handle * 4, r->handle2 >= 0 ? (unsigned)r->handle2 * 4 : 0u, decl_type(r->type, dt),
+                   img && (r->flags & 4) ? " store" : "", (unsigned long long)h);
+            else
+                sp(b, "    %s %s slot %d decl %s%s: ", stn[st], img ? "img" : "tex", slot, decl_type(r->type, dt),
+                   img && (r->flags & 4) ? " store" : "");
             if (!h) { sp(b, "no handle (dummy)\n"); continue; }
             view_t v;
             int hv = 0;
@@ -307,6 +359,9 @@ static void describe_bindings(Str *b, const VkExec *ex, const VkPipeInfo *info) 
             vk_texture_debug(t, &ups, &last, &wr);
             sp(b, " | addr %#llx image %p mirrored %d gpu_owned %d bound %d uploads %u last-check %d written-since %d",
                (unsigned long long)t->addr, (void *)t->image, t->mirrored, t->gpu_owned, t->bound, ups, last, wr);
+            uint32_t g1, g0, go, gf;   // a 3D texture's guest memory now, against the image dumped as lut<id>
+            if (t->type == VK_IMAGE_TYPE_3D && vk_texture_guest_words(t, &g1, &g0, &go, &gf))
+                sp(b, " | guest words ones %u zero %u other %u (first %#x)", g1, g0, go, gf);
             uint8_t ssw[4] = {0};
             vk_texture_slot_swz(NVN_HANDLE_TEX(h), ssw);
             sp(b, " | swz image %u%u%u%u slot %u%u%u%u", t->swz[0], t->swz[1], t->swz[2], t->swz[3], ssw[0], ssw[1], ssw[2],
@@ -339,7 +394,7 @@ static uint64_t bindings_hash(const VkExec *ex, const VkPipeInfo *info) {
         }
         if (!bd->res || (bd->kind != GFX_RES_TEX && bd->kind != GFX_RES_IMG)) continue;
         for (uint32_t k = 0; k < (bd->count ? bd->count : 1u); k++)
-            h = (h ^ handle_of(ex, nvn_stage(bd->stage), bd->res->slot + (int)k, bd->kind == GFX_RES_IMG)) * 0x100000001b3ull;
+            h = (h ^ handle_of(ex, nvn_stage(bd->stage), bd->res, k, bd->kind == GFX_RES_IMG)) * 0x100000001b3ull;
     }
     return h;
 }
@@ -377,6 +432,10 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
     if (!active()) goto out;
     draws_select(ex, s, seq);
     pass_draws++;
+    if (nwant_fs && s->fs && !fs_hit) {
+        uint64_t fh = shader_hash(s->fs);
+        for (int k = 0; k < nwant_fs; k++) fs_hit |= want_fs[k] == fh;
+    }
     uint64_t th = bindings_hash(ex, info);
     for (int i = 0; i < nents; i++)
         if (ents[i].p == p && ents[i].th == th) {
@@ -395,6 +454,7 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
         goto out;
     }
     Str b = {0};
+    if (s->gs) sp(&b, "gs %016llx ", (unsigned long long)shader_hash(s->gs));   // a geometry stage between them
     sp(&b, "vs %016llx fs %016llx prog %llu prim %d; depth test %d write %d func %d; wmask t0 %#x t1 %#x; blend0 %llx "
            "fs outputs %#x; discard %d vp %.0f,%.0f %.0fx%.0f z %.2f-%.2f range %.2f-%.2f scissor %d,%d %dx%d (set %d) samples %u\n",
        (unsigned long long)shader_hash(s->vs),
@@ -404,7 +464,7 @@ void vk_dump_draw(VkExec *ex, const VkPipeState *s, VkPipeline p, const VkPipeIn
        (int)s->raster_discard, ex->vp[0][0], ex->vp[0][1], ex->vp[0][2], ex->vp[0][3], ex->vp[0][4], ex->vp[0][5],
        ex->depth_range[0], ex->depth_range[1], ex->scissor.x, ex->scissor.y, ex->scissor.w, ex->scissor.h,
        ex->has_scissor, ex->pass_samples);
-    for (int k = 0; k < 16; k++) {   // the vertex input: attributes with a format, their streams and buffers
+    for (int k = 0; k < 32; k++) {   // the vertex input: attributes with a format, their streams and buffers
         uint32_t w = ex->pipe.vattr[k];
         va_st a;
         memcpy(&a, &w, sizeof a);
@@ -456,10 +516,17 @@ uint64_t targets_sig(const VkExec *ex) {
 }
 
 // Sets pass_skip for the pass or dispatch being logged and counts it when it copies.
-static void pass_decide(int same_targets) {
+static void pass_decide(int same_targets, int wanted_fs) {
     if (frame_now() != dump_frame) copied = 0;
-    pass_skip = luts_only ? "volumes only" : copied >= MAX_PASSES ? "pass cap" : same_targets ? "same targets as the previous pass" : NULL;
+    int n = seq - 1;   // the caller numbered this pass already
+    pass_skip = luts_only                                      ? "volumes only"
+                : pass_to >= 0 && (n < pass_from || n > pass_to) ? "outside ORBITALS_DUMP_PASSES"
+                : nwant_fs && !wanted_fs && fs_after_left <= 0 ? "no draw by ORBITALS_DUMP_FS"
+                : copied >= MAX_PASSES                         ? "pass cap"
+                : same_targets                                 ? "same targets as the previous pass"
+                                                               : NULL;
     if (!pass_skip) copied++;
+    if (nwant_fs) fs_after_left = wanted_fs ? fs_after : fs_after_left - 1;
 }
 
 // Pipeline statistics per render pass of the dumped frame (stats.txt): input primitives, vertex shader invocations,
@@ -526,7 +593,8 @@ void vk_dump_pass_end(VkExec *ex) {
     if (!active()) goto out;
     int n = seq++;
     uint64_t sig = targets_sig(ex);
-    pass_decide(skip_runs && sig == last_targets);
+    pass_decide(skip_runs && sig == last_targets, fs_hit);
+    fs_hit = 0;
     last_targets = sig;
     pass_skip = draws_pass_end(sig, pass_skip);
     fprintf(passes_f, "pass %04d: render pass, draws %d, area %ux%u layers %u, fence %llu, frame %llu\n", n, pass_draws,
@@ -548,7 +616,7 @@ void vk_dump_pass_end(VkExec *ex) {
         fprintf(passes_f, "\n");
     }
     if (!pass_skip || luts_only) flush_luts(ex, n);
-    else nluts = 0;
+    else drop_luts();
     buf_snap(ex, n);
     fflush(passes_f);
     nents = ents_over = pass_draws = n_over_fs = 0;
@@ -556,19 +624,111 @@ out:
     plat_mutex_unlock(&rec_lock);
 }
 
+// ORBITALS_TRACE_3D=1 also logs every upload, clear and copy into a 3D texture (vk_trace_3d_on gates them, at most 512
+// lines): Orbitals' light grids (20x20x100 r32ui) read all ones on the GPU while their guest memory is zero, and no
+// pass of the dumped frame writes them (18/11/2026).
+int vk_trace_3d_on(void) {
+    static int on = -1;
+    static volatile int32_t n;
+    if (on < 0) on = cfg_get("ORBITALS_TRACE_3D") && atoi(cfg_get("ORBITALS_TRACE_3D"));
+    return on && plat_inc32(&n) <= 512;
+}
+
 // ORBITALS_TRACE_3D=1 (diagnosis): the first dispatch that writes each 3D storage image is logged with its frame, size,
 // shader and caller (the race's colour-grading LUT is written in some earlier frame, not in the one dumped).
+// The dispatch's bindings with its uniform blocks into the log (tag: what it is traced for), and its SPIR-V into
+// <game>/trace3d/sh_<hash>.spv (ORBITALS_TRACE_3D).
+static void trace3d_dispatch(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, uint64_t sh, const char *tag) {
+    Str bs = {0};
+    int du = dump_ubo;
+    dump_ubo = 1;
+    describe_bindings(&bs, ex, info);
+    dump_ubo = du;
+    rt_log("vk: trace3d %016llx (%s), frame %llu:", (unsigned long long)sh, tag, (unsigned long long)frame_now());
+    for (char *line = bs.s, *nl; line && *line; line = nl) {
+        nl = strchr(line, '\n');
+        if (nl) *nl++ = 0;
+        rt_log("vk: trace3d %016llx: %s", (unsigned long long)sh, line);
+        if (!nl) break;
+    }
+    free(bs.s);
+    uint64_t words = 0;
+    const void *b = gfx_shader_spirv(cs, &words);
+    char path[1100];
+    snprintf(path, sizeof path, "%s/trace3d", cfg_game_dir());
+    plat_file_mkdir_p(path);
+    snprintf(path, sizeof path, "%s/trace3d/sh_%016llx.spv", cfg_game_dir(), (unsigned long long)sh);
+    if (b && !plat_file_exists(path)) plat_file_write(path, b, (size_t)words * 4);
+}
+
+// The storage of the 3D images written so far (first writer seen): a dispatch that later writes the same memory through
+// a storage buffer or a buffer texture is logged once per shader and image. Orbitals' light grid is cleared to all ones
+// by a ClearUAV-like compute through its 3D image (a29340cb16aff1e1) and filled by something else: its guest memory
+// changed from garbage to zero with no CPU write and no other write to the image (19/11/2026).
+static struct { uint64_t lo, hi; } g3d[32];
+static int ng3d;
+
+static void trace3d_overlap(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, uint64_t sh) {
+    static struct { uint64_t sh; int r; } logged[64];
+    static int nlogged;
+    for (uint32_t i = 0; i < info->n_bindings; i++) {
+        const VkPipeBinding *bd = &info->bindings[i];
+        const GfxShaderRes *r = bd->res;
+        if (!r) continue;
+        uint64_t lo[17], hi[17];
+        int n = 0;
+        const char *how = NULL;
+        int st = nvn_stage(bd->stage);
+        if (bd->kind == GFX_RES_SSBO) {
+            how = "storage buffer";
+            if (r->cbuf_slot >= 3 && r->cbuf_slot - 3 < 18) {   // an address in a uniform block, its size unknown
+                lo[0] = ubo_ptr(ex, st, r), hi[0] = lo[0] + (1u << 20), n = lo[0] != 0;
+            } else {
+                for (int k = 0; k < 16; k++)   // the stage's bound slots (c0 table)
+                    if (ex->ssbo[st][k].addr)
+                        lo[n] = ex->ssbo[st][k].addr, hi[n] = lo[n] + ex->ssbo[st][k].size, n++;
+            }
+        } else if ((bd->kind == GFX_RES_IMG || bd->kind == GFX_RES_TEX) &&
+                   (bd->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || bd->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER)) {
+            uint64_t h = handle_of(ex, st, r, 0, bd->kind == GFX_RES_IMG), addr = 0;
+            int fmt = 0;
+            uint32_t texels = 0;
+            if (h && vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels))
+                lo[0] = addr, hi[0] = addr + (uint64_t)texels * 16, n = 1;
+            how = bd->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ? "storage buffer texture" : "buffer texture";
+        }
+        for (int q = 0; q < n; q++)
+        for (int k = 0; k < ng3d; k++) {
+            if (hi[q] <= g3d[k].lo || lo[q] >= g3d[k].hi) continue;
+            int seen = 0;
+            for (int j = 0; j < nlogged; j++) seen |= logged[j].sh == sh && logged[j].r == k;
+            if (seen || nlogged == 64) continue;
+            logged[nlogged].sh = sh, logged[nlogged++].r = k;
+            char tag[160];
+            snprintf(tag, sizeof tag, "its %s %#llx reaches the 3D image at %#llx", how, (unsigned long long)lo[q],
+                     (unsigned long long)g3d[k].lo);
+            trace3d_dispatch(ex, cs, info, sh, tag);
+        }
+    }
+}
+
 void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info, const p_dispatch *d) {
     static int on = -1;
     static VkImage seen[256];
     static int nseen;
     if (on < 0) on = cfg_get("ORBITALS_TRACE_3D") && atoi(cfg_get("ORBITALS_TRACE_3D"));
     if (!on) return;
+    if (ng3d) {
+        uint64_t w0 = 0, h0 = 0xcbf29ce484222325ull;
+        const uint8_t *b0 = (const uint8_t *)gfx_shader_spirv(cs, &w0);
+        for (uint64_t j = 0; j < w0 * 4; j++) h0 = (h0 ^ b0[j]) * 0x100000001b3ull;
+        trace3d_overlap(ex, cs, info, h0);
+    }
     for (uint32_t i = 0; i < info->n_bindings; i++) {
         const VkPipeBinding *bd = &info->bindings[i];
         if (!bd->res || bd->kind != GFX_RES_IMG || !(bd->res->flags & 4) || bd->type != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
             continue;
-        uint64_t h = handle_of(ex, 5, bd->res->slot, 1);
+        uint64_t h = handle_of(ex, 5, bd->res, 0, 1);
         view_t v;
         int hv = 0;
         const VkTexImage *t = h ? vk_texture_by_id(NVN_HANDLE_TEX(h), &v, &hv) : NULL;
@@ -584,6 +744,8 @@ void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info,
                "caller %#llx", (unsigned long long)frame_now(), t->width, t->height, t->depth, (int)t->format,
                (unsigned)NVN_HANDLE_TEX(h), hv, (unsigned long long)sh, bd->res->slot, d->x, d->y, d->z,
                (unsigned long long)d->caller);
+        if (ng3d < 32) g3d[ng3d].lo = t->addr, g3d[ng3d++].hi = t->addr + (uint64_t)t->width * t->height * t->depth * 16;
+        trace3d_dispatch(ex, cs, info, sh, "first writer of a 3D image");
     }
 }
 
@@ -592,7 +754,7 @@ void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPip
     plat_mutex_lock(&rec_lock);
     if (!active()) goto out;
     int n = seq++;
-    pass_decide(0);
+    pass_decide(0, 0);
     last_targets = 0;
     Str b = {0};
     describe_bindings(&b, ex, info);
@@ -604,7 +766,7 @@ void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPip
         const VkPipeBinding *bd = &info->bindings[i];
         if (!bd->res || bd->kind != GFX_RES_IMG || !(bd->res->flags & 4) || bd->type != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
             continue;
-        uint64_t h = handle_of(ex, 5, bd->res->slot, 1);
+        uint64_t h = handle_of(ex, 5, bd->res, 0, 1);
         view_t v;
         int hv = 0;
         const VkTexImage *t = h ? vk_texture_by_id(NVN_HANDLE_TEX(h), &v, &hv) : NULL;
@@ -626,7 +788,7 @@ void vk_dump_dispatch(VkExec *ex, const GfxShader *cs, VkPipeline p, const VkPip
                 dd, name, why ? " skipped: " : "", why ? why : "");
     }
     if (!pass_skip || luts_only) flush_luts(ex, n);
-    else nluts = 0;
+    else drop_luts();
     buf_snap(ex, n);
     fflush(passes_f);
 out:
@@ -739,6 +901,24 @@ void vk_dump_init(void) {
     if (lf && *lf) log_from = strtoull(lf, NULL, 10);
     const char *sr = cfg_get("ORBITALS_DUMP_SKIP_RUNS");
     skip_runs = sr && *sr && *sr != '0';
+    const char *dp = cfg_get("ORBITALS_DUMP_PASSES");
+    if (dp && *dp) {
+        char *q;
+        pass_from = (int)strtol(dp, &q, 10);
+        pass_to = *q == '-' ? (int)strtol(q + 1, NULL, 10) : pass_from;
+        if (pass_from < 0 || pass_to < pass_from) pass_from = 0, pass_to = -1;
+    }
+    const char *df = cfg_get("ORBITALS_DUMP_FS");
+    for (const char *q = df; q && *q && nwant_fs < 16;) {
+        char *end;
+        uint64_t h = strtoull(q, &end, 16);
+        if (end == q) break;
+        want_fs[nwant_fs++] = h;
+        q = *end == ',' ? end + 1 : end;
+        if (*end != ',') break;
+    }
+    const char *dfa = cfg_get("ORBITALS_DUMP_FS_AFTER");
+    if (dfa && *dfa) fs_after = atoi(dfa);
     const char *du = cfg_get("ORBITALS_DUMP_UBO");
     dump_ubo = du && *du && *du != '0';
     const char *d = cfg_get("ORBITALS_DUMP_DIR");

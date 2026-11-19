@@ -337,16 +337,18 @@ static void ov_random_bytes(Cpu *c) {
 
 // ==== SDK-internal initialisation (services.c)
 static void ov_diag_startup(Cpu *c) { (void)c; rt_log("diag: host diagnostics"); }
-static void ov_aoc_initialize(Cpu *c) { (void)c; rt_log("aoc: no add-on content"); }
+static void ov_aoc_initialize(Cpu *c) { (void)c; fs_aoc_count(); }   // logs what the setup unpacked
 // The rest of nn::aoc: with Initialize replaced the SDK never makes its service object, so every call reaching
-// aoc::detail::GetObjectHolder reads a null pointer (Orbitals' CountAddOnContent from main+0x989c). No add-on is
-// installed on the host yet, so the list is empty.
-static void ov_aoc_count(Cpu *c) { ret_x(c, 0); }          // int CountAddOnContent([ApplicationId])
-static void ov_aoc_list(Cpu *c) { ret_x(c, 0); }           // int ListAddOnContent(int *out, int offset, int count[, ApplicationId])
+// aoc::detail::GetObjectHolder reads a null pointer (Orbitals' CountAddOnContent from main+0x989c). The add-ons are
+// the folders the setup unpacked from the package (fs_host.c fs_aoc_*); MountAddOnContent mounts one (fs_host.c).
+static void ov_aoc_count(Cpu *c) { ret_x(c, (uint64_t)fs_aoc_count()); }   // int CountAddOnContent([ApplicationId])
+// int ListAddOnContent(int *out, int offset, int count[, ApplicationId])
+static void ov_aoc_list(Cpu *c) { ret_x(c, (uint64_t)fs_aoc_list(arg_p(c, 0), (int)arg_x(c, 1), (int)arg_x(c, 2))); }
 static void ov_aoc_base_id(Cpu *c) {                       // Bit64 GetAddOnContentBaseId([ApplicationId]): program id + 0x1000
     ret_x(c, (rt_game()->port ? rt_game()->port->program_id : 0) + 0x1000);
 }
-static void ov_aoc_prepare(Cpu *c) { ret_x(c, FS_R_TARGET_NOT_FOUND); }   // Result PrepareAddOnContent(int index)
+// Result PrepareAddOnContent(int index)
+static void ov_aoc_prepare(Cpu *c) { ret_x(c, fs_aoc_dir((int)arg_x(c, 0), NULL, 0) ? 0 : FS_R_TARGET_NOT_FOUND); }
 // void GetAddOnContentListChangedEvent(nn::os::SystemEvent *): a real event the game can wait on (Orbitals does, on
 // its own thread from main+0xd91c), never signalled: the host's list does not change. As ov_chat.c's attach:
 // nn::os::SystemEvent holds its SystemEventType first.

@@ -417,7 +417,7 @@ NVN_API(nvnCommandBufferMultiDrawMeshTasks3DIndirectCount) { (void)c; mesh_skipp
 // ---------- Push constants: void nvnCommandBufferPush{Graphics,Compute}Constants[Deferred](NVNcommandBuffer *cmd,
 // int stage, int offset, int size, const void *data) as the driver reads them (sdk+0x5d34b0: stage & 7, offset in
 // bits 8-15, size clamped to 256 bytes) into Maxwell-3D method 0x141 (byte 0x504). No source says which constant bank
-// the shaders see them in; eden-nx2 does not model the method either and runs MKW, so they are dropped for now.
+// the graphics shaders see them in; eden-nx2 does not model the method either and runs MKW, so those are dropped for now.
 static void push_dropped(Cpu *c, const char *name) {
     static volatile int32_t seen;
     if (plat_inc32(&seen) <= 8)
@@ -425,8 +425,26 @@ static void push_dropped(Cpu *c, const char *name) {
 }
 NVN_API(nvnCommandBufferPushGraphicsConstants) { push_dropped(c, "PushGraphicsConstants"); }
 NVN_API(nvnCommandBufferPushGraphicsConstantsDeferred) { push_dropped(c, "PushGraphicsConstantsDeferred"); }
-NVN_API(nvnCommandBufferPushComputeConstants) { push_dropped(c, "PushComputeConstants"); }
-NVN_API(nvnCommandBufferPushComputeConstantsDeferred) { push_dropped(c, "PushComputeConstantsDeferred"); }
+// Compute: kept per command buffer and given to each dispatch, which the replay puts at c0+0x10 (nvn_api_state.c). The
+// Deferred form is read at once too: the data is the game's and is not known to change before the dispatch.
+// ORBITALS_PUSH_CS=0 drops them as before (an A/B of the black frames).
+static void push_compute(Cpu *c, const char *name) {
+    static int on = -1;
+    if (on < 0) {
+        const char *v = cfg_get("ORBITALS_PUSH_CS");
+        on = !(v && *v == '0');
+    }
+    if (!on) return push_dropped(c, name);
+    uint32_t off = (uint32_t)arg_x(c, 2), size = (uint32_t)arg_x(c, 3);
+    const uint32_t *w = arg_p(c, 4);
+    static volatile int32_t seen;
+    if (plat_inc32(&seen) <= 8)
+        rt_log("nvn2: %s stage %d offset %u size %u kept: %08x %08x %08x %08x", name, (int)arg_x(c, 1), off, size,
+               w && size >= 4 ? w[0] : 0, w && size >= 8 ? w[1] : 0, w && size >= 12 ? w[2] : 0, w && size >= 16 ? w[3] : 0);
+    nvn_cmd_push_compute(arg_p(c, 0), off, size, w);
+}
+NVN_API(nvnCommandBufferPushComputeConstants) { push_compute(c, "PushComputeConstants"); }
+NVN_API(nvnCommandBufferPushComputeConstantsDeferred) { push_compute(c, "PushComputeConstantsDeferred"); }
 
 // ---------- The rest of the procs MKW's code reads (tools/gpu/nvn_usage.py) that the totk-pc-recomp front lacked. Signatures
 // from nvn.h (NVN1) unless noted.

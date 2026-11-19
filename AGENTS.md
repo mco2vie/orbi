@@ -9,7 +9,8 @@ A static recompilation of Orbitals (Switch 2) to x86-64, `orbitals-recomp`: the 
 ([recomp/](recomp/README.md)), the runtime ([runtime/](runtime/README.md)) replaces the console (kernel, SDK by
 function name, NVN2 over Vulkan), and the game's SM86 shaders become SPIR-V offline ([sm86/](sm86/README.md)). Every
 folder has a README that names each file: read it before opening the code. The open work is in
-[docs/roadmap.md](docs/roadmap.md).
+[docs/roadmap.md](docs/roadmap.md); the task in progress and the owner's way of working in
+[.github/copilot-instructions.md](.github/copilot-instructions.md); Orbitals' shaders in [docs/shaders.md](docs/shaders.md).
 
 ## Hard rules
 

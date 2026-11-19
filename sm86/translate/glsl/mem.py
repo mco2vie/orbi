@@ -47,6 +47,11 @@ class MemOps:
                 v = f"({v} * gl_FragCoord.w)"
         elif addr in (0x2E0, 0x2E4):  # PointCoord (Ryujinx AttributeMap.cs)
             v = f"gl_PointCoord[{(addr - 0x2E0) >> 2}]"
+        elif addr in (0x60, 0x64, 0x68):
+            # PrimitiveId, Layer, ViewportIndex (Ryujinx AttributeConsts): fragment inputs of the built-ins. Layer was
+            # refused in 3 Orbitals programs (17/11/2026).
+            v = {0x60: "gl_PrimitiveID", 0x64: "gl_Layer", 0x68: "gl_ViewportIndex"}[addr]
+            v = f"intBitsToFloat({v})"
         elif addr == 0x3FC:  # FrontFacing, a bool: all ones when true, as Ryujinx stores booleans
             v = "uintBitsToFloat(gl_FrontFacing ? 0xffffffffu : 0u)"
         else:
@@ -113,7 +118,8 @@ class MemOps:
         bank, addr = (v for _, v in iv.slot_values)
         out = []
         for k in range(size):   # a new value: no longer what was traced (track_ssbo leaves ULDC to this)
-            self.ur_ssbo.pop(n + k, None), self.ur_derived.pop(n + k, None)
+            self.ur_ssbo.pop(n + k, None), self.ur_derived.pop(n + k, None), self.ur_const.pop(n + k, None)
+            self.ur_or.pop(n + k, None)
         if i.has("URa") and i.v("URa") != URZ:
             # ULDC URd, c[bank][URa + offset]: a dynamic address. The index was dropped and every read took word
             # `offset`: the race's colour-grading LUT read the same table entry for all 32 slices (no blue, 31/10/2026).
@@ -124,12 +130,29 @@ class MemOps:
                 loads.append(self.cb_word(bank, self.ureg(i.v("URa")), addr + 4 * k))
             tmp = ", ".join(f"lw{k} = {w}" for k, w in enumerate(loads))
             return f"{{ uint {tmp}; {' '.join(f'ur{n + k} = lw{k};' for k in range(size))} }}"
+        sb = size == 2 and (bank == 0 or self.SB_BANKS[0] <= bank < self.SB_BANKS[1])
         for k in range(size):
             self.uregs.add(n + k)
-            out.append(f"ur{n + k} = {self.const(bank, addr + 4 * k, spec=not (size == 2 and bank == 0))};")
-        if size == 2 and bank == 0:
-            self.ur_ssbo[n] = addr  # a storage buffer address: the driver keeps one per binding in bank 0
+            out.append(f"ur{n + k} = {self.const(bank, addr + 4 * k, spec=not sb)};")
+            self.ur_const[n + k] = (bank, addr + 4 * k)   # a texture handle read through URc (tex.py tex_key)
+        if sb:
+            # A storage buffer address: the driver keeps one per binding in bank 0. A user uniform block may hold one
+            # too: Orbitals (Unreal) loads LDG/STG bases with ULDC.64 c[3][...] in 50 programs it dumped (title,
+            # menu and character select backgrounds, 17/11/2026); the back end reads it from the block (ubo_ptr).
+            self.ur_ssbo[n] = self.sb_key(bank, addr)
         return " ".join(out)
+
+    # ---- storage buffer keys: the c[0] byte offset of a driver binding, or bank << 16 | byte offset for an address
+    # held in a user uniform block (banks 3..20 = NVN uniform slots 0..17, vk_exec_bind.c ubo_ptr_res)
+    SB_BANKS = (3, 21)
+
+    @staticmethod
+    def sb_key(bank: int, byte: int) -> int:
+        return bank << 16 | byte
+
+    def sb_word(self, key: int, extra: int = 0) -> str:
+        """The bank word at the storage buffer's address (+ extra bytes), plain: the traced bases subtract it."""
+        return self.const(key >> 16, (key & 0xFFFF) + extra, spec=False)
 
     # ---- global memory as storage buffers
     def global_mem(self, i: Insn) -> str:
@@ -201,11 +224,11 @@ class MemOps:
             slot = self.ur_derived[base]
             self.uregs.add(base)
             extra = f"{self.src_u(i, 'a')} + " if i.cls.endswith("Ra32") and ra != RZ else ""
-            rel = f"({extra}ur{base} - {self.const(0, slot, spec=False)} + {off:#x}u)"
+            rel = f"({extra}ur{base} - {self.sb_word(slot)} + {off:#x}u)"
         elif base is None and ("sImmOffset" in i.cls or "RaNonRZ" in i.cls) and ra in self.reg_ssbo:
             slot = self.reg_ssbo[ra]
             self.regs.add(ra)
-            rel = f"(r{ra} - {self.const(0, slot, spec=False)} + {off:#x}u)"
+            rel = f"(r{ra} - {self.sb_word(slot)} + {off:#x}u)"
         else:
             raise Unsupported(f"{i.cls}: base not a traced storage buffer")
         self.ssbos.add(slot)
@@ -241,15 +264,15 @@ class MemOps:
     def global_search_fns(self) -> list[str]:
         """gld/gst over the storage buffers the program names (bank 0 base, bound length); every one may be stored
         into when gst is used. No buffer at all: nothing to search."""
-        if not (self.gsearch_load or self.gsearch_store):
+        if not (self.gsearch_load or self.gsearch_store or self.gsearch_atom):
             return []
         if not self.ssbos:
             raise Unsupported("global access with no storage buffer to search")
-        if self.gsearch_store:
+        if self.gsearch_store or self.gsearch_atom:
             self.ssbos_written |= self.ssbos
         find = []
         for k, o in enumerate(sorted(self.ssbos)):
-            lo, hi = self.const(0, o, spec=False), self.const(0, o + 4, spec=False)
+            lo, hi = self.sb_word(o), self.sb_word(o, 4)
             find.append(f"    r = usubBorrow(lo, {lo}, b); if (hi - {hi} - b == 0u && r < uint(sb{o:x}.d.length()) * 4u "
                         f"&& r < w) {{ w = r; s = {k}; }}")  # fmt: skip
         head = ["uint gfind(uint lo, uint hi, out int s) {", "    uint w = 0xffffffffu, r, b; s = -1;", *find,
@@ -260,6 +283,10 @@ class MemOps:
             ld = pick.replace("{X(", "v = ").replace(")}", ".d[(w >> 2) + k];")
             out += ["uint gld(uint lo, uint hi, uint k) {", "    int s; uint w = gfind(lo, hi, s), v = 0u;",
                     f"    {ld}", "    return v;", "}"]  # fmt: skip
+        for op in sorted(self.gsearch_atom):
+            at = pick.replace("{X(", "o = " + self.ATOM[op] + "(").replace(")}", ".d[w >> 2], v);")
+            out += [f"uint gatm_{op}(uint lo, uint hi, uint v) {{", "    int s; uint w = gfind(lo, hi, s), o = 0u;",
+                    f"    {at}", "    return o;", "}"]  # fmt: skip
         if self.gsearch_store:
             st = pick.replace("{X(", "").replace(")}", ".d[(w >> 2) + k] = v;")
             out += ["void gst(uint lo, uint hi, uint k, uint v) {", "    int s; uint w = gfind(lo, hi, s);",
@@ -277,10 +304,59 @@ class MemOps:
             raise Unsupported(f"{i.op}.{op}.{sz}")
         if i.has("Pu") and i.v("Pu") != PT:
             raise Unsupported(f"{i.op} with predicate out")
-        slot, rel = self.global_addr(i)
+        try:
+            slot, rel = self.global_addr(i)
+        except Unsupported:
+            # A register base the tracking lost (RaNonRZ): looked up at run time among the program's storage buffers,
+            # as global_search does for LDG/STG (4 Orbitals compute programs, 18/11/2026)
+            if "RaNonRZ" not in i.cls or i.v("Ra") == RZ:
+                raise
+            ra, off = i.v("Ra"), i.sv("Ra_offset") & 0xFFFFFFFF
+            self.regs.update((ra, ra + 1))
+            self.gsearch_atom.add(op)
+            addr = f"uint gc, gl = uaddCarry(r{ra}, {off:#x}u, gc), gh = r{ra + 1} + gc;"
+            call = f"gatm_{op}(gl, gh, {self.src_u(i, 'b')})"
+            if i.op == "RED" or i.v("Rd", RZ) == RZ:
+                return f"{{ {addr} {call}; }}"
+            n = i.v("Rd")
+            self.regs.add(n)
+            return f"{{ {addr} r{n} = {call}; }}"
         self.ssbos_written.add(slot)
         e = f"{self.ATOM[op]}(sb{slot:x}.d[{rel} >> 2], {self.src_u(i, 'b')})"
         return f"{e};" if i.op == "RED" else self.dst(i, e)
+
+    def atoms(self, i: Insn) -> str:
+        """ATOMS: an atomic on a 32-bit shared memory word (byte address Ra + offset), Rd the old value. Unsigned and
+        bitwise ops map to GLSL's; signed MIN/MAX, INC and DEC (old >= b ? 0 : old + 1; old == 0 || old > b ? b :
+        old - 1, as Ryujinx's AtomicDecrement/Increment) go through a compare-and-swap loop."""
+        op, sz = i.sym("op"), i.sym("sz")
+        if sz not in ("", "U32", "_32", "32", "S32"):
+            raise Unsupported(f"ATOMS.{op}.{sz}")
+        self.uses_shared = True
+        off = (i.sv("Ra_offset") if "NonRZ" in i.cls else i.v("Ra_offset")) & 0xFFFFFFFF
+        ra = i.v("Ra") if i.has("Ra") else RZ
+        addr = f"({reg(ra)} + {off:#x}u)" if ra != RZ else f"{off:#x}u"
+        if ra != RZ:
+            self.regs.add(ra)
+        b = self.src_u(i, "b")
+        word = f"SMEM(({addr}) >> 2)"
+        signed = sz == "S32"
+        new = {"MIN": "uint(min(int(w), int(bv)))", "MAX": "uint(max(int(w), int(bv)))"} if signed else {}
+        new |= {"INC": "(w >= bv ? 0u : w + 1u)", "DEC": "((w == 0u || w > bv) ? bv : w - 1u)"}
+        n = i.v("Rd", RZ)
+        if n != RZ:
+            self.regs.add(n)
+        put = f" r{n} = w;" if n != RZ else ""
+        if op in new:
+            loop = (f"{{ uint ad = {addr}, bv = {b}, o = SMEM(ad >> 2), w; do {{ w = o; "
+                    f"o = atomicCompSwap(SMEM(ad >> 2), w, {new[op]}); }} while (o != w);{put} }}")  # fmt: skip
+            return loop
+        fn = {"ADD": "atomicAdd", "MIN": "atomicMin", "MAX": "atomicMax", "AND": "atomicAnd", "OR": "atomicOr",
+              "XOR": "atomicXor", "EXCH": "atomicExchange"}.get(op)  # fmt: skip
+        if fn is None:
+            raise Unsupported(f"ATOMS.{op}")
+        call = f"{fn}({word}, {b})"
+        return f"r{n} = {call};" if n != RZ else f"{call};"
 
     def track_ssbo(self, i: Insn) -> None:
         """reg_ssbo after i: a register written from a bank-0 word that is a storage buffer's address (LEA/IADD3 of
@@ -291,6 +367,30 @@ class MemOps:
             # Any other write ends both: a base kept after `UIADD3 UR4, UR4, 0x100` lost the offset of the accesses
             # through it (115 programs, among them the cacti's draw arguments; tools/shaders/track_audit.py).
             n = i.v("URd")
+            # ULOP3 URd, URa, URb, URZ with the table of a | b over two ULDC words: Orbitals' combined handles,
+            # c[3][texture word] | c[3][sampler word] (tools/shaders/handle_trace.py, 56 programs, 17/11/2026)
+            # The table is a | b whatever URc is (0xfc), or with URc = URZ any table whose c = 0 half reads a | b: the
+            # 6 programs still refused on 18/11/2026 had ULOP3 URd, URa, URb, URc with a non-zero URc (base_origin.py
+            # --tex). UMOV copies a word or a combination (3 of them moved the ULDC word first).
+            combo = copied = None
+            lut, c = i.v("imm8", 0), i.v("URc", URZ)
+            if i.op == "ULOP3" and (lut == 0xFC or (c == URZ and lut & 0x55 == 0x54)) and not i.v("UPg@not", 0) \
+                    and i.v("UPg", PT) == PT:
+                a, b = i.v("URa", URZ), i.v("URb", URZ)
+                if a in self.ur_const and b in self.ur_const:
+                    combo = (self.ur_const[a], self.ur_const[b])
+            if i.op == "UMOV" and i.v("UPg", PT) == PT and not i.v("UPg@not", 0):
+                src = next((i.v(r) for r in ("URb", "URa") if i.has(r) and i.v(r) != URZ), None)
+                if src is not None and (src in self.ur_const or src in self.ur_or):
+                    copied = (self.ur_const.get(src), self.ur_or.get(src))
+            self.ur_const.pop(n, None), self.ur_or.pop(n, None)
+            if combo is not None and n != URZ:
+                self.ur_or[n] = combo
+            if copied is not None and n != URZ:
+                if copied[0] is not None:
+                    self.ur_const[n] = copied[0]
+                if copied[1] is not None:
+                    self.ur_or[n] = copied[1]
             src = None
             if i.op in ("UIADD3", "ULEA", "UMOV", "UIMAD"):
                 src = next((self.ur_ssbo.get(i.v(r), self.ur_derived.get(i.v(r))) for r in ("URa", "URb", "URc")
@@ -304,6 +404,7 @@ class MemOps:
         n = i.v("Rd")
         if n == RZ:
             return
+        self.track_handle(i, n)
         slot = None
         for k, iv in i.f.items():
             if k.startswith("ConstBankAddress"):
@@ -321,6 +422,47 @@ class MemOps:
             self.reg_ssbo.pop(n + k, None)
         if slot is not None:
             self.reg_ssbo[n] = slot
+
+    @staticmethod
+    def const_operand(i: Insn) -> tuple[int, int] | None:
+        """(bank, byte) of the instruction's constant bank operand; 14-bit address slots count words, 16-bit ones bytes."""
+        for k, iv in i.f.items():
+            if k.startswith("ConstBankAddress"):
+                (_, bank), (slot, addr) = iv.slot_values
+                return bank, addr * 4 if slot.width == 14 else addr
+        return None
+
+    @staticmethod
+    def pred_of(i: Insn) -> tuple[int, int] | None:
+        """The instruction's guard (Pg, negated), None when it always runs."""
+        g, neg = i.v("Pg", PT), i.v("Pg@not", 0)
+        return None if g == PT and not neg else (g, neg)
+
+    def track_handle(self, i: Insn, n: int) -> None:
+        """r_const / r_or after i writes Rd = n: `MOV Rn, c[b][x]` then `LOP3.LUT Rm, Rn, c[b][y], RZ, 0xfc` (a | b), the
+        texture | sampler handle words in a general register (tex_scr_b_noConst_; tools/shaders/base_origin.py --tex on
+        Orbitals' dump: 8 programs, 17/11/2026). Each entry keeps the guard of its writes: Orbitals picks the texture
+        with predicated MOV/LOP3 pairs (@P c[3][0x10], 0x18 or 0x20) and samples it under the same guard, so a TEX takes
+        the entry only when its own guard is the same (tex.py tex_key). Any other write ends what n held."""
+        g = self.pred_of(i)
+        combo = None
+        # a | b whatever the table says for c, which is RZ: the bits of c = 0 (0, 2, 4, 6) read 0, 1, 1, 1
+        if (i.op == "LOP3" and i.v("imm8", 0) & 0x55 == 0x54 and i.v("Rc", RZ) == RZ and i.v("Ra", RZ) in self.r_const
+                and not i.v("Ra@not", 0) and not i.v("Rc@not", 0)):
+            c = self.const_operand(i)
+            src, sg = self.r_const[i.v("Ra")]
+            if c is not None and sg in (None, g):
+                combo = (src, c)
+        # MOV R, c[b][x], or IMAD.MOV.U32 R, RZ, RZ, c[b][x] (the form ptxas also writes)
+        mov = i.op == "MOV" or (i.op == "IMAD" and i.v("Ra", 0) == RZ and i.v("Rb", 0) == RZ and "RRC" in i.cls)
+        konst = self.const_operand(i) if mov else None
+        wide = {i.sym(k) for k in ("sz", "wide", "fmt")} & {"64", "128", "WIDE", "U64", "S64"}
+        for k in range(4 if "128" in wide else 2 if wide else 1):
+            self.r_const.pop(n + k, None), self.r_or.pop(n + k, None)
+        if konst is not None:
+            self.r_const[n] = (konst, g)
+        if combo is not None:
+            self.r_or[n] = (combo, g)
 
     def ldc(self, i: Insn) -> str:
         """LDC c[bank][Ra + offset]: a constant read at a dynamic address; .U8/.S8/.U16/.S16 take the byte or halfword

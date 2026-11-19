@@ -58,3 +58,8 @@ int fs_save_busy(void);                                    // a save is being wr
                                                            // or save data changed in the last 3 s and not committed
 void fs_save_flush(void);                                  // wait for a save Commit still running in the background;
                                                            // every exit path calls it before the process ends
+// Add-on content (DLC) the setup unpacked into <game dir>/aoc/<index>/: how many, their indices in order (as
+// nn::aoc::ListAddOnContent), and one's folder (0 when absent; out may be NULL).
+int fs_aoc_count(void);
+int fs_aoc_list(int *out, int offset, int count);
+int fs_aoc_dir(int index, char *out, size_t cap);

@@ -9,11 +9,51 @@ from glsl.common import PT, RZ, Unsupported, reg
 
 
 class TexOps:
+    TEX_VARIANT = 16   # texture key word index: bits above it number the sampler pairings of one word (tex_key)
+
+    def tex_key(self, i: Insn, hreg: int | None = None) -> tuple[int, int]:
+        """(bank, word index) of the texture or image handle: c[bank5][tsPtrIdx * 4] in the bound forms. The forms with
+        the handle in a uniform register (classes ending _urc_, Unreal's programs in Orbitals: 56 of them failed with a
+        KeyError on bank5, 17/11/2026) take it from a ULDC of a constant word (mem.py uldc, ur_const), which names the
+        same binding: the handle that word holds. Another source is not traced."""
+        if i.has("bank5"):
+            return i.v("bank5"), i.v("tsPtrIdx")
+        for n in ("URc", "URb"):
+            if i.has(n) and i.v(n) in self.ur_const:
+                bank, byte = self.ur_const[i.v(n)]
+                return bank, byte // 4
+            if i.has(n) and i.v(n) in self.ur_or:
+                return self.or_key(i, self.ur_or[i.v(n)])
+        # tex_scr_b_noConst_: the handle in a general register, written under the guard this instruction runs under
+        # (or unguarded): another guard may have left another texture's handle there (mem.py track_handle)
+        g = self.pred_of(i)
+        h = hreg if hreg is not None else i.v("Rb") if i.has("Rb") else None   # the bindless forms: tex() says where
+        if h is not None and h in self.r_const and self.r_const[h][1] in (None, g):
+            bank, byte = self.r_const[h][0]
+            return bank, byte // 4
+        if h is not None and h in self.r_or and self.r_or[h][1] in (None, g):
+            return self.or_key(i, self.r_or[h][0])
+        raise Unsupported(f"{i.cls}: texture handle in a register not traced to a constant bank")
+
+    def or_key(self, i: Insn, pair: tuple[tuple[int, int], tuple[int, int]]) -> tuple[int, int]:
+        """The texture key of a handle OR'ed from two words of one bank: the runtime reads both and ORs them (reflection
+        "handle2"). One texture word OR'ed with several sampler words (a texture sampled two ways: 8 Orbitals programs,
+        17/11/2026) gets a binding per pair, told apart by a variant number above bit TEX_VARIANT of the word index; the
+        reflection gives the word itself (head.py)."""
+        (b1, y1), (b2, y2) = pair
+        if b1 != b2:
+            raise Unsupported(f"{i.cls}: texture handle OR'ed from banks {b1} and {b2}")
+        for k in range(64):
+            key = (b1, y1 // 4 | k << self.TEX_VARIANT)
+            if self.tex_h2.setdefault(key, y2 // 4) == y2 // 4:
+                return key
+        raise Unsupported(f"{i.cls}: texture word {(b1, y1 // 4)} OR'ed with more than 64 words")
+
     def txq(self, i: Insn) -> str:
         """TXQ TEX_HEADER_DIMENSION: width, height, depth/layers, levels of the texture at lod Ra."""
         if i.sym("query") != "TEX_HEADER_DIMENSION":
             raise Unsupported(f"TXQ {i.sym('query')}")
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         self.textures.setdefault(key, "sampler2D")
         t = f"t{key[0]}_{key[1]}"
         # the sampler's type is final only after the whole program (a later TEX may make it an array): the size comes
@@ -36,8 +76,12 @@ class TexOps:
     # Images: bound like textures (handle at c[bank5][tsPtrIdx * 4], named i<bank>_<idx>), declared without a format
     # (shaderStorageImageRead/WriteWithoutFormat) and as float images (hypothesis: an integer image would need its
     # format from the descriptor). Coordinates are integers from Ra, the array layer after the coordinates.
+    # 1D_BUFFER: a buffer texture (NVN_TEXTURE_TARGET_BUFFER) as an imageBuffer, bound as a storage texel buffer (the
+    # reflection's type 2, vk_pipe_layout.c descriptor_type). Orbitals: 10 programs store to one and 2 load from one
+    # (failed.tsv of 17/11/2026, "SUST 1D_BUFFER IGN", "SULD 1D_BUFFER IGN").
     IMG: ClassVar[dict[str, tuple[str, int]]] = {"1D": ("1D", 1), "2D": ("2D", 2), "3D": ("3D", 3),
-                                                 "1D_ARRAY": ("1DArray", 2), "2D_ARRAY": ("2DArray", 3)}  # fmt: skip
+                                                 "1D_ARRAY": ("1DArray", 2), "2D_ARRAY": ("2DArray", 3),
+                                                 "1D_BUFFER": ("Buffer", 1)}  # fmt: skip
 
     def image(self, i: Insn) -> tuple[str, str, int]:
         dim = i.sym("dim")
@@ -49,11 +93,15 @@ class TexOps:
             self.regs.update(range(a, a + n))
         coords = [f"int({reg(a + k if a != RZ else RZ)})" for k in range(n)]
         vec = coords[0] if n == 1 else f"ivec{n}({', '.join(coords)})"
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
-        kind = "uimage" if i.op in ("SURED", "SUATOM") else "image"  # atomics need an integer image with a declared format
-        if self.images.get(key, f"{kind}{name}") != f"{kind}{name}":
-            raise Unsupported(f"{i.op}: image {key} used both as float and for atomics")
-        self.images[key] = f"{kind}{name}"
+        key = self.tex_key(i)
+        # Atomics need an integer image with a declared format (r32ui). An image also loaded or stored is declared so
+        # too, its loads and stores going through imld_/imst_ (head.py), which take and give the texels' bits as the
+        # registers hold them, whichever the final declaration (32 Orbitals programs, 17/11/2026).
+        cur = self.images.get(key)
+        if cur is not None and cur.removeprefix("u") != f"image{name}":
+            raise Unsupported(f"{i.op}: image {key} used as image{name} and as {cur}")
+        atomic = i.op in ("SURED", "SUATOM") or (cur or "").startswith("uimage")
+        self.images[key] = f"{'uimage' if atomic else 'image'}{name}"
         return f"i{key[0]}_{key[1]}", vec, {"R": 1, "RG": 2, "RGBA": 4}.get(i.sym("rgba"), 0)
 
     def sust(self, i: Insn) -> str:
@@ -61,10 +109,11 @@ class TexOps:
         if not n:
             raise Unsupported(f"SUST.{i.sym('rgba')}")
         b = i.v("Rb")
-        vals = [f"uintBitsToFloat({reg(b + k if b != RZ else RZ)})" for k in range(n)] + ["0.0"] * (4 - n)
+        vals = [reg(b + k if b != RZ else RZ) for k in range(n)] + ["0u"] * (4 - n)
         if b != RZ:
             self.regs.update(range(b, b + n))
-        return f"imageStore({img}, {vec}, vec4({', '.join(vals)}));"
+        self.img_st.add(img)
+        return f"imst_{img}({vec}, uvec4({', '.join(vals)}));"
 
     IMG_ATOM: ClassVar[dict[str, str]] = {"ADD": "imageAtomicAdd", "MIN": "imageAtomicMin", "MAX": "imageAtomicMax",
                                           "AND": "imageAtomicAnd", "OR": "imageAtomicOr", "XOR": "imageAtomicXor"}  # fmt: skip
@@ -102,8 +151,9 @@ class TexOps:
         for k in range(n):
             if d != RZ:
                 self.regs.add(d + k)
-                out.append(f"r{d + k} = floatBitsToUint(iv[{k}]);")
-        return f"{{ vec4 iv = imageLoad({img}, {vec}); {' '.join(out)} }}" if out else ""
+                out.append(f"r{d + k} = iv[{k}];")
+        self.img_ld.add(img)
+        return f"{{ uvec4 iv = imld_{img}({vec}); {' '.join(out)} }}" if out else ""
 
     # ---- textures
     DIMS: ClassVar[dict[str, tuple[str, int, bool]]] = {
@@ -122,16 +172,26 @@ class TexOps:
         aoffi = i.sym("aoffi") == "AOFFI"
         gather = i.op == "TLD4"
         ptp = gather and i.sym("toff") == "PTP"
-        if dim not in self.DIMS or i.sym("toff") not in ("notoff", "", "PTP" if gather else "") or (
-            (aoffi or ptp) and dim.startswith("CUBE")
+        # TLD4.AOFFI: one offset for the whole gather, x and y as 6-bit signed fields at bits 0 and 8 of a source
+        # register (Ryujinx's Tld4; TEX packs 4 bits per axis). 2 Orbitals pixel programs, sampled each frame in the
+        # level (18/11/2026).
+        goff = gather and i.sym("toff") == "AOFFI"
+        if dim not in self.DIMS or i.sym("toff") not in ("notoff", "", *(("PTP", "AOFFI") if gather else ())) or (
+            (aoffi or ptp or goff) and dim.startswith("CUBE")
         ):
             raise Unsupported(f"{i.op} {dim} {i.sym('aoffi')}{i.sym('toff')}")
         name, ncoord, is_array = self.DIMS[dim]
         lod, dc = i.sym("lodlc"), i.sym("dc") == "DC"
         g0 = (["idx"] if is_array else []) + [f"c{k}" for k in range(ncoord)]
         # the second group: lod or bias, the packed offsets (AOFFI), the depth reference (Ryujinx's TEX order)
-        g1 = (["lod"] if lod in ("LL", "LB") else []) + (["off"] if aoffi else []) + (["p0", "p1"] if ptp else [])
+        g1 = (["lod"] if lod in ("LL", "LB") else []) + (["off"] if aoffi or goff else []) + (["p0", "p1"] if ptp else [])
         g1 += ["ref"] if dc else []
+        # Bindless (classes _b_): the handle is a source, the first of the second group, after the coordinates. Left
+        # out, the .SCR forms took a coordinate for the handle (an array's y: 84 Orbitals programs, 17/11/2026) and
+        # the next sources from one register early.
+        bindless = "_b_" in i.cls
+        if bindless:
+            g1 = ["h"] + g1
         regs: dict[str, str] = {}
         a, b = i.v("Ra"), i.v("Rb")
         if i.sym("scr") == "SCR":
@@ -150,7 +210,7 @@ class TexOps:
             return f"uintBitsToFloat({reg(regs[n])})"
 
         coords = [f(f"c{k}") for k in range(ncoord)]
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i, regs["h"] if bindless else None)
         t = f"t{key[0]}_{key[1]}"
         if aoffi:  # 4-bit signed texel offsets per axis; GLSL wants them constant, so they move the coordinates
             lvl = f"int({f('lod')})" if lod == "LL" else "0"
@@ -178,6 +238,12 @@ class TexOps:
                 for k in range(4)
             ]
             call = f"vec4({', '.join(f'textureGatherOffset({t}, {args}, {o}{ch}).w' for o in offs)})"
+        elif gather and goff:
+            ch = {"R": 0, "G": 1, "B": 2, "A": 3}[i.sym("comp") or "R"]
+            o = (f"ivec2(bitfieldExtract(int({reg(regs['off'])}), 0, 6), "
+                 f"bitfieldExtract(int({reg(regs['off'])}), 8, 6))")  # fmt: skip
+            call = (f"textureGatherOffset({t}, {vec}, {o}, {ch})" if not dc
+                    else f"textureGatherOffset({t}, {self.split_ref(coords)}, {o})")  # fmt: skip
         elif gather:
             ch = {"R": 0, "G": 1, "B": 2, "A": 3}[i.sym("comp") or "R"]
             call = f"textureGather({t}, {vec}, {ch})" if not dc else f"textureGather({t}, {self.split_ref(coords)})"
@@ -194,6 +260,39 @@ class TexOps:
         if dc and not gather:
             call = f"vec4({call}, 0.0, 0.0, 1.0)"
         outs = self.tex_outs(i)
+        return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
+
+    def txd(self, i: Insn) -> str:
+        """TXD: a sample with explicit derivatives, textureGrad. Sources as Ryujinx's TexD (MIT): Ra..., the array index
+        (u32) then the coordinates; Rb..., the derivatives interleaved, d/dx then d/dy of each coordinate (hypothesis
+        until checked on a picture). 11 Orbitals programs, 17/11/2026 (txd_urc_)."""
+        dim = i.sym("paramA")
+        if dim not in ("1D", "2D", "ARRAY_1D", "ARRAY_2D") or i.sym("aoffi") == "AOFFI":
+            raise Unsupported(f"TXD {dim} {i.sym('aoffi')}")
+        name, ncoord, is_array = self.DIMS[dim]
+        a, b = i.v("Ra"), i.v("Rb")
+        n0 = ncoord + (1 if is_array else 0)
+        self.regs.update(r for r in range(a, a + n0) if a != RZ)
+        self.regs.update(r for r in range(b, b + 2 * ncoord) if b != RZ)
+
+        def fr(r: int) -> str:
+            return f"uintBitsToFloat({reg(r if r != RZ else RZ)})"
+
+        base = a + (1 if is_array else 0)
+        coords = [fr(base + k if a != RZ else RZ) for k in range(ncoord)]
+        if is_array:
+            coords.append(f"float({reg(a)})")
+        dx = [fr(b + 2 * k if b != RZ else RZ) for k in range(ncoord)]
+        dy = [fr(b + 2 * k + 1 if b != RZ else RZ) for k in range(ncoord)]
+
+        def vec(v: list[str]) -> str:
+            return v[0] if len(v) == 1 else f"vec{len(v)}({', '.join(v)})"
+
+        key = self.tex_key(i)
+        t = f"t{key[0]}_{key[1]}"
+        self.textures[key] = f"sampler{name}"
+        outs = self.tex_outs(i)
+        call = f"textureGrad({t}, {vec(coords)}, {vec(dx)}, {vec(dy)})"
         return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
 
     def tex_outs(self, i: Insn) -> list[str]:
@@ -253,10 +352,16 @@ class TexOps:
             [f"int({reg(regs['idx'])})"] if is_array else []
         )
         vec = ints[0] if len(ints) == 1 else f"ivec{len(ints)}({', '.join(ints)})"
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         self.textures.setdefault(key, f"sampler{name}")
         lv = f"int({reg(regs['ms' if ms else 'lod'])})" if ms or lod == "LL" else "0"
         call = f"texelFetch(t{key[0]}_{key[1]}, {vec}, {lv})"
+        if name == "1D":
+            # The handle may name a buffer texture (NVN_TEXTURE_TARGET_BUFFER): the console's TLD reads either from the
+            # descriptor, and Unreal reads its typed buffers so (Orbitals: 32 slots of target 10 sampled through 1D
+            # bindings, all zero stand-ins, 17/11/2026). head.py declares a samplerBuffer twin of the binding.
+            self.tld1d.add(key)
+            call = f"tld1d_{key[0]}_{key[1]}({vec}, {lv})"
         outs = self.tex_outs(i)
         return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
 
@@ -272,7 +377,7 @@ class TexOps:
         coords = [f"uintBitsToFloat({reg(a + idx + k)})" for k in range(ncoord)]
         self.regs.update(r for r in range(a, a + idx + ncoord) if r != RZ)
         vec = coords[0] if ncoord == 1 else f"vec{ncoord}({', '.join(coords)})"
-        key = (i.v("bank5"), i.v("tsPtrIdx"))
+        key = self.tex_key(i)
         self.textures.setdefault(key, f"sampler{name}")
         t = f"t{key[0]}_{key[1]}"
         rd, rd2 = i.v("Rd"), i.v("Rd2")

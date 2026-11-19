@@ -338,6 +338,7 @@ NVN_API(nvnCommandBufferFinalize) {
     free(o->seg);
     o->seg = o->cur = o->end = NULL;
     o->magic = 0;
+    nvn_cmd_push_reset(o);
     cb_set_disabled(o, CB_NO_COMMAND | CB_NO_CONTROL, 0);
 }
 // void nvnCommandBufferSetMemoryCallback(NVNcommandBuffer *cmd, PFNNVNCOMMANDBUFFERMEMORYCALLBACKPROC callback)
@@ -389,6 +390,7 @@ NVN_API(nvnCommandBufferBeginRecording) {
     cmd_t *o = cmd_of(c);
     if (o->recording) rt_log("nvn: BeginRecording on command buffer %p while it records", (void *)o);
     o->recording = 1;
+    nvn_cmd_push_reset(o);
     o->cur = o->seg;   // the previous recording was copied at EndRecording
     o->rec_start = o->cmd_used;
     put_hdr(cmd_alloc(o, 8), OP_BEGIN, 8);
@@ -404,6 +406,7 @@ NVN_API(nvnCommandBufferEndRecording) {
     put_hdr(cmd_alloc(o, 8), OP_END, 8);
     o->hw_used -= 8;
     o->recording = 0;
+    nvn_cmd_push_reset(o);   // the dispatches took their constants as they were recorded
     uint8_t *copy = flatten_recording(o->seg, (size_t)(o->cur - o->seg));
     // Finalizing the recorder does not retire its handle; only reusing the control memory it was recorded in does.
     uintptr_t lo = (uintptr_t)o->ctl + (o->ctl_used < o->ctl_size ? o->ctl_used : 0);

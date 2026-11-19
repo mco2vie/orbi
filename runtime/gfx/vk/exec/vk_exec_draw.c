@@ -124,6 +124,38 @@ int find_stage(const prog_t *p, int nvn_stage, const uint8_t **ctl, const uint8_
     return 1;
 }
 
+// Programs with a geometry or tessellation stage (NVN 2, 3, 4), logged once per program, up to 32, with what happens
+// to the stage. A geometry stage runs on the program's triangle draws when it has SPIR-V (gs_for); without, the lookup
+// dumps it into spirv-dump (gfx_shader.c prepared_get) and the draws go without it. Tessellation is not translated.
+// Orbitals draws its colour-grading LUT (32x32x32, 32 instances into 32 layers) through a geometry stage that picks
+// each instance's layer; without it only layer 0 was written and the tonemapper graded the frame black (18/11/2026).
+static void note_extra_stages(const VkExec *ex) {
+    static PlatMutex lock = PLAT_MUTEX_INIT;
+    static uint64_t seen[32];
+    static int nseen;
+    static const char *const names[] = {"geometry", "tessellation control", "tessellation evaluation"};
+    for (int st = 2; st <= 4; st++) {
+        const uint8_t *ctl, *code;
+        uint32_t len;
+        if (!find_stage(ex->prog, st, &ctl, &code, &len)) continue;
+        plat_mutex_lock(&lock);
+        int k = 0;
+        while (k < nseen && seen[k] != ex->prog->serial) k++;
+        int fresh = k == nseen && nseen < 32;
+        if (fresh) seen[nseen++] = ex->prog->serial;
+        plat_mutex_unlock(&lock);
+        if (!fresh) return;
+        GfxShaderAnswers a = {0};
+        const GfxShader *s = gfx_shader_get(ctl, code, &a);
+        rt_log("vk: program %llu has a %s stage (%u bytes of code): %s", (unsigned long long)ex->prog->serial,
+               names[st - 2], len,
+               st != NVN_STAGE_GS ? "not run (tessellation is not translated)"
+               : s ? "run on its triangle draws"
+                   : "no SPIR-V, not run (dumped into spirv-dump; translate it with dumped_shaders.py)");
+        return;
+    }
+}
+
 // Which TEX/IMG bindings of a compute program have an integer-format view bound: the translator reads them as float
 // and takes the bits (floatBitsToUint), as SM86 does; in Vulkan a float image over an integer view is undefined
 // (format-07753): AMD and NVIDIA return the bits, Intel Arc drew the race black (issue #64). Array and buffer
@@ -168,7 +200,7 @@ static const GfxShader *cached_shader(VkExec *ex, int st, const uint8_t *ctl, co
         }
     }
     const GfxShader *s = gfx_shader_get(ctl, code, &a);
-    if (!s) warn_once(W_SHADER, "a stage %d shader of program %llu has no prepared SPIR-V: draws with it are skipped", st,
+    if (!s && st != NVN_STAGE_GS) warn_once(W_SHADER, "a stage %d shader of program %llu has no prepared SPIR-V: draws with it are skipped", st,
                       (unsigned long long)serial);
     // in front, the least recently used way drops out. A program without prepared SPIR-V is kept too (s NULL): each of
     // its draws hashed its code and looked for the file again: 4.9 us each on the replay thread (a capture replayed
@@ -200,6 +232,16 @@ const GfxShader *shader_for(VkExec *ex, int st, int *present) {
         if (!(a.img_uint | a.img_sint)) return base;
     }
     return cached_shader(ex, st, ctl, code, &a);
+}
+
+// The program's geometry stage for a draw of triangles, or NULL (none, no SPIR-V yet, or not a geometry program).
+static const GfxShader *gs_for(VkExec *ex) {
+    const uint8_t *ctl, *code;
+    uint32_t len;
+    if (!find_stage(ex->prog, NVN_STAGE_GS, &ctl, &code, &len)) return NULL;
+    GfxShaderAnswers a = {0};
+    const GfxShader *g = cached_shader(ex, NVN_STAGE_GS, ctl, code, &a);
+    return g && gfx_shader_stage(g) == GFX_STAGE_GS ? g : NULL;
 }
 
 // The values the GPU reads for s's fixed-address constant words idx[0..n) (all words when idx is NULL) in this draw
@@ -518,9 +560,11 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         SM.valid = 0;
         vs = shader_for(ex, NVN_STAGE_VS, &has_vs);
         fs = shader_for(ex, NVN_STAGE_FS, &has_fs);
+        note_extra_stages(ex);
         if (memo && vs && (!has_fs || fs))
             memo_key(ex, &SM.k), SM.vs = vs, SM.fs = fs, SM.has_fs = has_fs, SM.valid = 1;
     }
+    const GfxShader *gs = !mesh && vk_pipeline_gs_prim(prim) ? gs_for(ex) : NULL;
     if (!has_vs) return vk_exec_frame.skip[VK_SKIP_NO_VS]++, warn_once(W_NO_VS, "a draw with a program that has no vertex stage is skipped"), 0;
     // A draw into a target not rendered in the last RECENT_FRAMES (vk_exec_rt.c; or into none) waits for a pending pipeline: one-shot
     // draws (volumes and LUTs generated once, later only sampled) would leave their target empty for the session. A
@@ -533,7 +577,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
     if (ru_cap) ru_note_fbl(fbl);
     PD_MARK(PD_FEEDBACK);
     VkPipeState s = ex->pipe;
-    s.vs = vs, s.fs = fs, s.mesh = msh;
+    s.vs = vs, s.fs = fs, s.mesh = msh, s.gs = gs;
     if (mesh == 2) {   // task/mesh as compute: the draw of the vertices its passes wrote (op_draw_mesh_cs)
         if (!(s.vs = gfx_shader_mesh_cs_vs())) return 0;
         s.mesh = NULL;

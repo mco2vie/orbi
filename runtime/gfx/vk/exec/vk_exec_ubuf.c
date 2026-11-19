@@ -114,6 +114,25 @@ static void ubo_ptr_log(void) {
 
 // That address as the bound block holds it at this point of the replay; 0 when the block is unbound or too short. The
 // block has no size field.
+// A word of user uniform block cbuf_slot (3..20, NVN uniform slot cbuf_slot - 3) at word index `word`, as of the
+// submission: its inline updates, the uniform snapshot, else live memory. Texture and image handles that the shader reads
+// from such a block (Orbitals' Unreal programs: c[3][texture word] | c[3][sampler word], gfx.h handle2); 0 when the slot
+// is unbound or too short.
+uint32_t ubo_word(const VkExec *ex, int st, int cbuf_slot, uint32_t word) {
+    if (cbuf_slot < 3 || cbuf_slot - 3 >= 18) return 0;
+    const p_bind_buf *u = &ex->ubo[st][cbuf_slot - 3];
+    uint64_t off = (uint64_t)word * 4;
+    uint32_t v = 0;
+    if (!u->addr || u->size < off + 4) return 0;
+    if (upd_read(ex, u->addr + off, &v, 4)) return v;
+    vk_usnap_host_wanted = 1;
+    const uint8_t *s = vk_usnap_peek(u->addr + off, 4, 1);
+    if (s) return memcpy(&v, s, 4), v;
+    VkMemSpan sp;
+    if (vk_mem_resolve(u->addr + off, 4, &sp)) memcpy(&v, (const void *)(uintptr_t)(u->addr + off), 4);
+    return v;
+}
+
 uint64_t ubo_ptr(const VkExec *ex, int st, const GfxShaderRes *r) {
     const p_bind_buf *u = &ex->ubo[st][r->cbuf_slot - 3];
     uint64_t off = (uint64_t)r->handle * 4, a = 0, live = 0;

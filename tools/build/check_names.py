@@ -9,7 +9,9 @@ three-letter "mkw" counts only when no letter touches it, to avoid hits inside c
 
 In an executable each match names its PE section and file offset. The bare three letters "mkw" inside compressed image
 data (the IDAT chunks of an embedded PNG: the icon) or inside a section of machine code (.text: instruction bytes) are
-not text: they are listed apart and do not count. The longer names count everywhere.
+not text: they are listed apart and do not count. The same holds for the DWARF debug sections (.debug_*, which a PE file
+names "/<n>", an offset into its COFF string table): their bytes are addresses and offsets, and a build that moved code
+put "MKw" in one (17/11/2026, /58+0x349951). The longer names count everywhere.
 
 Paths listed in the allow file (default tools/build/check_names.allow, globs relative to the scanned root) may keep the
 names: the licence texts, the third-party notices, the removal report and the one-shot migration data.
@@ -70,19 +72,28 @@ def files_of(root: Path):
 
 
 def pe_sections(data: bytes) -> list[tuple[str, int, int, bool]]:
-    """(name, file offset, size, holds code) of each section of a PE file; [] for anything else."""
+    """(name, file offset, size, holds code or debug data) of each section of a PE file; [] for anything else."""
     if data[:2] != b"MZ" or len(data) < 0x40:
         return []
     pe = struct.unpack_from("<I", data, 0x3C)[0]
     if data[pe : pe + 4] != b"PE\0\0":
         return []
     count, opt = struct.unpack_from("<H12xH", data, pe + 6)
+    symtab, nsyms = struct.unpack_from("<II", data, pe + 12)
+    strtab = symtab + 18 * nsyms if symtab else 0  # COFF string table: long section names ("/58")
     out, at = [], pe + 24 + opt
     for i in range(count):
         name, size, off = struct.unpack_from("<8s8xII", data, at + 40 * i)
         flags = struct.unpack_from("<I", data, at + 40 * i + 36)[0]
-        code = bool(flags & 0x20000020)  # IMAGE_SCN_CNT_CODE or IMAGE_SCN_MEM_EXECUTE
-        out.append((name.rstrip(b"\0").decode("ascii", "replace"), off, size, code))
+        text = name.rstrip(b"\0").decode("ascii", "replace")
+        if text.startswith("/") and text[1:].isdigit() and strtab:
+            lo = strtab + int(text[1:])
+            hi = data.find(b"\0", lo)
+            if 0 <= lo < hi:
+                text = data[lo:hi].decode("ascii", "replace")
+        # machine code (IMAGE_SCN_CNT_CODE or IMAGE_SCN_MEM_EXECUTE) or DWARF: bytes, not text
+        code = bool(flags & 0x20000020) or text.startswith(".debug")
+        out.append((text, off, size, code))
     return out
 
 

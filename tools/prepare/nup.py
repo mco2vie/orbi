@@ -5,6 +5,8 @@ them in place, and the runtime reads the RomFS from one too (runtime/sdk/fs/nup.
 
 Usage: uv run tools/prepare/nup.py list GAME.nup
        uv run tools/prepare/nup.py extract GAME.nup DIR [--part exefs|romfs]   (DIR/exefs, DIR/romfs)
+       uv run tools/prepare/nup.py addons GAME.nup GAMEDIR
+            the add-ons' (DLC) RomFS into GAMEDIR/aoc/<index>/, where the runtime mounts them (fs_host.c fs_aoc_dir)
        uv run tools/prepare/nup.py pack DIR GAME.nup --title 0400C3F00006E000 [--version 0]
             DIR/exefs and DIR/romfs into one package, stored raw (no zstd, so the runtime reads the RomFS in place):
             one file instead of ~206 000 for a dump kept loose (Adrià 13/11/2026)
@@ -92,6 +94,36 @@ class Nup:
             self._parts[part] = dict(sorted(out.items()))
         return self._parts[part]
 
+    def addons(self) -> dict[int, int]:
+        """{aoc index: romfs dir} of the add-on records (kind 2) with a RomFS. The index nn::aoc lists is the add-on's
+        title id less the base id, the program id + 0x1000 (runtime/sdk/ov/ov_system.c GetAddOnContentBaseId); a
+        title id outside that range gets the next free index from 1."""
+        base = (int(self.title_id, 16) & ~0xFFF) + 0x1000
+        out: dict[int, int] = {}
+        odd = []
+        for tid, kind, _, ro, _ in self.packages:
+            if kind != 2 or ro == NONE:
+                continue
+            if 0 < tid - base < 0x800 and tid - base not in out:
+                out[tid - base] = ro
+            else:
+                odd.append(ro)
+        for ro in odd:
+            i = 1
+            while i in out:
+                i += 1
+            out[i] = ro
+        return dict(sorted(out.items()))
+
+    def extract_addons(self, game: Path, progress=None) -> list[int]:
+        """Each add-on's RomFS into game/aoc/<index>/ (resumable, as extract); returns the indices."""
+        done = []
+        for index, root in self.addons().items():
+            files = dict(sorted(self._walk(root).items()))
+            self._extract_files(files, Path(game, "aoc", str(index)), progress)
+            done.append(index)
+        return done
+
     def _walk(self, top: int) -> dict[str, Entry]:
         """{path: Entry} of the files under directory top."""
         out: dict[str, Entry] = {}
@@ -127,7 +159,9 @@ class Nup:
     def extract(self, part: str, dst: Path, progress=None, prefix: str = "") -> None:
         """The part's files (those under prefix) into dst; files already there with the right size are kept (resume).
         progress(done, total)."""
-        files = {k: e for k, e in self.files(part).items() if k.startswith(prefix)}
+        self._extract_files({k: e for k, e in self.files(part).items() if k.startswith(prefix)}, dst, progress)
+
+    def _extract_files(self, files: dict[str, Entry], dst: Path, progress=None) -> None:
         with open(self.path, "rb") as f:
             for n, (name, e) in enumerate(files.items(), 1):
                 out = Path(dst, name)
@@ -240,6 +274,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list").add_argument("nup", type=Path)
+    ad = sub.add_parser("addons")
+    ad.add_argument("nup", type=Path)
+    ad.add_argument("game", type=Path, help="the game folder (orbitals-recomp): GAME/aoc/<index>/")
     ex = sub.add_parser("extract")
     ex.add_argument("nup", type=Path)
     ex.add_argument("out", type=Path)
@@ -255,6 +292,10 @@ def main() -> None:
         print(f"{a.out}: done{' ' * 20}")
         return
     n = Nup(a.nup)
+    if a.cmd == "addons":
+        got = n.extract_addons(a.game, lambda d, t: print(f"  {d}/{t}", end="\r", file=sys.stderr))
+        print(f"add-ons: {', '.join(map(str, got)) or 'none in this package'}{' ' * 20}")
+        return
     print(f"title {n.title_id} v{n.version}: {len(n.files('exefs'))} exefs and {len(n.files('romfs'))} romfs files")
     if a.cmd == "extract":
         for part in a.part or ("exefs", "romfs"):

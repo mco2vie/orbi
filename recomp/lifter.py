@@ -416,7 +416,13 @@ class Lifter:
             return Insn('op', f'{{ uint32_t st = stx{nbits}(c, {addr}, {X(rt)}); {set_reg(0, rs, "st")} }}')
         if L:
             return Insn('op', set_reg(1, rt, f'lda{nbits}({addr})'))
-        return Insn('op', f'stl{nbits}({addr}, {X(rt)});')
+        # STLR: a sequentially consistent store, not a release one. ARM's STLR then LDAR stay in order (RCsc), which
+        # C++ seq_cst atomics compiled for AArch64 rely on; x86 lets a release store (a plain mov) pass a later load,
+        # so the pair did not order there. A seq_cst store is XCHG and orders it. Suspected of the rare corruption of
+        # Unreal's render graph structures (a freed pointer read at 0x104 after the logos, 1 run in 3, with the GPU
+        # write-backs, preemption, page freezing and the VRAM mirror each ruled out, 17/11/2026).
+        t = f'uint{nbits}_t'
+        return Insn('op', f'__atomic_store_n(({t} *)(uintptr_t)({addr}), ({t}){X(rt)}, __ATOMIC_SEQ_CST);')
 
     def excl_pair(self, sz, L, rs, rt2, rt, addr):
         """LDXP/LDAXP/STXP/STLXP. Two W registers form one 64-bit exclusive, two X registers one 128-bit."""

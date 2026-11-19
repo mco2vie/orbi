@@ -73,6 +73,8 @@ static _Thread_local const RsList *rs_last_l;
 
 _Thread_local uint32_t c0_dim[3], c0_binst;
 _Thread_local const GfxShader *c0_cs;
+_Thread_local const uint8_t *c0_push;
+_Thread_local uint32_t c0_push_n;
 _Thread_local uint64_t bind_gen = 1;
 
 // ---- descriptors
@@ -101,7 +103,9 @@ static void count_use(int cls, int use, uint64_t n) {
 
 // A buffer descriptor for [addr, addr+size) of guest memory: its backing (a pool's VRAM mirror when it has one) when
 // aligned, a copy in transient memory when the backing is host memory with an unaligned offset. 0 when neither works.
-// written: the shader stores into it (a mirror's range goes back to guest memory at the end of the submission).
+// written: the shader stores into it (a mirror's range goes back to guest memory at the end of the submission); 2: it
+// may store into part of it only, so only the bytes it changes go back (vk_mem_gpu_wrote_merged).
+#define WB_UNSIZED (16ull << 20)
 static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, uint64_t max, int use, int written,
                       VkDescriptorBufferInfo *out) {
     VkMemSpan sp;
@@ -112,7 +116,11 @@ static int bind_range(VkExec *ex, uint64_t addr, uint64_t size, uint64_t align, 
     if (sp.offset % align == 0) {
         VK_MEM_USE(sp);
         *out = (VkDescriptorBufferInfo){sp.buffer, sp.offset, n};
-        if (written) vk_mem_gpu_wrote(&sp, n), vk_usnap_drop(addr, n);
+        // A store into a buffer of unknown size (an address read from a uniform block, ubo_ptr) binds to the end of
+        // the backing; its merge covers WB_UNSIZED from the address: past it the GPU's stores stay in VRAM.
+        if (written == 2) vk_mem_gpu_wrote_merged(&sp, !size && n > WB_UNSIZED ? WB_UNSIZED : n);
+        else if (written == 1) vk_mem_gpu_wrote(&sp, n);   // 3: the stores stay in the VRAM mirror (unsized_mode)
+        if (written) vk_usnap_drop(addr, n);
         if (written && ru_cap) ru_note_bad(RUB_WRITTEN);
         count_use(sp.cls, use, n);
         VK_MEM_BOUND(sp);
@@ -162,6 +170,10 @@ static VkDescriptorBufferInfo c0_info(VkExec *ex, int st) {
         if ((table = gfx_shader_cs_table(c0_cs))) {   // NVN2 packed table: its handles are part of the bank
             memcpy(in.table, table, 5);
             memcpy(in.tex, ex->tex[st], sizeof in.tex), memcpy(in.img, ex->img[st], sizeof in.img);
+            // the push constants, at 0x10 up to the table (4 * table[4] bytes)
+            uint32_t room = 4u * table[4], n = c0_push && c0_push_n < room ? c0_push_n : c0_push ? room : 0;
+            if (n > sizeof in.push) n = sizeof in.push;
+            if (n) in.push_n = n, memcpy(in.push, c0_push, n);
         }
     } else {
         in.binst = c0_binst;
@@ -171,6 +183,7 @@ static VkDescriptorBufferInfo c0_info(VkExec *ex, int st) {
     B.c0_in[k] = in;
     uint8_t tmp[VK_C0_BYTES];
     vk_c0_fill(tmp, st, ex->ssbo[st], ex->ubo[st], c0_dim, c0_binst, table, ex->tex[st], ex->img[st]);
+    if (in.push_n && 0x10 + in.push_n <= VK_C0_BYTES) memcpy(tmp + 0x10, in.push, in.push_n);
     if (!B.c0_valid[k] || memcmp(tmp, B.c0[k], VK_C0_BYTES)) {
         memcpy(scratch(ex, VK_C0_BYTES, &B.c0_buf[k], &B.c0_off[k]), tmp, VK_C0_BYTES);
         memcpy(B.c0[k], tmp, VK_C0_BYTES);
@@ -242,6 +255,22 @@ static int ssbo_slot(const GfxShaderRes *r, int st, int *ubo) {
 // cbuf_slot - 3, byte offset handle * 4). The Depths terrain reads its vertices through one, about 500 draws a frame;
 // with a zero buffer they collapse and the ground is missing. MacNativeGames resolves these the same way (NVN_RB_SBUFU,
 // games/totk/third_party/d2r_gfx/gfx/nvn/nvn_mtl.m @ b75be8cf).
+// ORBITALS_WB_UNSIZED (stores into a storage buffer of unknown size, an address from a uniform block): "vram"
+// (default) leaves them in the pool's VRAM mirror, where later GPU work reads them; "merge" merges them back to guest
+// memory by bytes; "whole" copies the binding back whole. With merge the RTX 4080 lost the device inside the merge
+// after the logos (read invalid at 0x20003a52b000 and 0x20003a585000), with whole the render graph read 0x104; with
+// no write-back at all (WB_MERGE=none) and with texel views alone merged, both runs played on (17/11/2026).
+static int unsized_mode(void) {
+    static int m = -1;
+    if (m < 0) {
+        const char *e = cfg_get("ORBITALS_WB_UNSIZED");
+        m = e && !strcmp(e, "merge") ? 2 : e && !strcmp(e, "whole") ? 1 : 3;
+        rt_log("vk: stores into storage buffers of unknown size: %s (ORBITALS_WB_UNSIZED)",
+               m == 2 ? "merged back by bytes" : m == 1 ? "copied back whole" : "kept in VRAM");
+    }
+    return m;
+}
+
 static int ubo_ptr_res(const GfxShaderRes *r) {
     return r->cbuf_slot >= 3 && r->cbuf_slot - 3 < 18;
 }
@@ -261,6 +290,19 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
         up.addr = ubo_ptr(ex, st, r), b = &up;
         if (ru_cap) ru_note_bad(RUB_UBO_PTR);   // read from the block's bytes, which change without a bind
     }
+    // A compute shader that loads its buffer's address from the push constants (c0 from 0x10, ahead of the packed table):
+    // Orbitals pushes {u64 address, u32 size} entries there, 16 bytes each (48-byte pushes such as {0xf174b0000, 0x20},
+    // run of 17/11/2026), the same form as the table's. The dispatch's bytes say which buffer (c0_push, op_dispatch).
+    else if (st == NVN_STAGE_CS && r->cbuf_slot == 0 && c0_push && r->handle * 4 >= 0x10 &&
+             (uint32_t)(r->handle * 4 - 0x10) + 12 <= c0_push_n) {
+        uint32_t at = (uint32_t)(r->handle * 4 - 0x10), n;
+        memcpy(&up.addr, c0_push + at, 8), memcpy(&n, c0_push + at + 8, 4);
+        up.size = n, b = &up;
+        static volatile int32_t seen;
+        if (plat_inc32(&seen) <= 8)
+            rt_log("vk: compute storage buffer from the push constants at c0+%#x: %#llx+%u", r->handle * 4,
+                   (unsigned long long)up.addr, n);
+    }
     if (b) {
         // vk_caps.c: shaders translated for sbuf_align address the buffer from its address rounded down to it.
         uint64_t lead = vk_caps.sbuf_align ? b->addr & (vk_caps.sbuf_align - 1) : 0;
@@ -268,8 +310,17 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
         // to the size in c0 (the HUD's text VS reads 64-byte glyph records, one per instance, from a binding of 0x100
         // bytes: past the fourth they read zero).
         uint64_t size = written && b->size ? b->size + lead : 0;
+        // Written with no size (an address from a uniform block, ubo_ptr, or a push without one): the binding runs to
+        // the end of the backing, and copied back whole it reverted the CPU's writes over the rest of the pool: with
+        // the c[3] bases translated (933e676) Orbitals' render graph read 0x104 after the logos (17/11/2026). Only the
+        // bytes the GPU changes go back (vk_mem_gpu_wrote_merged).
+        // Written with a size: the shader stores some of its words, the CPU may write others meanwhile (a storage
+        // buffer is guest memory both use). Copied back whole it could revert them as the texel views did: with
+        // texel write-backs off (WB_MERGE=none) the render graph still read 0x104 after the logos in 1 of 4 runs
+        // (17/11/2026). Only the bytes the GPU changes go back (vk_mem_gpu_wrote_merged; WB_MERGE=0 copies whole).
+        int wmode = !written ? 0 : !size ? unsized_mode() : 2;
         if (bind_range(ex, b->addr - lead, size, align, max, ubo ? VK_MUSE_UBO : VK_MUSE_SSBO,
-                       written, &bi)) {
+                       wmode, &bi)) {
             if (written && bi.buffer != VK_NULL_HANDLE) note_written(ex, b->addr - lead, bi.range);
             return bi;
         }
@@ -315,6 +366,151 @@ static void tex_lock_once(int *locked) {
 }
 
 // locked: whether this thread holds the texture lock; taken here when a lookup needs it, released by the caller.
+// ---- buffer textures (NVN_TEXTURE_TARGET_BUFFER): texel buffer views over the guest memory they name. Until 17/11/2026
+// every UNIFORM/STORAGE_TEXEL_BUFFER binding got the zero view, so a shader that reads one read zeros and one that writes
+// one wrote nothing. Orbitals registers such textures as it loads a level (slots of fmt 0x2f, 128 texels, and fmt 0x1,
+// 65536 texels, logged just before the render thread read a null pointer at main+0x175dbd0 in both runs of 17/11/2026).
+// A view is made for (buffer, offset, range, format) once and kept until vk_texel_views_drop, which the pool code calls
+// before it destroys a buffer: the binding resolves the address the way storage buffers are (bind_range: the mirror, the
+// census and the written-range bookkeeping), so the view sees what the GPU and the CPU wrote there.
+#define TEXEL_VIEWS 4096
+// used: tvw_clock at the view's last bind. Full, the least recently bound eighth goes (texel_evict): Orbitals' gameplay
+// filled the 4096 within a minute and every later buffer texture read the zero view, the colony's world black
+// (17/11/2026).
+typedef struct { VkBuffer buf; VkDeviceSize off, range; VkFormat fmt; VkBufferView view; uint64_t used; } TexelView;
+static TexelView TVW[TEXEL_VIEWS];
+static int tvw_n;
+static uint64_t tvw_clock, tvw_evicted;
+static PlatMutex tvw_lock = PLAT_MUTEX_INIT;
+
+void vk_texel_views_drop(VkBuffer b) {
+    if (!b) return;
+    plat_mutex_lock(&tvw_lock);
+    for (int i = 0; i < tvw_n;)
+        if (TVW[i].buf == b) {
+            vkDestroyBufferView(vk_ctx()->device, TVW[i].view, NULL);
+            TVW[i] = TVW[--tvw_n];
+        } else {
+            i++;
+        }
+    plat_mutex_unlock(&tvw_lock);
+}
+
+static void texel_view_destroy(void *arg) { vkDestroyBufferView(vk_ctx()->device, (VkBufferView)(uintptr_t)arg, NULL); }
+
+static int u64_order(const void *a, const void *b) {
+    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
+    return (x > y) - (x < y);
+}
+
+// tvw_lock held, the table full: the least recently bound eighth out. Their views may be named by the submission being
+// recorded, so they are destroyed once it is done (vk_defer_call, on the recording thread).
+static void texel_evict(void) {
+    static uint64_t used[TEXEL_VIEWS];
+    for (int i = 0; i < tvw_n; i++) used[i] = TVW[i].used;
+    qsort(used, (size_t)tvw_n, sizeof *used, u64_order);
+    uint64_t cut = used[tvw_n / 8];
+    for (int i = 0; i < tvw_n;)
+        if (TVW[i].used < cut) {
+            vk_defer_call(texel_view_destroy, (void *)(uintptr_t)TVW[i].view);
+            TVW[i] = TVW[--tvw_n];
+            tvw_evicted++;
+        } else {
+            i++;
+        }
+    static volatile int32_t said;
+    if (plat_inc32(&said) <= 4 || !(said & (said - 1)))
+        rt_log("vk: texel buffer views: the table was full, %llu least recently bound let go so far, %d kept",
+               (unsigned long long)tvw_evicted, tvw_n);
+}
+
+static VkBufferView texel_view_make(VkBuffer buf, VkDeviceSize off, VkDeviceSize range, VkFormat fmt) {
+    VkBufferView v = VK_NULL_HANDLE;
+    plat_mutex_lock(&tvw_lock);
+    tvw_clock++;
+    for (int i = 0; i < tvw_n; i++)
+        if (TVW[i].buf == buf && TVW[i].off == off && TVW[i].range == range && TVW[i].fmt == fmt) {
+            v = TVW[i].view;
+            TVW[i].used = tvw_clock;
+            break;
+        }
+    if (!v && tvw_n >= TEXEL_VIEWS) texel_evict();
+    if (!v && tvw_n < TEXEL_VIEWS) {
+        VkBufferViewCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO, .buffer = buf, .format = fmt,
+                                     .offset = off, .range = range};
+        if (vkCreateBufferView(vk_ctx()->device, &ci, NULL, &v) == VK_SUCCESS)
+            TVW[tvw_n++] = (TexelView){buf, off, range, fmt, v, tvw_clock};
+        else
+            v = VK_NULL_HANDLE;
+    }
+    int full = !v && tvw_n >= TEXEL_VIEWS;
+    plat_mutex_unlock(&tvw_lock);
+    if (full) warn_once(W_TEXEL_FULL, "%d texel buffer views in use: further buffer textures bind the zero view", TEXEL_VIEWS);
+    return v;
+}
+
+// The view of the buffer texture with handle h (its slot id in the low 20 bits), or the zero view: an unregistered slot,
+// a slot that is not a buffer texture, a format without the texel buffer feature, or memory that is not backed.
+// ORBITALS_TEXEL_VIEWS (diagnosis): 0 binds the zero view everywhere (as before 17/11/2026), "read" only for the
+// storage ones (shaders write nothing there); default 1. To tell whether these views take part in the render thread's
+// corrupted pointers in main+0x1750b88's callees (17/11/2026).
+static int texel_mode(void) {
+    static int m = -1;
+    if (m < 0) {
+        const char *e = cfg_get("ORBITALS_TEXEL_VIEWS");
+        int v = !e || !*e ? 1 : !strcmp(e, "0") ? 0 : !strcmp(e, "read") ? 2 : 1;
+        if (v != 1) rt_log("vk: ORBITALS_TEXEL_VIEWS=%s: %s", e, v ? "storage texel buffers get the zero view" : "every texel buffer gets the zero view");
+        m = v;
+    }
+    return m;
+}
+
+static VkBufferView texel_view(VkExec *ex, uint64_t h, int storage) {
+    uint64_t addr;
+    int fmt;
+    uint32_t texels;
+    int mode = texel_mode();
+    if (!mode || (mode == 2 && storage)) return Z.zview;
+    if (!h || !vk_texture_slot_buffer((int)(h & 0xfffff), &addr, &fmt, &texels) || !addr || !texels) return Z.zview;
+    TexVkFormat f;
+    int bpb = nvn_fmt_bpb(fmt, NULL, NULL);
+    if (!tex_vk_format(fmt, &f) || f.ideal == VK_FORMAT_UNDEFINED || f.astc_bw || f.expand_rgb || bpb <= 0) {
+        warn_once(W_TEXEL_FMT, "buffer texture format %#x has no texel buffer format: the zero view is bound", fmt);
+        return Z.zview;
+    }
+    static VkFormatFeatureFlags feat[0x100];
+    static uint8_t feat_known[0x100];
+    if (!__atomic_load_n(&feat_known[fmt & 0xff], __ATOMIC_ACQUIRE)) {
+        VkFormatProperties fp;
+        vkGetPhysicalDeviceFormatProperties(vk_ctx()->phys, f.ideal, &fp);
+        feat[fmt & 0xff] = fp.bufferFeatures;
+        __atomic_store_n(&feat_known[fmt & 0xff], 1, __ATOMIC_RELEASE);
+    }
+    VkFormatFeatureFlags need = storage ? VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT : VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+    if (!(feat[fmt & 0xff] & need)) {
+        warn_once(W_TEXEL_FMT, "buffer texture format %#x is not a %s texel buffer format here: the zero view is bound", fmt,
+                  storage ? "storage" : "uniform");
+        return Z.zview;
+    }
+    const VkPhysicalDeviceLimits *l = &vk_ctx()->props.limits;
+    uint64_t max_texels = l->maxTexelBufferElements;
+    uint64_t n = (uint64_t)texels < max_texels ? texels : max_texels;
+    VkDescriptorBufferInfo bi;
+    uint64_t align = l->minTexelBufferOffsetAlignment ? l->minTexelBufferOffsetAlignment : 1;
+    // A storage view spans the whole buffer texture and the shader stores some of its texels: copied back whole, the view
+    // reverted the CPU's writes made meanwhile and Orbitals' render graph freed a corrupted pointer (17/11/2026).
+    if (!bind_range(ex, addr, n * (uint64_t)bpb, align, n * (uint64_t)bpb, VK_MUSE_SSBO, storage ? 2 : 0, &bi) || !bi.buffer) {
+        warn_once(W_TEXEL_ADDR, "buffer texture %#llx is not backed or not aligned: the zero view is bound",
+                  (unsigned long long)addr);
+        return Z.zview;
+    }
+    if (storage) note_written(ex, addr, bi.range);
+    VkDeviceSize range = bi.range - bi.range % (VkDeviceSize)bpb;
+    if (!range) return Z.zview;
+    VkBufferView v = texel_view_make(bi.buffer, bi.offset, range, f.ideal);
+    return v ? v : Z.zview;
+}
+
 static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, int separate, VkDescriptorImageInfo *out,
                      int *locked) {
     int td_on = td_mode();
@@ -516,10 +712,14 @@ static const RsList *rs_list(const VkExec *ex, const VkPipeInfo *info) {
                     if (np == RS_PTRS) { ok = 0; break; }
                     rs_add(tmp, &n, ex, &ex->ubo[st][r->cbuf_slot - 3], sizeof(p_bind_buf));
                     ptr[np++] = (RsPtr){st, r};
+                } else if (st == NVN_STAGE_CS && r->cbuf_slot == 0 && r->handle * 4 >= 0x10) {
+                    ok = 0;   // its address comes with each dispatch (the push constants, ssbo_info): no kept set
+                    break;
                 }
             } else if ((b->kind == GFX_RES_TEX || b->kind == GFX_RES_IMG) && b->type != VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER &&
                        b->type != VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
                 int img = b->kind == GFX_RES_IMG, cap = img ? 32 : 128;
+                if (r->cbuf_slot >= 3) { ok = 0; break; }   // its handle is read from a uniform block at each bind
                 for (uint32_t k = 0; k < cnt; k++) {
                     int slot = r->slot + (int)k;
                     if (slot >= 0 && slot < cap) rs_add(tmp, &n, ex, img ? &ex->img[st][slot] : &ex->tex[st][slot], 8);
@@ -867,10 +1067,17 @@ void bind_resources(VkExec *ex, const VkPipeInfo *info) {
             int img = b->kind == GFX_RES_IMG;
             if (b->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER || b->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
                 kind = 2;
-                for (uint32_t k = 0; k < cnt; k++) {   // buffer textures are not replayed yet
+                for (uint32_t k = 0; k < cnt; k++) {   // the handle as for images and textures, then its view
+                    int slot = r->slot + (int)k;
+                    uint64_t h = 0;
+                    if (r->cbuf_slot >= 3)
+                        h = ubo_word(ex, st, r->cbuf_slot, r->handle + k) |
+                            (r->handle2 >= 0 ? ubo_word(ex, st, r->cbuf_slot, (uint32_t)r->handle2 + k) : 0);
+                    else if (img) h = slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
+                    else h = slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
                     o[k].w[0] = 0, o[k].w[1] = 0, o[k].w[2] = 0;
-                    o[k].view = Z.zview;
-                    if (need_w) bv[nd + k] = Z.zview;
+                    o[k].view = texel_view(ex, h, img);
+                    if (need_w) bv[nd + k] = o[k].view;
                 }
             } else if (xuse) {
                 kind = 1;
@@ -883,7 +1090,10 @@ void bind_resources(VkExec *ex, const VkPipeInfo *info) {
                 for (uint32_t k = 0; k < cnt; k++) {
                     int slot = r->slot + (int)k;
                     uint64_t h = 0;
-                    if (img) h = slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
+                    if (r->cbuf_slot >= 3)   // the handle is in a user uniform block (ubo_word), OR'ed with handle2
+                        h = ubo_word(ex, st, r->cbuf_slot, r->handle + k) |
+                            (r->handle2 >= 0 ? ubo_word(ex, st, r->cbuf_slot, (uint32_t)r->handle2 + k) : 0);
+                    else if (img) h = slot >= 0 && slot < 32 ? ex->img[st][slot] : 0;
                     else h = slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
                     tex_info(ex, r, h, img, r->separate, &o[k].image, &locked);
                     if (ru_cap && !img && slot >= 0 && slot < 128) ru_note_slot(0, st, slot);   // others read 0

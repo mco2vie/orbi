@@ -132,6 +132,20 @@ uint32_t vk_texture_slot_format(int id, uint64_t *addr) {
     return f;
 }
 
+// A buffer texture (NVN_TEXTURE_TARGET_BUFFER, 10) registered in slot id: its guest address, NVN format and width in texels,
+// for the texel buffer views of vk_exec_bind.c. 0 for any other slot.
+int vk_texture_slot_buffer(int id, uint64_t *addr, int *format, uint32_t *texels) {
+    lock();
+    int ok = id >= 0 && id < ntslots && tslots[id].used && tslots[id].t.d.target == 10;
+    if (ok) {
+        *addr = (uint64_t)(uintptr_t)tslots[id].t.mem;
+        *format = tslots[id].t.d.format;
+        *texels = tslots[id].t.d.width;
+    }
+    unlock();
+    return ok;
+}
+
 // A sampled slot that resolves to no image (the draw binds a zero stand-in): the first 32 slot ids, with why. run106's
 // final composite read four such slots and came out black.
 static void unresolved_note(int id, const TexSlot *s) {
@@ -189,6 +203,7 @@ const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view) {
             make_fresh_snap(e);
             e->checked = submit_epoch;
         }
+        alias_sync(e);   // a live alias written since (a storage image of the same memory)
         s->cepoch = submit_epoch;
         __atomic_store_n(&schk[id], (uint64_t)submit_epoch << 32 | s->cgen, __ATOMIC_RELEASE);
     }
