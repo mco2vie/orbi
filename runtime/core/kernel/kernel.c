@@ -355,7 +355,7 @@ void kern_crash_context(const Cpu *c) {
             (unsigned long long)(c ? c->tpidrro : 0), c && (uintptr_t)t->tls == c->tpidr,
             c && (uintptr_t)t->tlr == c->tpidrro, c == t->cur);
     rt_logf("  kernel TLS: fiber=%#llx switches=%llu base_tpidr=%#llx base_tpidrro=%#llx\n",
-            (unsigned long long)(t->fiber ? t->fiber->addr : 0), (unsigned long long)t->fiber_switches,
+            (unsigned long long)t->fiber_addr, (unsigned long long)t->fiber_switches,
             (unsigned long long)t->cpu->tpidr, (unsigned long long)t->cpu->tpidrro);
     rt_logf("  kernel TLS: last fiber switch %#llx -> %#llx; TPIDR %#llx -> %#llx; TPIDRRO %#llx -> %#llx\n",
             (unsigned long long)t->fiber_last_from, (unsigned long long)t->fiber_last_to,
