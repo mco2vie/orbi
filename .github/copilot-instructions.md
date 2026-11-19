@@ -34,7 +34,10 @@ storage buffers or buffer textures reach a 3D image's memory (`vk: trace3d <hash
 3D image at ...)`), with its bindings and uniform blocks, and writes its SPIR-V to `<game>/trace3d/`. Next: get that
 log and folder, read the writer (spirv-cross `--vulkan-semantics`), and make buffer writes into a texture's storage
 reach the image the lighting samples (runtime/gfx/vk/tex: the image re-read from the buffer's mirror after such a
-write, or a buffer-to-image copy at use). Details: roadmap 1.1b, docs/shaders.md.
+write, or a buffer-to-image copy at use). Update (recomp51): no buffer writer found; the CPU rewrites the grids' pages with zeros
+(re-uploads at frames 1580, 1606, 1635) and the ClearUAV compute writes ones, so nothing puts lights in them on our
+side. Compare with Lichii's GPU trace of the same pass before going further (roadmap 1.1b). Details: roadmap 1.1b,
+docs/shaders.md.
 
 Other open items: two refused fragment programs (`tex_scr_urc_`), bright speckled patches on lamps, a crash at
 `main+0x1759b20` reading 0x104 in about one start in three (roadmap 1.2), silent logos 2 and 3, black title and menu

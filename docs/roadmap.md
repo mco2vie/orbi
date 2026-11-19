@@ -164,6 +164,19 @@ logs any dispatch whose storage buffers or buffer textures reach the memory of a
 trace3d <hash> (its storage buffer ... reaches the 3D image at ...)`), with its bindings and SPIR-V. If that is the
 fill, the fix is a buffer/image alias: buffer writes into a texture's storage must reach the image (or the image be
 re-read from the buffer's mirror).
+recomp51 (the buffer-writer trace): no dispatch reaches the colony grids' memory through a buffer; the hits logged
+are other volumes (the range estimate, width x height x depth x 16 bytes, is wide). What the log does show for the two
+grids (`0xfe8290000`, `0xfe8352000`): uploaded at frame 1579 (guest memory all zero), cleared to all ones by the
+ClearUAV compute at 1580, then **uploaded again** at 1580, 1606 and 1635 from guest memory that is still all zero: the
+CPU writes those pages (the re-uploads follow page writes) and writes zeros. A second texture id at the same address
+(12177 against 13325) is sampled by compute `d62b11d7a6c6d9a3` (35x35x175 volumes, likely volumetric fog). So on our
+side nobody puts lights in the grid: the CPU writes zeros, the GPU writes ones.
+Two readings remain: (a) the game's CPU light culling finds no light (a runtime/SDK difference upstream, in game
+code), or (b) the grid is not where Orbitals' colony light comes from and the cause is elsewhere (the storage buffer
+of binding 4, c7, the r8 volume). **Next, decisive:** the same grids and the lighting pass's inputs on Lichii (its GPU
+trace, `docs/nx2/gpu-trace.md` in `sinedgiveaways/tool`): if Lichii's grids hold light indices, (a); if they are empty
+too, (b). Also a runtime bug seen on the way: a storage-image write into a mirrored texture is not marked GPU-owned
+(`vk_texture_storage_bound_locked`), so a later CPU page write re-uploads the storage over the GPU's result.
 
 ### 1.2 A crash after the logos in about one run in three
 
