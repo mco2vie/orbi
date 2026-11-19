@@ -191,9 +191,10 @@ The structure was corrupted earlier; the code reading it is right.
   (`ORBITALS_ASYNC_PREEMPT=0`), page freezing (`ORBITALS_FREEZE_IDLE=0`), the VRAM mirror (`ORBITALS_MEMORY=import`),
   and STLR ordered as a release store (fixed in `7b4a312`, a correct change, the crash stayed). The game library was
   checked rebuilt (its lifted code grew by 4 544 bytes).
-- Added crash-site diagnostics on `copilot/obital-copilot-analyse`: the fatal report now records the current guest thread, its `tls`/`tlr` allocations, the CPU context's `TPIDR`/`TPIDRRO`, and whether the pointers and active context agree. This is observation only; it does not change scheduling or TLS.
-- **Next:** make one run of the diagnostic build. If `TPIDR` or `TPIDRRO` differs from the current thread's allocation (or `cur` differs from the faulting `Cpu`), investigate context/fiber ownership and TLS restoration. If they match, the fault likely occurs inside allocator/TLS contents or earlier heap corruption; use the new addresses to trace allocation/free lifetime before changing synchronization.
-  a path that lets two threads in at once; then the SDK functions the runtime replaces for threads and TLS.
+- Added crash-site diagnostics on `copilot/obital-copilot-analyse`: the fatal report records the current guest thread, its `tls`/`tlr` allocations, the CPU context's `TPIDR`/`TPIDRRO`, and whether the pointers and active context agree. This is observation only; it does not change scheduling or TLS.
+- The first diagnostic run (thread `0x1021`, id `111`) found `cur == fault_cpu`, `TPIDRRO == thread->tlr`, but `TPIDR != thread->tls` (`0xa2003c740` versus `0x701007a000`). The thread was active and not closed. This is a lead, not proof: `TPIDR` is a guest CPU register and may be changed by guest code; the code also carries it across fiber switches.
+- Added a second, observation-only diagnostic: at the next crash it will report the active guest fiber, the base thread CPU's TPIDR values, the number of fiber switches, and the register values copied by the last fiber switch. It also fixes the crash report's literal `\\n` separators.
+- **Next:** make one run of this build. If the last fiber transfer copied `0xa2003c740`, the value was already present before that switch; if the base context differs from the active fiber, inspect the guest fiber lifecycle. If there were no fiber switches, or both contexts carry the same unexpected TPIDR, trace guest writes to `TPIDR_EL0` and the TLS slot contents before changing runtime behavior.
 
 ### 1.3 Smaller visible differences
 
