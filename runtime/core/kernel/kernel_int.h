@@ -80,6 +80,7 @@ struct RtThread {
     Fiber *fiber;              // current guest fiber, NULL on the thread's own context
     Fiber *leaving;            // fiber just switched away from, released by whoever resumes next
     uint64_t fiber_switches;    // diagnostic: number of context switches involving a guest fiber
+    uint64_t fiber_addr;         // current guest fiber address (0: thread context), diagnostic mirror
     uint64_t fiber_last_from, fiber_last_to;             // guest fiber addresses (0: thread context)
     uint64_t fiber_last_from_tpidr, fiber_last_to_tpidr;
     uint64_t fiber_last_from_tpidrro, fiber_last_to_tpidrro;
