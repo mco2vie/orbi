@@ -87,6 +87,7 @@ static void fiber_switch_to(RtThread *t, const Cpu *from, Fiber *to) {
     t->fiber_switches++;
     t->fiber_last_from = t->fiber ? t->fiber->addr : 0;
     t->fiber_last_to = to ? to->addr : 0;
+    t->fiber_addr = t->fiber_last_to;
     t->fiber_last_from_tpidr = from->tpidr;
     t->fiber_last_to_tpidr = from->tpidr;
     t->fiber_last_from_tpidrro = from->tpidrro;
