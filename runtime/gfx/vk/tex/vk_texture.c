@@ -71,6 +71,7 @@ uint64_t n_checks;    // draw-binding storage checks (make_fresh_snap) since the
 // textures every frame: about 90 tex_gen and 160 slots_gen bumps per frame in the monsters fight, one every 16 draws,
 // which emptied every cache keyed on the global generations.
 uint32_t agen[AGEN_N];
+uint64_t tex_wseq, n_alias_synced;
 // Per slot id, for vk_texture_slot_token without the lock: the registration serial (bits 16-47; 0: never registered)
 // and the address generation index (bits 0-15), one word so a reader gets a consistent pair. Fixed-size (slot ids are
 // 20 bits), unlike tslots, which moves when it grows.

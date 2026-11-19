@@ -45,6 +45,9 @@ typedef struct Tex {
     uint32_t shash_epoch;         // submit_epoch of the last hash check
     uint8_t sparse;               // a Vulkan sparse image whose tiles follow the game's MapVirtual (vk_sparse.c)
     uint64_t use;                 // ORBITALS_GPU_GUARD: newest submission part that looked it up (vk_guard_note)
+    uint64_t wseq;                // order of the newest content its image got (GPU write, storage binding, upload or
+                                  // alias copy) among every entry's (tex_wseq): the newest of a storage's aliases wins
+    uint8_t gpu_src;              // that content came from the GPU (alias_wrote), not from the storage's bytes (upload)
 } Tex;
 
 // A slot keeps what vk_texture_by_id resolved for it, so a draw binding skips the key lookup and the address chain: the
@@ -83,6 +86,9 @@ extern PlatMutex owned_lock;
 extern Tex **owned;
 extern int nowned, cowned;
 extern uint64_t max_owned, gpu_writes, n_checks;
+extern uint64_t tex_wseq, n_alias_synced;   // Tex.wseq counter; alias_sync copies (vk_tex_alias.c)
+void alias_sync(Tex *e);
+void alias_wrote(Tex *e);
 extern uint32_t agen[AGEN_N];
 extern uint64_t *sinfo, *schk;
 void tex_init(void *p);

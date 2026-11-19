@@ -203,6 +203,7 @@ const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view) {
             make_fresh_snap(e);
             e->checked = submit_epoch;
         }
+        alias_sync(e);   // a live alias written since (a storage image of the same memory)
         s->cepoch = submit_epoch;
         __atomic_store_n(&schk[id], (uint64_t)submit_epoch << 32 | s->cgen, __ATOMIC_RELEASE);
     }

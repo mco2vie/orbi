@@ -137,9 +137,17 @@ spirv-cross) fetches a cell with `texelFetch` and skips it when it reads `0xffff
 Its lights come from a read-only storage buffer (binding 4) indexed through the grid. The image's ones did not come
 from guest memory (that would be zeros), and nothing writes the grids in the dumped frame: no copy, clear, storage
 image or buffer range. `nvnTextureWriteTexels` is never called; `ClearTexture` and `CopyBufferToTexture` are.
-**Next:** `ORBITALS_TRACE_3D=1` now logs every upload, clear and copy into a 3D texture with its frame (at most 512
-lines): who set the ones, and whether a fill (a copy from a buffer the CPU writes, most likely) runs and where it
-goes.
+recomp48 (`ORBITALS_TRACE_3D=1`): each grid is written by compute `a29340cb16aff1e1` (dispatch 5x5x25) through a
+**storage image** descriptor, and sampled by the lighting through **another descriptor of the same memory**. The
+texture cache keys images by address and descriptor, so these are two Vulkan images. An entry created next to a live
+one copied its content once (`alias_copy` at creation, right after the compute's clear to all ones); after that the
+compute's writes stayed in its own image, and a storage binding did not even count as a GPU write. The lighting read
+"no light" in every cell.
+Fixed (`vk_tex_alias.c alias_sync`): each entry carries the order of its newest content (GPU write, storage binding,
+upload, alias copy); when an entry is used, a live alias with newer GPU content and the same shape is copied into it
+at that point of the replay, and the slots of an address with aliases re-resolve after a write. An alias of another
+shape is logged (`an alias of another shape got newer content`). **Next:** the colony against Lichii's recording; the
+log's `took a newer alias's content` line says the sync ran.
 
 ### 1.2 A crash after the logos in about one run in three
 

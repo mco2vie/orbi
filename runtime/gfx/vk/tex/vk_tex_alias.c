@@ -103,6 +103,65 @@ static int alias_copy(Tex *e, const Tex *src) {
     return 1;
 }
 
+// Live aliases (entries of one storage under different descriptors) are separate images here and one memory on the
+// console: whatever writes one, the others must read. alias_copy at an entry's creation covered the first use only.
+// Orbitals' light grids (3D r32ui 20x20x100) are written each frame by a compute shader through a storage image
+// descriptor and sampled by the lighting through another one: the sampled image kept the content of its creation
+// (all 0xffffffff, every cell empty) and the colony was lit by nothing (18/11/2026). Now each entry carries the order of
+// its newest content (wseq) and, when it is used, takes a newer alias's image (alias_sync).
+
+// e got new content (texture lock held): its order, and its address re-resolved by the slots that cached it, so the
+// aliases' next use in this submission syncs them.
+void alias_wrote(Tex *e) {
+    e->wseq = ++tex_wseq;
+    e->gpu_src = 1;
+    for (Tex *p = nvn_hm_get(&by_addr, &e->pub.addr); p; p = p->next_at)
+        if (p != e && !p->released) {
+            tex_gen_bump(e->pub.addr);
+            return;
+        }
+}
+
+// e is about to be used (texture lock held): if a live alias holds newer content and has e's shape, its image is copied
+// into e's at the replay's current position. Aliases of another shape stay as they are (logged once each).
+void alias_sync(Tex *e) {
+    if (tex_alias <= 0) return;
+    Tex *src = NULL;
+    for (Tex *p = nvn_hm_get(&by_addr, &e->pub.addr); p; p = p->next_at) {
+        // only GPU content: an alias uploaded from the storage holds bytes e can upload itself
+        if (p == e || p->released || !p->gpu_src || p->wseq <= e->wseq || (src && p->wseq <= src->wseq)) continue;
+        if (!alias_compatible(e, p)) {
+            static uint64_t seen[16];
+            static int nseen;
+            int k = 0;
+            while (k < nseen && seen[k] != e->pub.addr) k++;
+            if (k == nseen && nseen < 16) {
+                seen[nseen++] = e->pub.addr;
+                rt_log("vk: texture %#llx: an alias of another shape got newer content (%ux%ux%u fmt %#x against "
+                       "%ux%ux%u fmt %#x): not synced", (unsigned long long)e->pub.addr, p->t.d.width, p->t.d.height,
+                       p->t.d.depth, p->t.d.format, e->t.d.width, e->t.d.height, e->t.d.depth, e->t.d.format);
+            }
+            continue;
+        }
+        src = p;
+    }
+    if (!src || !alias_copy(e, src)) return;
+    e->wseq = src->wseq;
+    e->gpu_src = 1;
+    n_alias_synced++;
+    if (e->pub.mirrored) {   // the content is the alias's GPU write, newer than the storage bytes
+        uint32_t now;
+        vk_mem_changed(e->pub.addr, e->t.L.size, 0, &now);
+        e->wgen = now;
+        e->uploaded = 1;
+        e->pub.gpu_owned = 1;
+    }
+    static int logged;
+    if (!logged++)
+        rt_log("vk: texture %#llx %ux%ux%u fmt %#x: took a newer alias's content (first alias sync)",
+               (unsigned long long)e->pub.addr, e->t.d.width, e->t.d.height, e->t.d.depth, e->t.d.format);
+}
+
 // The entries at a storage address, chained by next_at (ui/glyphs/glyphs.c re-uploads all of them). Texture lock held.
 Tex *entries_at(uint64_t addr) { return nvn_hm_get(&by_addr, &addr); }
 
@@ -133,6 +192,7 @@ Tex *entry_of(const tex_t *t) {
         if (tex_alias) {
             if (src && alias_copy(e, src)) {
                 n_alias_copied++;
+                e->wseq = src->wseq, e->gpu_src = 1;
                 if (e->pub.mirrored) {   // the content is src's GPU render, newer than the storage bytes
                     vk_mem_changed(e->pub.addr, e->t.L.size, 0, &e->wgen);
                     e->uploaded = 1;
@@ -236,6 +296,7 @@ void vk_texture_gpu_written(const tex_t *t) {
     if (e) {
         make_fresh(e);   // a partial render keeps what the storage held before
         e->pub.gpu_owned = 1;
+        alias_wrote(e);
         uint64_t f = vk_exec_recording_fence();
         if (f > e->wr_fence) e->wr_fence = f;
         if (e->pub.mirrored) {

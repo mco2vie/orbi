@@ -283,6 +283,7 @@ static int owned_dirty(uint64_t addr, uint64_t size, Tex **hit) {
 // tex_info). Its storage is not marked GPU-owned: only the write fence for ReadTexels.
 void vk_texture_storage_bound_locked(const VkTexImage *img) {
     Tex *e = (Tex *)img;   // pub is the first member
+    alias_wrote(e);        // the shaders may write it: its aliases take its image at their next use (alias_sync)
     uint64_t f = vk_exec_recording_fence();
     if (f > e->wr_fence) e->wr_fence = f;
 }

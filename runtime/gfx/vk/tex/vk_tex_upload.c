@@ -312,6 +312,7 @@ counted:;
     e->wt_n = 0;
     e->uploaded = 1;
     e->n_up++;
+    e->wseq = ++tex_wseq, e->gpu_src = 0;   // the storage's bytes: newer than any GPU content of its aliases so far
     perf_end(PERF_TEX, p0);
 }
 
