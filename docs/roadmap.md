@@ -19,6 +19,8 @@ the same dump on [Lichii](https://github.com/sinedgiveaways/tool) (repository `s
   no SPIR-V for into `<game>/spirv-dump` (default since `ffce7da`) and `tools/prepare/dumped_shaders.py` translates
   them. After a run into the colony: 753 programs dumped (cs 99, ps 488, vs 165, gs 1), 751 translated; the two left
   are pixel programs `93b54007c4699bde` and `e2d9a1f0ae647869` (`tex_scr_urc_`, 1.3).
+- A whole `orbitals.log` can be summarised with `shader_analyzer.exe` ([log-analyzer.md](log-analyzer.md)): how the
+  run ended, key threads, missing shaders, NVN sync call sites.
 - Geometry stages are translated and run (`sm86/translate/glsl/geom.py`, 1.1). Tessellation is not (no Orbitals
   program has it so far; `vk_exec_draw.c` logs any program that does).
 
