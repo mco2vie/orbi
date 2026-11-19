@@ -146,8 +146,15 @@ compute's writes stayed in its own image, and a storage binding did not even cou
 Fixed (`vk_tex_alias.c alias_sync`): each entry carries the order of its newest content (GPU write, storage binding,
 upload, alias copy); when an entry is used, a live alias with newer GPU content and the same shape is copied into it
 at that point of the replay, and the slots of an address with aliases re-resolve after a write. An alias of another
-shape is logged (`an alias of another shape got newer content`). **Next:** the colony against Lichii's recording; the
-log's `took a newer alias's content` line says the sync ran.
+shape is logged (`an alias of another shape got newer content`).
+recomp49 (with the sync): still dark, and no sync ran (no `took a newer alias's content`). So the sampled grid is
+most likely the compute's own image: one upload per grid, and the compute `a29340cb16aff1e1` runs at the level's
+load (frame ~1680 in recomp48) and in no dumped frame. It then wrote "empty" everywhere: its input (the light list)
+was empty or unreadable to it. The sync stays (it is right for aliases), but this is not that case. Also visible:
+bright speckled patches on lamps and ceilings (volumetric light shafts?), not looked at yet.
+**Next:** `ORBITALS_TRACE_3D=1` now also logs, for the first write of each 3D storage image, the dispatch's bindings
+with its uniform blocks (`vk: trace3d <hash>: ...`) and writes its SPIR-V to `<game>/trace3d/`. Read the light grid
+compute: where its lights come from (a storage buffer, its count in a uniform block) and why it finds none.
 
 ### 1.2 A crash after the logos in about one run in three
 

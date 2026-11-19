@@ -662,6 +662,25 @@ void vk_trace_3d_writes(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info,
                "caller %#llx", (unsigned long long)frame_now(), t->width, t->height, t->depth, (int)t->format,
                (unsigned)NVN_HANDLE_TEX(h), hv, (unsigned long long)sh, bd->res->slot, d->x, d->y, d->z,
                (unsigned long long)d->caller);
+        // What the dispatch reads, as a dump's pass lines with its uniform blocks (the colony's light grid compute
+        // runs once, at the level's load, outside any dumped frame), and its SPIR-V into <game>/trace3d
+        Str bs = {0};
+        int du = dump_ubo;
+        dump_ubo = 1;
+        describe_bindings(&bs, ex, info);
+        dump_ubo = du;
+        for (char *line = bs.s, *nl; line && *line; line = nl) {
+            nl = strchr(line, '\n');
+            if (nl) *nl++ = 0;
+            rt_log("vk: trace3d %016llx: %s", (unsigned long long)sh, line);
+            if (!nl) break;
+        }
+        free(bs.s);
+        char path[1100];
+        snprintf(path, sizeof path, "%s/trace3d", cfg_game_dir());
+        plat_file_mkdir_p(path);
+        snprintf(path, sizeof path, "%s/trace3d/sh_%016llx.spv", cfg_game_dir(), (unsigned long long)sh);
+        if (!plat_file_exists(path)) plat_file_write(path, b, (size_t)words * 4);
     }
 }
 
