@@ -82,6 +82,15 @@ static void fiber_switch_to(RtThread *t, const Cpu *from, Fiber *to) {
             to->state = F_STARTED;
         }
     }
+    // Keep the last transfer in the thread record so a later fatal report can distinguish a guest TPIDR write
+    // from a value copied during a fiber switch. This is diagnostic only; the copied register values are unchanged.
+    t->fiber_switches++;
+    t->fiber_last_from = t->fiber ? t->fiber->addr : 0;
+    t->fiber_last_to = to ? to->addr : 0;
+    t->fiber_last_from_tpidr = from->tpidr;
+    t->fiber_last_to_tpidr = from->tpidr;
+    t->fiber_last_from_tpidrro = from->tpidrro;
+    t->fiber_last_to_tpidrro = from->tpidrro;
     dst->tpidr = from->tpidr;
     dst->tpidrro = from->tpidrro;
     dst->fpcr = from->fpcr;
