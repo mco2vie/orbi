@@ -79,6 +79,10 @@ struct RtThread {
     PlatFiber *base_fiber;     // the host thread as a host fiber, after the first switch
     Fiber *fiber;              // current guest fiber, NULL on the thread's own context
     Fiber *leaving;            // fiber just switched away from, released by whoever resumes next
+    uint64_t fiber_switches;    // diagnostic: number of context switches involving a guest fiber
+    uint64_t fiber_last_from, fiber_last_to;             // guest fiber addresses (0: thread context)
+    uint64_t fiber_last_from_tpidr, fiber_last_to_tpidr;
+    uint64_t fiber_last_from_tpidrro, fiber_last_to_tpidrro;
     int exit_pending;          // ExitThread on a fiber: unwind once back on the thread's own context
     // ORBITALS_TRACE=sched accounting (holding G)
     uint32_t tid;              // host thread id
