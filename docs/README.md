@@ -7,6 +7,7 @@
 | `logo.svg` | The fallback icon (`tools/build/icon.py docs/logo.svg`), used when the Orbitals picture is absent ([branding.md](branding.md)) |
 | [images/](images/README.md) | Screenshots of the start screen for the README |
 | [roadmap.md](roadmap.md) | Where the game is, the open problems with what was measured and ruled out, and the work in order of priority |
+| [shaders.md](shaders.md) | Orbitals' shaders: how programs reach SPIR-V, the translator and runtime additions with their commits, the colony's frame pass by pass, the findings in order, the tools |
 | [workflow.md](workflow.md) | How the work is done with a player's machine: branches, builds, the player's commands, exchanging data without leaking the game's, diagnosing, checking a change without the game |
 | [remote-play.md](remote-play.md) | Steam Remote Play Together: set-up (Steam's library, the App ID, starting from Steam), playing, limits |
 | `release-template.md` | What every release's notes repeat (install, updating, known issues, reporting); `tools/build/notes.py` fills it with the version's section of `CHANGELOG.md` |

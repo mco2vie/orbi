@@ -117,3 +117,5 @@ ray tracing, push constants, HDR in `Window*`, variable rate shading). Orbitals'
 
 Orbitals' shaders are not in agl/BNSH archives, so the setup's shader step is skipped for it (`recomp/versions.py`
 `skip_steps`). Where its programs sit in the `.pak`/`.utoc` containers, and how they reach NVN2, is still to find.
+Until then a run dumps every program it meets without SPIR-V and the player translates them; see
+[shaders.md](shaders.md).

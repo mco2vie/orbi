@@ -1,8 +1,8 @@
 # Roadmap
 
 What is being worked on, in order of priority: Orbitals playable from boot (no crash, a picture as on the console),
-then nothing hanging the GPU, then the frame rate. Updated 18/11/2026 (branch `diag/frame-history-trace`; how the
-work is done with a player's machine: [workflow.md](workflow.md)).
+then nothing hanging the GPU, then the frame rate. Updated 19/11/2026 (branch `diag/frame-history-trace`; how the
+work is done with a player's machine: [workflow.md](workflow.md); the shaders: [shaders.md](shaders.md)).
 
 All measurements below are from one machine: Windows 11, RTX 4080, NVIDIA 616.92, Orbitals Deluxe Edition 1.0.5
 (program `040032B023CA4000`, main build `d6efcc0a51c1c792`) with its add-on, from a `.nup` package. The reference is
